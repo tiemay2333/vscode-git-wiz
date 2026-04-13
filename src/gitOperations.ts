@@ -270,14 +270,20 @@ fs.writeFileSync(process.argv[2], ${JSON.stringify(newMessage + '\n')});
     }
 
     async resetToCommit(commitHash: string) {
-        const resetType = await vscode.window.showQuickPick(
-            [
-                { label: 'Soft', description: 'Keep changes staged', value: '--soft' },
-                { label: 'Mixed', description: 'Keep changes unstaged', value: '--mixed' },
-                { label: 'Hard', description: 'Discard all changes', value: '--hard' },
-            ],
-            { placeHolder: 'Select reset type' },
-        );
+        if (!commitHash) {
+            return;
+        }
+
+        const items: (vscode.QuickPickItem & { value: string })[] = [
+            { label: 'Soft', description: 'Keep changes staged', value: '--soft' },
+            { label: 'Mixed', description: 'Keep changes unstaged', value: '--mixed' },
+            { label: 'Hard', description: 'Discard all changes', value: '--hard' },
+        ];
+
+        const resetType = await vscode.window.showQuickPick(items, {
+            placeHolder: 'Select reset type',
+        });
+
         if (!resetType) {
             return;
         }
@@ -293,10 +299,11 @@ fs.writeFileSync(process.argv[2], ${JSON.stringify(newMessage + '\n')});
 
         const cwd = this.getCwd();
         if (!cwd) {
+            vscode.window.showErrorMessage('No workspace folder found.');
             return;
         }
 
-        cp.exec(`git reset ${resetType.value} ${commitHash}`, { cwd }, (error, _stdout, stderr) => {
+        cp.exec(`git reset ${resetType.value} "${commitHash}"`, { cwd }, (error, _stdout, stderr) => {
             if (error) {
                 vscode.window.showErrorMessage(`Failed to reset: ${error.message}\n${stderr}`);
                 return;
