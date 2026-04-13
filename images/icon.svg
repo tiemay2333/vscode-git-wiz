@@ -1,0 +1,12 @@
+<svg width="256" height="256" xmlns="http://www.w3.org/2000/svg">
+ <!-- 极简星芒代表 Wiz -->
+
+ <g>
+  <title>Layer 1</title>
+  <rect width="256" height="256" rx="56" class="bg-rect" fill="#F8F9FA" id="svg_1"/>
+  <path d="m76,174l0,-100" stroke="#64748B" stroke-width="16" stroke-linecap="round" id="svg_2"/>
+  <circle cx="76" cy="192" r="16" fill="none" stroke="#64748B" stroke-width="12" id="svg_3"/>
+  <path stroke="#F05032" d="m76,142c40,0 86,-20 86,-60" fill="none" stroke-width="16" stroke-linecap="round" id="svg_4"/>
+  <path stroke="null" d="m160.5,38q0,38.5 38.5,38.5q-38.5,0 -38.5,38.5q0,-38.5 -38.5,-38.5q38.5,0 38.5,-38.5z" fill="#F05032" id="svg_5"/>
+ </g>
+</svg>

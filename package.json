@@ -1,0 +1,204 @@
+{
+    "name": "git-wiz-v2",
+    "publisher": "tiemay",
+    "displayName": "GitWiz",
+    "description": "A minimalist Git extension with a canvas-rendered commit graph and branch management — no bloat, no distractions.",
+    "version": "1.0.0",
+    "engines": {
+        "vscode": "^1.75.0",
+        "node": ">=24",
+        "pnpm": ">=10"
+    },
+    "categories": [
+        "SCM Providers"
+    ],
+    "keywords": [
+        "git",
+        "git graph",
+        "git history",
+        "git log",
+        "branch",
+        "version control",
+        "scm",
+        "commit graph",
+        "squash",
+        "cherry-pick"
+    ],
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/tiemay2333/vscode-git-wiz"
+    },
+    "icon": "images/icon.png",
+    "main": "./out/extension.js",
+    "contributes": {
+        "configuration": {
+            "title": "Git Wiz",
+            "properties": {
+                "git-wiz.showStatusBarItem": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Show the Git Wiz status bar item for quick access."
+                }
+            }
+        },
+        "viewsContainers": {
+            "panel": [
+                {
+                    "id": "git-wiz",
+                    "title": "Git Wiz",
+                    "icon": "$(git-branch)"
+                }
+            ]
+        },
+        "views": {
+            "git-wiz": [
+                {
+                    "id": "gitLeanBranchView",
+                    "name": "Branches",
+                    "type": "webview"
+                },
+                {
+                    "id": "gitLeanGraphView",
+                    "name": "Graph",
+                    "type": "webview"
+                }
+            ]
+        },
+        "menus": {
+            "view/title": [
+                {
+                    "command": "git-wiz.pull",
+                    "when": "view == gitLeanBranchView",
+                    "group": "navigation@1"
+                },
+                {
+                    "command": "git-wiz.push",
+                    "when": "view == gitLeanBranchView",
+                    "group": "navigation@2"
+                },
+                {
+                    "command": "git-wiz.pushForce",
+                    "when": "view == gitLeanBranchView",
+                    "group": "navigation@3"
+                },
+                {
+                    "command": "git-wiz.refreshBranches",
+                    "when": "view == gitLeanBranchView",
+                    "group": "navigation@4"
+                }
+            ]
+        },
+        "commands": [
+            {
+                "command": "git-wiz.showGraph",
+                "title": "Git Wiz: Show Graph",
+                "category": "Git Wiz"
+            },
+            {
+                "command": "git-wiz.editCommitMessage",
+                "title": "Git Wiz: Edit Commit Message",
+                "category": "Git Wiz"
+            },
+            {
+                "command": "git-wiz.cherryPick",
+                "title": "Git Wiz: Cherry Pick",
+                "category": "Git Wiz"
+            },
+            {
+                "command": "git-wiz.copyHash",
+                "title": "Git Wiz: Copy Hash",
+                "category": "Git Wiz"
+            },
+            {
+                "command": "git-wiz.revertCommit",
+                "title": "Git Wiz: Revert Commit",
+                "category": "Git Wiz"
+            },
+            {
+                "command": "git-wiz.resetToCommit",
+                "title": "Git Wiz: Reset to Commit",
+                "category": "Git Wiz"
+            },
+            {
+                "command": "git-wiz.checkoutBranch",
+                "title": "Checkout Branch"
+            },
+            {
+                "command": "git-wiz.deleteBranch",
+                "title": "Delete Branch"
+            },
+            {
+                "command": "git-wiz.deleteRemoteBranch",
+                "title": "Delete Remote Branch"
+            },
+            {
+                "command": "git-wiz.pull",
+                "title": "Pull",
+                "icon": "$(arrow-down)"
+            },
+            {
+                "command": "git-wiz.push",
+                "title": "Push",
+                "icon": "$(arrow-up)"
+            },
+            {
+                "command": "git-wiz.pushForce",
+                "title": "Force Push",
+                "icon": "$(repo-force-push)"
+            },
+            {
+                "command": "git-wiz.refreshBranches",
+                "title": "Refresh Branches",
+                "icon": "$(refresh)"
+            },
+            {
+                "command": "git-wiz.createBranch",
+                "title": "Create New Branch Here"
+            },
+            {
+                "command": "git-wiz.rebaseBranch",
+                "title": "Rebase Current Branch onto This"
+            },
+            {
+                "command": "git-wiz.mergeBranch",
+                "title": "Merge Branch into Current"
+            },
+            {
+                "command": "git-wiz.deleteMultipleBranches",
+                "title": "Delete Multiple Branches"
+            }
+        ]
+    },
+    "packageManager": "pnpm@10.30.0",
+    "scripts": {
+        "vscode:prepublish": "pnpm run compile",
+        "compile": "tsc -p ./ && pnpm run bundle-webview",
+        "bundle-webview": "esbuild src/webview/index.tsx --bundle --outfile=out/webview/index.js --format=iife --target=es2020 --jsx=automatic --minify",
+        "watch": "tsc -watch -p ./",
+        "watch:webview": "esbuild src/webview/index.tsx --bundle --outfile=out/webview/index.js --format=iife --target=es2020 --jsx=automatic --watch",
+        "test": "vitest run",
+        "pretest": "pnpm run compile",
+        "lint": "eslint src",
+        "lint:fix": "eslint src --fix",
+        "format": "prettier --write src",
+        "format:check": "prettier --check src"
+    },
+    "devDependencies": {
+        "@types/node": "^25.5.0",
+        "@types/react": "^19.2.14",
+        "@types/react-dom": "^19.2.3",
+        "@types/vscode": "^1.75.0",
+        "esbuild": "^0.27.4",
+        "eslint": "^10.0.3",
+        "eslint-config-prettier": "^10.1.8",
+        "eslint-plugin-react-hooks": "^7.0.1",
+        "prettier": "^3.8.1",
+        "typescript": "^5.0.0",
+        "typescript-eslint": "^8.57.1",
+        "vitest": "^4.1.0"
+    },
+    "dependencies": {
+        "react": "^19.2.4",
+        "react-dom": "^19.2.4"
+    }
+}

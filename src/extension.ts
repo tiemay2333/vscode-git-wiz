@@ -1,0 +1,505 @@
+import * as vscode from 'vscode';
+import * as cp from 'child_process';
+import { GitGraphViewProvider } from './gitGraphView';
+import { BranchWebviewProvider } from './branchWebviewProvider';
+import { BranchTreeItem } from './branchTreeProvider';
+import { GitOperations } from './gitOperations';
+
+export function activate(context: vscode.ExtensionContext) {
+    const statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 0);
+    statusBarItem.text = '$(git-branch) Git Wiz';
+    statusBarItem.tooltip = 'Open Git Wiz';
+    statusBarItem.command = 'workbench.view.extension.git-wiz';
+    
+    const updateStatusBar = () => {
+        const config = vscode.workspace.getConfiguration();
+        if (config.get('git-wiz.showStatusBarItem', true)) {
+            statusBarItem.show();
+        } else {
+            statusBarItem.hide();
+        }
+    };
+    
+    updateStatusBar();
+    context.subscriptions.push(statusBarItem);
+    context.subscriptions.push(
+        vscode.workspace.onDidChangeConfiguration(e => {
+            if (e.affectsConfiguration('git-wiz.showStatusBarItem')) {
+                updateStatusBar();
+            }
+        })
+    );
+
+    const graphProvider = new GitGraphViewProvider(context.extensionUri);
+    const branchProvider = new BranchWebviewProvider(context.extensionUri);
+
+    const provider = new (class implements vscode.TextDocumentContentProvider {
+        async provideTextDocumentContent(uri: vscode.Uri): Promise<string> {
+            try {
+                const params = new URLSearchParams(uri.query);
+                const hash = params.get('hash');
+                if (!hash) {
+                    return '';
+                }
+                const ops = new GitOperations(() => {});
+                return await ops.getFileContentAtRev(hash, uri.path.substring(1));
+            } catch (err) {
+                return '';
+            }
+        }
+    })();
+    context.subscriptions.push(vscode.workspace.registerTextDocumentContentProvider('git-wiz', provider));
+
+    context.subscriptions.push(vscode.window.registerWebviewViewProvider(GitGraphViewProvider.viewType, graphProvider));
+    context.subscriptions.push(
+        vscode.window.registerWebviewViewProvider(BranchWebviewProvider.viewType, branchProvider),
+    );
+
+    branchProvider.onBranchSelected = (branch) => graphProvider.filterByBranch(branch);
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand('git-wiz.showGraph', () => {
+            GitGraphViewProvider.createOrShow(context.extensionUri);
+        }),
+    );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand('git-wiz.editCommitMessage', (commitHash: string) => {
+            graphProvider.editCommitMessage(commitHash);
+        }),
+    );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand('git-wiz.cherryPick', (commitHash: string) => {
+            graphProvider.cherryPickCommit(commitHash);
+        }),
+    );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand('git-wiz.copyHash', (commitHash: string) => {
+            graphProvider.copyCommitHash(commitHash);
+        }),
+    );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand('git-wiz.revertCommit', (commitHash: string) => {
+            graphProvider.revertCommit(commitHash);
+        }),
+    );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand('git-wiz.resetToCommit', (commitHash: string) => {
+            graphProvider.resetToCommit(commitHash);
+        }),
+    );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand('git-wiz.checkoutBranch', async (item: string | BranchTreeItem) => {
+            const branchName = typeof item === 'string' ? item : item.branchName;
+            if (!branchName) {
+                return;
+            }
+            const workspaceFolders = vscode.workspace.workspaceFolders;
+            if (!workspaceFolders) {
+                return;
+            }
+
+            const cwd = workspaceFolders[0].uri.fsPath;
+            cp.execFile('git', ['checkout', branchName], { cwd }, (error, _stdout, _stderr) => {
+                if (error) {
+                    vscode.window.showErrorMessage(`Failed to checkout branch: ${error.message}`);
+                    return;
+                }
+                vscode.window.showInformationMessage(`Switched to branch '${branchName}'`);
+                branchProvider.refresh();
+            });
+        }),
+    );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand('git-wiz.checkoutRemoteBranch', async (item: string | BranchTreeItem) => {
+            const branchName = typeof item === 'string' ? item : item.branchName;
+            if (!branchName) return;
+            const workspaceFolders = vscode.workspace.workspaceFolders;
+            if (!workspaceFolders) return;
+
+            const cwd = workspaceFolders[0].uri.fsPath;
+            const parts = branchName.split('/');
+            if (parts.length < 2) return;
+            
+            const remote = parts[0];
+            const localBranchName = parts.slice(1).join('/');
+
+            vscode.window.withProgress({
+                location: vscode.ProgressLocation.Notification,
+                title: `Fetching ${remote} and tracking ${branchName}...`,
+                cancellable: false
+            }, () => {
+                return new Promise<void>((resolve) => {
+                    cp.execFile('git', ['fetch', remote], { cwd }, (fetchError) => {
+                        if (fetchError) {
+                            vscode.window.showErrorMessage(`Failed to fetch remote '${remote}': ${fetchError.message}`);
+                            resolve();
+                            return;
+                        }
+
+                        // Try to checkout and track
+                        cp.execFile('git', ['checkout', '-t', branchName], { cwd }, (checkoutError) => {
+                            if (checkoutError) {
+                                // If local branch exists, it fails. We fallback to just checking it out
+                                cp.execFile('git', ['checkout', localBranchName], { cwd }, (fallbackError) => {
+                                    if (fallbackError) {
+                                        vscode.window.showErrorMessage(`Failed to checkout remote branch: ${checkoutError.message}`);
+                                    } else {
+                                        vscode.window.showInformationMessage(`Switched to existing branch '${localBranchName}'`);
+                                        branchProvider.refresh();
+                                    }
+                                    resolve();
+                                });
+                                return;
+                            }
+                            
+                            vscode.window.showInformationMessage(`Checked out and tracking '${branchName}'`);
+                            branchProvider.refresh();
+                            resolve();
+                        });
+                    });
+                });
+            });
+        }),
+    );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand('git-wiz.deleteBranch', async (branchTreeItem: BranchTreeItem) => {
+            const branchName = branchTreeItem.branchName;
+            if (!branchName) {
+                return;
+            }
+            const confirm = await vscode.window.showWarningMessage(
+                `Are you sure you want to delete branch '${branchName}'?`,
+                'Yes',
+                'No',
+            );
+
+            if (confirm !== 'Yes') {
+                return;
+            }
+
+            const workspaceFolders = vscode.workspace.workspaceFolders;
+            if (!workspaceFolders) {
+                return;
+            }
+
+            const cwd = workspaceFolders[0].uri.fsPath;
+            cp.execFile('git', ['branch', '-d', branchName], { cwd }, async (error, _stdout, stderr) => {
+                if (error) {
+                    if (stderr.includes('not fully merged')) {
+                        const forceConfirm = await vscode.window.showWarningMessage(
+                            `Branch '${branchName}' is not fully merged. Force delete anyway?`,
+                            'Force Delete',
+                            'Cancel',
+                        );
+                        if (forceConfirm !== 'Force Delete') {
+                            return;
+                        }
+                        cp.execFile('git', ['branch', '-D', branchName], { cwd }, (err2, _stdout2, stderr2) => {
+                            if (err2) {
+                                vscode.window.showErrorMessage(`Failed to delete branch: ${err2.message}\n${stderr2}`);
+                                return;
+                            }
+                            vscode.window.showInformationMessage(`Deleted branch '${branchName}'`);
+                            branchProvider.refresh();
+                        });
+                        return;
+                    }
+                    vscode.window.showErrorMessage(`Failed to delete branch: ${error.message}\n${stderr}`);
+                    return;
+                }
+                vscode.window.showInformationMessage(`Deleted branch '${branchName}'`);
+                branchProvider.refresh();
+            });
+        }),
+    );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand('git-wiz.deleteRemoteBranch', async (branchTreeItem: any) => {
+            const fullName = branchTreeItem.branchName;
+            if (!fullName) {
+                return;
+            }
+
+            const firstSlash = fullName.indexOf('/');
+            if (firstSlash === -1) {
+                vscode.window.showErrorMessage(`Invalid remote branch name: ${fullName}`);
+                return;
+            }
+
+            const remote = fullName.substring(0, firstSlash);
+            const branch = fullName.substring(firstSlash + 1);
+
+            const confirm = await vscode.window.showWarningMessage(
+                `Are you sure you want to delete remote branch '${branch}' from '${remote}'?`,
+                { modal: true },
+                'Delete Remote Branch',
+            );
+
+            if (confirm !== 'Delete Remote Branch') {
+                return;
+            }
+
+            const workspaceFolders = vscode.workspace.workspaceFolders;
+            if (!workspaceFolders) {
+                return;
+            }
+
+            const cwd = workspaceFolders[0].uri.fsPath;
+            cp.execFile('git', ['push', remote, '--delete', branch], { cwd }, (error, _stdout, stderr) => {
+                if (error) {
+                    vscode.window.showErrorMessage(`Failed to delete remote branch: ${stderr || error.message}`);
+                    return;
+                }
+                vscode.window.showInformationMessage(`Deleted remote branch '${branch}' from '${remote}'`);
+                branchProvider.refresh();
+            });
+        }),
+    );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand('git-wiz.refreshBranches', () => {
+            branchProvider.refresh();
+        }),
+    );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand('git-wiz.pull', () => {
+            const cwd = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+            if (!cwd) {
+                return;
+            }
+            cp.execFile('git', ['pull'], { cwd }, (error, _stdout, stderr) => {
+                if (error) {
+                    vscode.window.showErrorMessage(`Pull failed: ${stderr || error.message}`);
+                    return;
+                }
+                vscode.window.showInformationMessage('Pull successful');
+                branchProvider.refresh();
+            });
+        }),
+    );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand('git-wiz.push', () => {
+            const cwd = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+            if (!cwd) {
+                return;
+            }
+            cp.execFile('git', ['push'], { cwd }, (error, _stdout, stderr) => {
+                if (error) {
+                    vscode.window.showErrorMessage(`Push failed: ${stderr || error.message}`);
+                    return;
+                }
+                vscode.window.showInformationMessage('Push successful');
+                branchProvider.refresh();
+            });
+        }),
+    );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand('git-wiz.pushForce', async () => {
+            const confirm = await vscode.window.showWarningMessage(
+                'Force push will overwrite remote history. Are you sure?',
+                'Force Push',
+                'Cancel',
+            );
+            if (confirm !== 'Force Push') {
+                return;
+            }
+            const cwd = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+            if (!cwd) {
+                return;
+            }
+            cp.execFile('git', ['push', '--force-with-lease'], { cwd }, (error, _stdout, stderr) => {
+                if (error) {
+                    vscode.window.showErrorMessage(`Force push failed: ${stderr || error.message}`);
+                    return;
+                }
+                vscode.window.showInformationMessage('Force push successful');
+                branchProvider.refresh();
+            });
+        }),
+    );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand('git-wiz.rebaseBranch', async (branchTreeItem: BranchTreeItem) => {
+            const targetBranch = branchTreeItem.branchName;
+            if (!targetBranch) {
+                return;
+            }
+            const workspaceFolders = vscode.workspace.workspaceFolders;
+            if (!workspaceFolders) {
+                return;
+            }
+            const cwd = workspaceFolders[0].uri.fsPath;
+
+            cp.execFile('git', ['rebase', targetBranch], { cwd }, (error, _stdout, stderr) => {
+                if (error) {
+                    cp.execFile('git', ['rebase', '--abort'], { cwd }, () => {});
+                    vscode.window.showErrorMessage(`Rebase failed: ${stderr || error.message}`);
+                    return;
+                }
+                vscode.window.showInformationMessage(`Rebased onto '${targetBranch}' successfully`);
+                branchProvider.refresh();
+            });
+        }),
+    );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand('git-wiz.mergeBranch', async (branchTreeItem: BranchTreeItem) => {
+            const sourceBranch = branchTreeItem.branchName;
+            if (!sourceBranch) {
+                return;
+            }
+            const workspaceFolders = vscode.workspace.workspaceFolders;
+            if (!workspaceFolders) {
+                return;
+            }
+            const cwd = workspaceFolders[0].uri.fsPath;
+
+            cp.execFile('git', ['merge', sourceBranch], { cwd }, (error, _stdout, stderr) => {
+                if (error) {
+                    vscode.window.showErrorMessage(`Merge failed: ${stderr || error.message}`);
+                    return;
+                }
+                vscode.window.showInformationMessage(`Merged '${sourceBranch}' successfully`);
+                branchProvider.refresh();
+            });
+        }),
+    );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand('git-wiz.deleteMultipleBranches', async (branchNames: string[]) => {
+            if (!branchNames || branchNames.length === 0) {
+                return;
+            }
+            const workspaceFolders = vscode.workspace.workspaceFolders;
+            if (!workspaceFolders) {
+                return;
+            }
+            const cwd = workspaceFolders[0].uri.fsPath;
+
+            const label = branchNames.length === 1 ? `branch '${branchNames[0]}'` : `${branchNames.length} branches`;
+            const confirm = await vscode.window.showWarningMessage(
+                `Delete ${label}?`,
+                { detail: branchNames.join(', ') },
+                'Yes',
+                'No',
+            );
+            if (confirm !== 'Yes') {
+                return;
+            }
+
+            const tryDelete = (
+                name: string,
+                force: boolean,
+            ): Promise<{ name: string; notMerged: boolean; error?: string }> =>
+                new Promise((resolve) => {
+                    cp.execFile('git', ['branch', force ? '-D' : '-d', name], { cwd }, (err, _stdout, stderr) => {
+                        if (err) {
+                            if (!force && stderr.includes('not fully merged')) {
+                                resolve({ name, notMerged: true });
+                            } else {
+                                resolve({ name, notMerged: false, error: stderr || err.message });
+                            }
+                        } else {
+                            resolve({ name, notMerged: false });
+                        }
+                    });
+                });
+
+            const results = await Promise.all(branchNames.map((name) => tryDelete(name, false)));
+            const notMerged = results.filter((r) => r.notMerged).map((r) => r.name);
+            const failed = results.filter((r) => !r.notMerged && r.error);
+            const deletedCount = results.filter((r) => !r.notMerged && !r.error).length;
+
+            if (failed.length > 0) {
+                vscode.window.showErrorMessage(`Failed to delete: ${failed.map((r) => r.name).join(', ')}`);
+            }
+
+            if (notMerged.length > 0) {
+                const notMergedLabel =
+                    notMerged.length === 1 ? `Branch '${notMerged[0]}' is` : `${notMerged.length} branches are`;
+                const forceConfirm = await vscode.window.showWarningMessage(
+                    `${notMergedLabel} not fully merged. Force delete?`,
+                    { detail: notMerged.join(', ') },
+                    'Force Delete',
+                    'Cancel',
+                );
+                if (forceConfirm === 'Force Delete') {
+                    const forceResults = await Promise.all(notMerged.map((name) => tryDelete(name, true)));
+                    const forceDeleted = forceResults.filter((r) => !r.error).length;
+                    const forceFailed = forceResults.filter((r) => r.error);
+                    if (forceFailed.length > 0) {
+                        vscode.window.showErrorMessage(
+                            `Failed to force delete: ${forceFailed.map((r) => r.name).join(', ')}`,
+                        );
+                    }
+                    const total = deletedCount + forceDeleted;
+                    if (total > 0) {
+                        vscode.window.showInformationMessage(`Deleted ${total} branch${total > 1 ? 'es' : ''}`);
+                    }
+                } else if (deletedCount > 0) {
+                    vscode.window.showInformationMessage(
+                        `Deleted ${deletedCount} branch${deletedCount > 1 ? 'es' : ''}`,
+                    );
+                }
+            } else if (deletedCount > 0) {
+                vscode.window.showInformationMessage(`Deleted ${deletedCount} branch${deletedCount > 1 ? 'es' : ''}`);
+            }
+
+            branchProvider.refresh();
+        }),
+    );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand('git-wiz.createBranch', async (branchTreeItem: BranchTreeItem) => {
+            const sourceBranch = branchTreeItem.branchName;
+            if (!sourceBranch) {
+                return;
+            }
+            const newBranchName = await vscode.window.showInputBox({
+                prompt: `Create new branch from '${sourceBranch}'`,
+                placeHolder: 'New branch name',
+                validateInput: (value) => {
+                    if (!value || !value.trim()) {
+                        return 'Branch name cannot be empty';
+                    }
+                    if (/[\s~^:?*\[\\]|\.\./.test(value)) {
+                        return 'Invalid branch name';
+                    }
+                    return null;
+                },
+            });
+
+            if (!newBranchName) {
+                return;
+            }
+
+            const workspaceFolders = vscode.workspace.workspaceFolders;
+            if (!workspaceFolders) {
+                return;
+            }
+
+            const cwd = workspaceFolders[0].uri.fsPath;
+            cp.execFile('git', ['checkout', '-b', newBranchName, sourceBranch], { cwd }, (error, _stdout, stderr) => {
+                if (error) {
+                    vscode.window.showErrorMessage(`Failed to create branch: ${stderr || error.message}`);
+                    return;
+                }
+                vscode.window.showInformationMessage(`Created and switched to branch '${newBranchName}'`);
+                branchProvider.refresh();
+            });
+        }),
+    );
+}
+
+export function deactivate() {}

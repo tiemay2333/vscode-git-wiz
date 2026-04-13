@@ -1,0 +1,12 @@
+.vscode/**
+.vscode-test/**
+src/**
+.claude/**
+.gitignore
+tsconfig.json
+*.vsix
+node_modules/**
+out/**/*.map
+images/icon.svg
+images/icon-preview.html
+media/**
