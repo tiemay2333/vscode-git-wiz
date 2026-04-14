@@ -8,7 +8,7 @@ describe('parseGitLogOutput', () => {
     });
 
     it('parses a single commit with no refs', () => {
-        const line = 'abc123def456|abc123|parent111|Jane Doe|2024-01-15 10:30:00 +0000||1700000|Fix bug in parser';
+        const line = 'abc123def456|abc123|parent111|Jane Doe|jane@doe.com|2024-01-15 10:30:00 +0000||1700000|Fix bug in parser';
         const [commit] = parseGitLogOutput(line);
 
         expect(commit.hash).toBe('abc123def456');
@@ -20,21 +20,21 @@ describe('parseGitLogOutput', () => {
     });
 
     it('parses a commit with HEAD and branch refs', () => {
-        const line = 'abc123|abc|parent1|Alice|2024-01-15 10:00:00 +0000|HEAD -> main, origin/main|171000|Initial commit';
+        const line = 'abc123|abc|parent1|Alice|alice@example.com|2024-01-15 10:00:00 +0000|HEAD -> main, origin/main|171000|Initial commit';
         const [commit] = parseGitLogOutput(line);
 
         expect(commit.refs).toEqual(['HEAD -> main', 'origin/main']);
     });
 
     it('parses a merge commit with multiple parents', () => {
-        const line = 'merge111|mer111|parent1 parent2|Bob|2024-01-15 12:00:00 +0000||171000|Merge feature into main';
+        const line = 'merge111|mer111|parent1 parent2|Bob|bob@example.com|2024-01-15 12:00:00 +0000||171000|Merge feature into main';
         const [commit] = parseGitLogOutput(line);
 
         expect(commit.parents).toEqual(['parent1', 'parent2']);
     });
 
     it('parses a commit message containing pipe characters', () => {
-        const line = 'abc123|abc|parent1|Carol|2024-01-15 09:00:00 +0000||171000|feat: add a|b|c support';
+        const line = 'abc123|abc|parent1|Carol|carol@example.com|2024-01-15 09:00:00 +0000||171000|feat: add a|b|c support';
         const [commit] = parseGitLogOutput(line);
 
         expect(commit.message).toBe('feat: add a|b|c support');
@@ -42,8 +42,8 @@ describe('parseGitLogOutput', () => {
 
     it('parses multiple commits', () => {
         const input = [
-            'hash1|sh1|par1|Alice|2024-01-15 10:00:00 +0000|HEAD -> main|171000|First commit',
-            'hash2|sh2|par2|Bob|2024-01-14 09:00:00 +0000||171000|Second commit',
+            'hash1|sh1|par1|Alice|alice@example.com|2024-01-15 10:00:00 +0000|HEAD -> main|171000|First commit',
+            'hash2|sh2|par2|Bob|bob@example.com|2024-01-14 09:00:00 +0000||171000|Second commit',
         ].join('\n');
 
         const commits = parseGitLogOutput(input);
@@ -53,14 +53,14 @@ describe('parseGitLogOutput', () => {
     });
 
     it('parses a root commit with no parent', () => {
-        const line = 'root111|root11||Alice|2024-01-01 00:00:00 +0000||171000|Initial commit';
+        const line = 'root111|root11||Alice|alice@example.com|2024-01-01 00:00:00 +0000||171000|Initial commit';
         const [commit] = parseGitLogOutput(line);
 
         expect(commit.parents).toEqual([]);
     });
 
     it('trims whitespace from hash, author, and message', () => {
-        const line = ' abc123 | abc | par1 | Alice Smith | 2024-01-15 10:00:00 +0000 | | 171000 | Fix thing ';
+        const line = ' abc123 | abc | par1 | Alice Smith | alice@smith.com | 2024-01-15 10:00:00 +0000 | | 171000 | Fix thing ';
         const [commit] = parseGitLogOutput(line);
 
         expect(commit.hash).toBe('abc123');
@@ -69,7 +69,7 @@ describe('parseGitLogOutput', () => {
     });
 
     it('parses tag refs correctly', () => {
-        const line = 'abc123|abc|par1|Alice|2024-01-15 10:00:00 +0000|tag: v1.0.0, HEAD -> main|171000|Release';
+        const line = 'abc123|abc|par1|Alice|alice@example.com|2024-01-15 10:00:00 +0000|tag: v1.0.0, HEAD -> main|171000|Release';
         const [commit] = parseGitLogOutput(line);
 
         expect(commit.refs).toEqual(['tag: v1.0.0', 'HEAD -> main']);
