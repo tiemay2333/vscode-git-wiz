@@ -177,6 +177,7 @@ interface RangeMenu {
     x: number;
     y: number;
     sortedIndices: number[];
+    hashes: string[];
     consecutive: boolean;
 }
 
@@ -313,20 +314,62 @@ export function GraphView({ commits: initialCommits, hasMore: initialHasMore, cu
     );
 
     const headCommitHash = useMemo(() => {
-        // Find the commit that HEAD points to (directly or via current branch)
-        const headRef = currentBranch ? `HEAD -> ${currentBranch}` : 'HEAD';
-        const commit = commits.find((c) => c.refs.some((r) => r.startsWith('HEAD -> ') || r === 'HEAD' || (currentBranch && r === currentBranch)));
-        return (commit ?? commits[0])?.hash;
-    }, [commits, currentBranch]);
+        if (!commits.length) return undefined;
 
-    const isOnHeadBranch = useMemo(() => {
-        // If we're filtering by a branch, it's the "head" branch only if it's the current branch
-        if (filterBranch) {
-            return filterBranch === currentBranch;
+        // 1. Prioritize commit with HEAD pointing to current branch
+        if (currentBranch) {
+            const headOnBranch = commits.find((c) =>
+                c.refs.some((r) => r === `HEAD -> ${currentBranch}` || r === `refs/heads/${currentBranch}`)
+            );
+            if (headOnBranch) return headOnBranch.hash;
         }
-        // If not filtering, we're in "All Branches" mode, where we can always see the HEAD
-        return true;
-    }, [filterBranch, currentBranch]);
+
+        // 2. Look for any HEAD (detached or otherwise)
+        const anyHead = commits.find((c) =>
+            c.refs.some((r) => r.startsWith('HEAD -> ') || r === 'HEAD')
+        );
+        if (anyHead) return anyHead.hash;
+
+        // 3. Look for current branch ref name
+        if (currentBranch) {
+            const branchRef = commits.find((c) =>
+                c.refs.some((r) => r === currentBranch || r.endsWith(`/${currentBranch}`))
+            );
+            if (branchRef) return branchRef.hash;
+        }
+
+        // 4. Fallback if strictly filtering by current branch
+        if (filterBranch && filterBranch === currentBranch) {
+            return commits[0]?.hash;
+        }
+
+        return undefined;
+    }, [commits, currentBranch, filterBranch]);
+
+    const headCommitAncestors = useMemo(() => {
+        const result = new Set<string>();
+        if (!headCommitHash || !commits.length) return result;
+
+        const queue = [headCommitHash];
+        const parentMap = new Map<string, string[]>();
+        for (const c of commits) {
+            parentMap.set(c.hash, c.parents);
+        }
+
+        while (queue.length > 0) {
+            const current = queue.shift()!;
+            if (result.has(current)) continue;
+            result.add(current);
+
+            const parents = parentMap.get(current);
+            if (parents) {
+                for (const p of parents) {
+                    if (!result.has(p)) queue.push(p);
+                }
+            }
+        }
+        return result;
+    }, [commits, headCommitHash]);
 
     const handleLoadMore = () => {
         if (!hasMore || isLoadingMore) return;
@@ -386,10 +429,12 @@ export function GraphView({ commits: initialCommits, hasMore: initialHasMore, cu
 
             if (selectedIndices.size > 1 && selectedIndices.has(index)) {
                 const sortedIndices = Array.from(selectedIndices).sort((a, b) => a - b);
+                const hashes = sortedIndices.map((i) => filteredCommits[i].hash);
                 setRangeMenu({
                     x: e.clientX,
                     y: e.clientY,
                     sortedIndices,
+                    hashes,
                     consecutive: areCommitsConsecutive(filteredCommits, sortedIndices),
                 });
                 setSingleMenu(null);
@@ -694,27 +739,25 @@ export function GraphView({ commits: initialCommits, hasMore: initialHasMore, cu
                         style={{ display: 'block', left: singleMenu.x, top: singleMenu.y }}
                         onClick={(e) => e.stopPropagation()}
                     >
-                        {isOnHeadBranch && singleMenu.hash === headCommitHash && (
+                        {headCommitAncestors.has(singleMenu.hash) && singleMenu.hash === headCommitHash && (
                             <div className="context-menu-item" onClick={() => handleSingleAction('amendCommit')}>
                                 Amend Commit
                             </div>
                         )}
-                        {isOnHeadBranch && (
+                        {headCommitAncestors.has(singleMenu.hash) && (
                             <div className="context-menu-item" onClick={() => handleSingleAction('editCommitMessage')}>
                                 Edit Commit Message
                             </div>
                         )}
-                        {!isOnHeadBranch && (
-                            <div className="context-menu-item" onClick={() => handleSingleAction('cherryPick')}>
-                                Cherry-pick to current branch
-                            </div>
-                        )}
+                        <div className="context-menu-item" onClick={() => handleSingleAction('cherryPick')}>
+                            Cherry-pick to current branch
+                        </div>
                         <div className="context-menu-separator" />
                         <div className="context-menu-item" onClick={() => handleSingleAction('copyHash')}>
                             Copy Hash
                         </div>
                         <div className="context-menu-separator" />
-                        {isOnHeadBranch && (
+                        {headCommitAncestors.has(singleMenu.hash) && (
                             <div className="context-menu-item" onClick={() => handleSingleAction('revertCommit')}>
                                 Revert Commit
                             </div>
@@ -722,7 +765,7 @@ export function GraphView({ commits: initialCommits, hasMore: initialHasMore, cu
                         <div className="context-menu-item" onClick={() => handleSingleAction('resetToCommit')}>
                             Reset to Commit
                         </div>
-                        {isOnHeadBranch && (
+                        {headCommitAncestors.has(singleMenu.hash) && (
                             <div
                                 className="context-menu-item context-menu-item--danger"
                                 onClick={() => handleSingleAction('dropCommit')}
@@ -749,7 +792,7 @@ export function GraphView({ commits: initialCommits, hasMore: initialHasMore, cu
                         style={{ display: 'block', left: rangeMenu.x, top: rangeMenu.y }}
                         onClick={(e) => e.stopPropagation()}
                     >
-                        {isOnHeadBranch && rangeMenu.consecutive && (
+                        {rangeMenu.consecutive && rangeMenu.hashes.every(h => headCommitAncestors.has(h)) && (
                             <>
                                 <div className="context-menu-item" onClick={() => handleRangeAction('squashCommits')}>
                                     Squash Commits
@@ -757,17 +800,15 @@ export function GraphView({ commits: initialCommits, hasMore: initialHasMore, cu
                                 <div className="context-menu-separator" />
                             </>
                         )}
-                        {!isOnHeadBranch && (
-                            <div className="context-menu-item" onClick={() => handleRangeAction('cherryPickRange')}>
-                                Cherry-pick Commits
-                            </div>
-                        )}
-                        {isOnHeadBranch && (
+                        <div className="context-menu-item" onClick={() => handleRangeAction('cherryPickRange')}>
+                            Cherry-pick Commits
+                        </div>
+                        {rangeMenu.hashes.every(h => headCommitAncestors.has(h)) && (
                             <div className="context-menu-item" onClick={() => handleRangeAction('revertCommits')}>
                                 Revert Commits
                             </div>
                         )}
-                        {isOnHeadBranch && rangeMenu.consecutive && (
+                        {rangeMenu.consecutive && rangeMenu.hashes.every(h => headCommitAncestors.has(h)) && (
                             <>
                                 <div className="context-menu-separator" />
                                 <div

@@ -25,6 +25,7 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider {
     private readonly _gitOps: GitOperations;
     private _refreshTimer?: ReturnType<typeof setTimeout>;
     private _initialized = false;
+    private _isFirstLoad = true;
 
     constructor(private readonly _extensionUri: vscode.Uri) {
         this._gitOps = new GitOperations(() => this.refresh());
@@ -260,8 +261,14 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider {
     private async updateWebview(webview: vscode.Webview) {
         this._initialized = false;
         this._loadedCount = 0;
-        const commits = await this._gitOps.getGitLog(this._filterBranch, 0, PAGE_SIZE, this._searchFilters);
         const currentBranch = await this._gitOps.getCurrentBranch();
+
+        if (this._isFirstLoad) {
+            this._filterBranch = currentBranch;
+            this._isFirstLoad = false;
+        }
+
+        const commits = await this._gitOps.getGitLog(this._filterBranch, 0, PAGE_SIZE, this._searchFilters);
         
         this.updateViewTitle(currentBranch);
 

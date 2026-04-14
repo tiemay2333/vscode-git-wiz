@@ -371,7 +371,9 @@ function TreeNodes({
 export function BranchPanel({ branches: initialBranches }: Props) {
     const [branches, setBranches] = useState(initialBranches);
     const [query, setQuery] = useState('');
-    const [selected, setSelected] = useState<string | null>(null);
+    const [selected, setSelected] = useState<string | null>(
+        initialBranches.find((b) => b.isCurrent)?.fullName || null
+    );
     const [multiSelected, setMultiSelected] = useState<Set<string>>(new Set());
     const [rangeAnchor, setRangeAnchor] = useState<string | null>(null);
     const [ctxMenu, setCtxMenu] = useState<CtxMenu | null>(null);
