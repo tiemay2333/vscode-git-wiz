@@ -486,6 +486,51 @@ fs.writeFileSync(process.argv[2], ${JSON.stringify(newMessage + '\n')});
         });
     }
 
+    async mergeBranch(sourceBranch: string) {
+        const cwd = this.getCwd();
+        if (!cwd) return;
+
+        cp.execFile('git', ['merge', sourceBranch], { cwd }, (error, _stdout, stderr) => {
+            if (error) {
+                const message = stderr || error.message;
+                const isConflict = message.includes('CONFLICT') || message.includes('Conflict');
+                if (isConflict) {
+                    vscode.window.showErrorMessage(`Merge failed with conflicts: ${message}`, 'Abort Merge', 'Close')
+                        .then(choice => {
+                            if (choice === 'Abort Merge') {
+                                cp.execFile('git', ['merge', '--abort'], { cwd }, () => {
+                                    vscode.window.showInformationMessage('Merge aborted');
+                                    this.onRefresh();
+                                });
+                            }
+                        });
+                } else {
+                    vscode.window.showErrorMessage(`Merge failed: ${message}`);
+                }
+            } else {
+                vscode.window.showInformationMessage(`Merged '${sourceBranch}' successfully`);
+            }
+            this.onRefresh();
+        });
+    }
+
+    async rebaseBranch(targetBranch: string) {
+        const cwd = this.getCwd();
+        if (!cwd) return;
+
+        cp.execFile('git', ['rebase', targetBranch], { cwd }, (error, _stdout, stderr) => {
+            if (error) {
+                cp.execFile('git', ['rebase', '--abort'], { cwd }, () => {
+                    vscode.window.showErrorMessage(`Rebase failed: ${stderr || error.message}. Rebase aborted.`);
+                    this.onRefresh();
+                });
+            } else {
+                vscode.window.showInformationMessage(`Rebased onto '${targetBranch}' successfully`);
+                this.onRefresh();
+            }
+        });
+    }
+
     async createBranch(branchName: string, startPoint: string) {
         const cwd = this.getCwd();
         if (!cwd) return;

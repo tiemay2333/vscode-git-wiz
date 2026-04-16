@@ -33,6 +33,11 @@ export function activate(context: vscode.ExtensionContext) {
     const graphProvider = new GitGraphViewProvider(context.extensionUri);
     const branchProvider = new BranchWebviewProvider(context.extensionUri);
 
+    const gitOps = new GitOperations(() => {
+        branchProvider.refresh();
+        graphProvider.refresh();
+    });
+
     const provider = new (class implements vscode.TextDocumentContentProvider {
         async provideTextDocumentContent(uri: vscode.Uri): Promise<string> {
             try {
@@ -332,47 +337,18 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(
         vscode.commands.registerCommand('git-wiz.rebaseBranch', async (branchTreeItem: BranchTreeItem) => {
             const targetBranch = branchTreeItem.branchName;
-            if (!targetBranch) {
-                return;
+            if (targetBranch) {
+                await gitOps.rebaseBranch(targetBranch);
             }
-            const workspaceFolders = vscode.workspace.workspaceFolders;
-            if (!workspaceFolders) {
-                return;
-            }
-            const cwd = workspaceFolders[0].uri.fsPath;
-
-            cp.execFile('git', ['rebase', targetBranch], { cwd }, (error, _stdout, stderr) => {
-                if (error) {
-                    cp.execFile('git', ['rebase', '--abort'], { cwd }, () => {});
-                    vscode.window.showErrorMessage(`Rebase failed: ${stderr || error.message}`);
-                    return;
-                }
-                vscode.window.showInformationMessage(`Rebased onto '${targetBranch}' successfully`);
-                branchProvider.refresh();
-            });
         }),
     );
 
     context.subscriptions.push(
         vscode.commands.registerCommand('git-wiz.mergeBranch', async (branchTreeItem: BranchTreeItem) => {
             const sourceBranch = branchTreeItem.branchName;
-            if (!sourceBranch) {
-                return;
+            if (sourceBranch) {
+                await gitOps.mergeBranch(sourceBranch);
             }
-            const workspaceFolders = vscode.workspace.workspaceFolders;
-            if (!workspaceFolders) {
-                return;
-            }
-            const cwd = workspaceFolders[0].uri.fsPath;
-
-            cp.execFile('git', ['merge', sourceBranch], { cwd }, (error, _stdout, stderr) => {
-                if (error) {
-                    vscode.window.showErrorMessage(`Merge failed: ${stderr || error.message}`);
-                    return;
-                }
-                vscode.window.showInformationMessage(`Merged '${sourceBranch}' successfully`);
-                branchProvider.refresh();
-            });
         }),
     );
 

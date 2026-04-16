@@ -193,7 +193,7 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider {
         }
     }
 
-    private async refresh(resetScroll: boolean = false) {
+    public async refresh(resetScroll: boolean = false) {
         if (!this._initialized) {
             return;
         }
