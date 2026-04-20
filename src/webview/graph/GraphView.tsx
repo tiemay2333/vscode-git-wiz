@@ -167,6 +167,51 @@ const FileTree = ({
     );
 };
 
+const FileList = ({
+    files,
+    onOpenDiff,
+    onOpenFile,
+}: {
+    files: { status: string; path: string; insertions?: number; deletions?: number }[];
+    onOpenDiff: (path: string) => void;
+    onOpenFile: (path: string) => void;
+}) => {
+    return (
+        <div className="file-list">
+            {files
+                .sort((a, b) => a.path.localeCompare(b.path))
+                .map((file) => (
+                    <div
+                        key={file.path}
+                        className="file-list-item"
+                        onClick={() => onOpenDiff(file.path)}
+                    >
+                        <div className="file-list-file">
+                            <span className={`file-status file-status-${file.status?.toLowerCase()}`}>{file.status}</span>
+                            <span className={`file-name file-name-${file.status?.toLowerCase()}`}>{file.path}</span>
+                            {(file.insertions! > 0 || file.deletions! > 0) && (
+                                <span className="file-stats">
+                                    {file.insertions! > 0 && <span className="stat-added">+{file.insertions}</span>}
+                                    {file.deletions! > 0 && <span className="stat-removed">-{file.deletions}</span>}
+                                </span>
+                            )}
+                            <span
+                                className="open-file-btn"
+                                title="Open locally"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    onOpenFile(file.path);
+                                }}
+                            >
+                                ↗
+                            </span>
+                        </div>
+                    </div>
+                ))}
+        </div>
+    );
+};
+
 interface SingleMenu {
     x: number;
     y: number;
@@ -194,6 +239,7 @@ export function GraphView({ commits: initialCommits, hasMore: initialHasMore, cu
     const [hasMore, setHasMore] = useState(initialHasMore);
     const [currentBranch, setCurrentBranch] = useState(initialCurrentBranch);
     const [isLoadingMore, setIsLoadingMore] = useState(false);
+    const [filesViewMode, setFilesViewMode] = useState<'tree' | 'list'>((window as any).__FILES_VIEW_MODE__ || 'list');
     
     const [searchQuery, setSearchQuery] = useState('');
     const [searchAuthor, setSearchAuthor] = useState('');
@@ -477,6 +523,11 @@ export function GraphView({ commits: initialCommits, hasMore: initialHasMore, cu
         [rangeMenu, filteredCommits, closeMenus],
     );
 
+    const handleFilesViewModeChange = (mode: 'tree' | 'list') => {
+        setFilesViewMode(mode);
+        vscode.postMessage({ command: 'saveFilesViewMode', mode });
+    };
+
     const handleEditConfirm = useCallback(
         (hash: string, newMessage: string) => {
             setEditingHash(null);
@@ -681,9 +732,31 @@ export function GraphView({ commits: initialCommits, hasMore: initialHasMore, cu
                                                 <td colSpan={5}>
                                                     <div className="inline-files-container">
                                                         <div className="inline-files-header">
-                                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                                                <span className="inline-files-title">Files modified in {commit.shortHash} - {commit.message}</span>
-                                                                <span style={{ fontSize: '11px', opacity: 0.8, color: 'var(--vscode-descriptionForeground)' }}>{commit.author} &lt;{commit.email}&gt;</span>
+                                                            <div style={{ display: 'flex', alignItems: 'center', flex: 1, minWidth: 0 }}>
+                                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1, minWidth: 0 }}>
+                                                                    <span className="inline-files-title">Files modified in {commit.shortHash} - {commit.message}</span>
+                                                                    <span style={{ fontSize: '11px', opacity: 0.8, color: 'var(--vscode-descriptionForeground)' }}>{commit.author} &lt;{commit.email}&gt;</span>
+                                                                </div>
+                                                                <div className="view-toggle">
+                                                                    <button 
+                                                                        className={`toggle-btn ${filesViewMode === 'list' ? 'active' : ''}`}
+                                                                        onClick={() => handleFilesViewModeChange('list')}
+                                                                        title="List View"
+                                                                    >
+                                                                        <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+                                                                            <path fillRule="evenodd" clipRule="evenodd" d="M2 3h12v1H2V3zm0 4h12v1H2V7zm12 4H2v1h12v-1z"/>
+                                                                        </svg>
+                                                                    </button>
+                                                                    <button 
+                                                                        className={`toggle-btn ${filesViewMode === 'tree' ? 'active' : ''}`}
+                                                                        onClick={() => handleFilesViewModeChange('tree')}
+                                                                        title="Tree View"
+                                                                    >
+                                                                        <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+                                                                            <path fillRule="evenodd" clipRule="evenodd" d="M1 2v3h1V2h12v12h-3v1h4V1H1v1zm12 12V5H5v9h8zm-1-1H6V6h6v7zM1 9h3V6H1v3zm1 4h3v-3H1v3z"/>
+                                                                        </svg>
+                                                                    </button>
+                                                                </div>
                                                             </div>
                                                             <button 
                                                                 className="close-pane-btn" 
@@ -695,11 +768,19 @@ export function GraphView({ commits: initialCommits, hasMore: initialHasMore, cu
                                                         <div className="inline-files-content">
                                                         {files ? (
                                                             files.length > 0 ? (
-                                                                <FileTree 
-                                                                    files={files} 
-                                                                    onOpenDiff={(path) => vscode.postMessage({ command: 'openDiff', commitHash: commit.hash, filePath: path })}
-                                                                    onOpenFile={(path) => vscode.postMessage({ command: 'openFile', filePath: path })}
-                                                                />
+                                                                filesViewMode === 'tree' ? (
+                                                                    <FileTree 
+                                                                        files={files} 
+                                                                        onOpenDiff={(path) => vscode.postMessage({ command: 'openDiff', commitHash: commit.hash, filePath: path })}
+                                                                        onOpenFile={(path) => vscode.postMessage({ command: 'openFile', filePath: path })}
+                                                                    />
+                                                                ) : (
+                                                                    <FileList
+                                                                        files={files}
+                                                                        onOpenDiff={(path) => vscode.postMessage({ command: 'openDiff', commitHash: commit.hash, filePath: path })}
+                                                                        onOpenFile={(path) => vscode.postMessage({ command: 'openFile', filePath: path })}
+                                                                    />
+                                                                )
                                                             ) : (
                                                                 <div className="no-files">No files changed</div>
                                                             )

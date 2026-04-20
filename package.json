@@ -41,6 +41,18 @@
                     "type": "boolean",
                     "default": true,
                     "description": "Show the Git Wiz status bar item for quick access."
+                },
+                "git-wiz.filesViewMode": {
+                    "type": "string",
+                    "enum": ["list", "tree"],
+                    "default": "list",
+                    "description": "The default view mode for changed files in the graph view (list or tree)."
+                },
+                "git-wiz.commitDetailsViewMode": {
+                    "type": "string",
+                    "enum": ["list", "tree"],
+                    "default": "list",
+                    "description": "The default view mode for changed files in the commit details view (list or tree)."
                 }
             }
         },

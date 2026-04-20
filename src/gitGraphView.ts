@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import * as cp from 'child_process';
 import { GitOperations } from './gitOperations';
 import { getHtmlForWebview } from './webviewContent';
 
@@ -139,6 +140,14 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider {
             case 'getCommitFiles':
                 this.getCommitFiles(message.commitHash!, webview);
                 break;
+            case 'saveFilesViewMode':
+                const mode = (message as any).mode;
+                vscode.workspace.getConfiguration('git-wiz').update('filesViewMode', mode, vscode.ConfigurationTarget.Global);
+                break;
+            case 'saveCommitDetailsViewMode':
+                const detailsMode = (message as any).mode;
+                vscode.workspace.getConfiguration('git-wiz').update('commitDetailsViewMode', detailsMode, vscode.ConfigurationTarget.Global);
+                break;
             case 'openDiff':
                 this.openDiff(message.commitHash!, message.filePath!);
                 break;
@@ -261,20 +270,16 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider {
     private async updateWebview(webview: vscode.Webview) {
         this._initialized = false;
         this._loadedCount = 0;
+        const countToLoad = Math.max(PAGE_SIZE, this._loadedCount);
+        const commits = await this._gitOps.getGitLog(this._filterBranch, 0, countToLoad, this._searchFilters);
         const currentBranch = await this._gitOps.getCurrentBranch();
+        const filesViewMode = vscode.workspace.getConfiguration('git-wiz').get<'tree' | 'list'>('filesViewMode', 'list');
 
-        if (this._isFirstLoad) {
-            this._filterBranch = currentBranch;
-            this._isFirstLoad = false;
-        }
-
-        const commits = await this._gitOps.getGitLog(this._filterBranch, 0, PAGE_SIZE, this._searchFilters);
-        
         this.updateViewTitle(currentBranch);
 
         this._loadedCount = commits.length;
-        const hasMore = commits.length === PAGE_SIZE;
-        webview.html = getHtmlForWebview(webview, commits, hasMore, this._filterBranch, currentBranch, this._extensionUri);
+        const hasMore = commits.length >= countToLoad; // Keep hasMore if we hit the limit
+        webview.html = getHtmlForWebview(webview, commits, hasMore, this._filterBranch, currentBranch, this._extensionUri, filesViewMode);
         this._initialized = true;
     }
 
@@ -286,8 +291,40 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider {
     }
 
     private async getCommitFiles(commitHash: string, webview: vscode.Webview) {
-        const files = await this._gitOps.getCommitFiles(commitHash);
-        webview.postMessage({ command: 'commitFilesData', commitHash, files });
+        const files = await this._gitOps.getGitLog(null, 0, 1, { query: commitHash });
+        if (files.length > 0) {
+            const commit = files[0];
+            const patch = await new Promise<string>((resolve) => {
+                const cwd = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+                if (!cwd) return resolve('');
+                // Get the patch for the commit
+                cp.exec(`git show ${commitHash} --patch`, { cwd }, (err: any, stdout: string) => {
+                    resolve(err ? '' : stdout);
+                });
+            });
+
+            const data = {
+                fullHash: commit.hash,
+                authorEmail: commit.email,
+                authorName: commit.author,
+                authorDate: commit.date, // Note: parsed string
+                commitDate: commit.date, // Simplified for now
+                subject: commit.message,
+                body: '', // git log output parsing might need refinement for body
+                patch: patch
+            };
+
+            const detailsMode = vscode.workspace.getConfiguration('git-wiz').get<'tree' | 'list'>('commitDetailsViewMode', 'list');
+
+            if (GitGraphViewProvider.currentPanel) {
+                const panelWebview = GitGraphViewProvider.currentPanel.webview;
+                const { getCommitDetailsHtml } = require('./webviewContent');
+                panelWebview.html = getCommitDetailsHtml(panelWebview, data, this._extensionUri, detailsMode);
+            }
+        }
+
+        const filesData = await this._gitOps.getCommitFiles(commitHash);
+        webview.postMessage({ command: 'commitFilesData', commitHash, files: filesData });
     }
 
     private openDiff(commitHash: string, filePath: string) {

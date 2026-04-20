@@ -32,6 +32,7 @@ export function getHtmlForWebview(
     filterBranch: string | null,
     currentBranch: string | null,
     extensionUri: vscode.Uri,
+    filesViewMode: 'list' | 'tree' = 'list',
 ): string {
     const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, 'out', 'webview', 'index.js'));
     const nonce = getNonce();
@@ -277,6 +278,37 @@ export function getHtmlForWebview(
             color: var(--vscode-descriptionForeground);
             opacity: 0.8;
         }
+        .view-toggle {
+            display: flex;
+            gap: 4px;
+            margin-left: 12px;
+            background: var(--vscode-editor-background);
+            padding: 2px;
+            border-radius: 4px;
+            border: 1px solid var(--vscode-panel-border);
+        }
+        .toggle-btn {
+            background: none;
+            border: none;
+            color: var(--vscode-descriptionForeground);
+            padding: 2px 4px;
+            cursor: pointer;
+            border-radius: 2px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0.7;
+            transition: all 0.15s ease;
+        }
+        .toggle-btn:hover {
+            opacity: 1;
+            background: var(--vscode-list-hoverBackground);
+        }
+        .toggle-btn.active {
+            opacity: 1;
+            color: var(--vscode-button-foreground);
+            background: var(--vscode-button-background);
+        }
         .close-pane-btn {
             background: none;
             border: none;
@@ -287,6 +319,7 @@ export function getHtmlForWebview(
             padding: 2px 6px;
             border-radius: 4px;
             transition: background 0.15s ease, color 0.15s ease;
+            margin-left: 8px;
         }
         .close-pane-btn:hover {
             color: var(--vscode-foreground);
@@ -295,11 +328,11 @@ export function getHtmlForWebview(
         .inline-files-content {
             font-family: var(--vscode-editor-font-family);
         }
-        .file-tree {
+        .file-tree, .file-list {
             display: flex;
             flex-direction: column;
         }
-        .file-tree-node {
+        .file-tree-node, .file-list-item {
             display: flex;
             align-items: center;
             padding: 0px 8px;
@@ -311,10 +344,10 @@ export function getHtmlForWebview(
             margin-bottom: 0px;
             height: 22px; /* Ensuring file and folder nodes have consistent height */
         }
-        .file-tree-node:hover {
+        .file-tree-node:hover, .file-list-item:hover {
             background-color: var(--vscode-list-hoverBackground);
         }
-        .file-tree-node:hover .open-file-btn {
+        .file-tree-node:hover .open-file-btn, .file-list-item:hover .open-file-btn {
             opacity: 1;
         }
         .file-tree-folder {
@@ -335,7 +368,7 @@ export function getHtmlForWebview(
             opacity: 0.8;
             color: var(--vscode-symbolIcon-folderForeground);
         }
-        .file-tree-file {
+        .file-tree-file, .file-list-file {
             display: flex;
             align-items: center;
             flex: 1;
@@ -454,7 +487,7 @@ export function getHtmlForWebview(
 </head>
 <body>
     <div id="root"></div>
-    <script nonce="${nonce}">window.__VIEW__ = 'graph'; window.__COMMITS__ = ${safeJson(commits)}; window.__HAS_MORE__ = ${hasMore}; window.__FILTER_BRANCH__ = ${safeJson(filterBranch)}; window.__CURRENT_BRANCH__ = ${safeJson(currentBranch)};</script>
+    <script nonce="${nonce}">window.__VIEW__ = 'graph'; window.__COMMITS__ = ${safeJson(commits)}; window.__HAS_MORE__ = ${hasMore}; window.__FILTER_BRANCH__ = ${safeJson(filterBranch)}; window.__CURRENT_BRANCH__ = ${safeJson(currentBranch)}; window.__FILES_VIEW_MODE__ = ${safeJson(filesViewMode)};</script>
     <script nonce="${nonce}" src="${scriptUri}"></script>
 </body>
 </html>`;
@@ -464,6 +497,7 @@ export function getCommitDetailsHtml(
     webview: vscode.Webview,
     data: CommitDetailsData,
     extensionUri: vscode.Uri,
+    viewMode: 'list' | 'tree' = 'list',
 ): string {
     const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, 'out', 'webview', 'index.js'));
     const nonce = getNonce();
@@ -479,87 +513,113 @@ export function getCommitDetailsHtml(
   * { box-sizing: border-box; }
   body {
     font-family: var(--vscode-font-family);
-    font-size: 12.5px;
+    font-size: 13px;
     color: var(--vscode-foreground);
     background-color: var(--vscode-editor-background);
     margin: 0;
-    padding: 20px 24px;
-    line-height: 1.5;
+    padding: 24px;
+    line-height: 1.6;
     -webkit-font-smoothing: antialiased;
   }
   .subject {
-    font-size: 15px;
+    font-size: 17px;
     font-weight: 600;
-    margin: 0 0 6px;
-    line-height: 1.4;
+    margin: 0 0 8px;
+    line-height: 1.3;
+    color: var(--vscode-editor-foreground);
+    overflow-wrap: break-word;
   }
   .body {
     color: var(--vscode-descriptionForeground);
-    font-size: 12.5px;
-    margin: 0 0 16px;
+    font-size: 13px;
+    margin: 0 0 24px;
     white-space: pre-wrap;
     line-height: 1.6;
+    border-left: 2px solid var(--vscode-panel-border);
+    padding-left: 12px;
   }
   .meta {
     display: grid;
-    grid-template-columns: 82px 1fr;
-    gap: 3px 10px;
-    margin-bottom: 22px;
-    font-size: 12px;
+    grid-template-columns: auto 1fr;
+    gap: 8px 16px;
+    margin-bottom: 32px;
+    padding: 16px;
+    background-color: var(--vscode-editor-inactiveSelectionBackground, rgba(128,128,128,0.1));
+    border-radius: 6px;
+    border: 1px solid var(--vscode-panel-border);
   }
   .meta-label {
     color: var(--vscode-descriptionForeground);
-    font-size: 10px;
-    font-weight: 600;
+    font-size: 11px;
+    font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.07em;
-    text-align: right;
-    padding-top: 2px;
-    opacity: 0.7;
+    letter-spacing: 0.05em;
+    opacity: 0.6;
   }
-  .meta-value { word-break: break-all; }
+  .meta-value { 
+    word-break: break-all;
+    font-size: 12px;
+  }
   .meta-value.hash {
     font-family: var(--vscode-editor-font-family);
-    font-size: 11px;
     color: var(--vscode-textPreformat-foreground);
-    letter-spacing: 0.03em;
     font-variant-numeric: tabular-nums;
   }
   .section-title {
-    font-size: 10px;
-    font-weight: 600;
+    font-size: 11px;
+    font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.08em;
+    letter-spacing: 0.1em;
     color: var(--vscode-descriptionForeground);
-    margin-bottom: 10px;
-    opacity: 0.7;
+    margin: 32px 0 12px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .section-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background-color: var(--vscode-panel-border);
+    opacity: 0.5;
   }
   details {
     border: 1px solid var(--vscode-panel-border);
-    border-radius: 5px;
-    margin-bottom: 7px;
+    border-radius: 6px;
+    margin-bottom: 12px;
     overflow: hidden;
+    background-color: var(--vscode-editor-background);
+    transition: box-shadow 0.2s ease;
+  }
+  details:hover {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    border-color: var(--vscode-focusBorder);
   }
   summary {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 6px 12px;
+    gap: 10px;
+    padding: 10px 14px;
     cursor: pointer;
-    font-size: 11.5px;
+    font-size: 12px;
     font-family: var(--vscode-editor-font-family);
+    font-weight: 600;
     list-style: none;
     user-select: none;
     background-color: var(--vscode-sideBar-background, var(--vscode-editor-background));
-    transition: background-color 0.1s ease;
+    border-bottom: 1px solid transparent;
+  }
+  details[open] summary {
+    border-bottom-color: var(--vscode-panel-border);
+    background-color: var(--vscode-list-hoverBackground);
   }
   summary:hover { background-color: var(--vscode-list-hoverBackground); }
   summary::-webkit-details-marker { display: none; }
   .chevron {
-    font-size: 9px;
+    font-size: 10px;
     color: var(--vscode-descriptionForeground);
-    transition: transform 0.15s ease;
-    opacity: 0.6;
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    opacity: 0.5;
     flex-shrink: 0;
   }
   details[open] .chevron { transform: rotate(90deg); }
@@ -568,68 +628,81 @@ export function getCommitDetailsHtml(
     display: inline-flex;
     align-items: center;
     justify-content: flex-end;
-    min-width: 64px;
-    font-size: 11px; 
-    white-space: nowrap; 
-    font-family: var(--vscode-font-family); 
     gap: 8px;
+    font-family: var(--vscode-editor-font-family);
+    font-size: 11px;
   }
-  .added { color: var(--vscode-gitDecoration-addedResourceForeground); font-weight: 600; }
-  .removed { color: var(--vscode-gitDecoration-deletedResourceForeground); font-weight: 600; }
+  .added { color: var(--vscode-gitDecoration-addedResourceForeground); }
+  .removed { color: var(--vscode-gitDecoration-deletedResourceForeground); }
   pre.diff-content {
     margin: 0;
-    padding: 5px 0;
+    padding: 8px 0;
     font-family: var(--vscode-editor-font-family);
-    font-size: 11.5px;
+    font-size: 12px;
     overflow-x: auto;
-    line-height: 1.65;
+    line-height: 1.6;
     background-color: var(--vscode-editor-background);
   }
-  .diff-line { display: block; padding: 0 14px; white-space: pre; }
+  .diff-line { 
+    display: block; 
+    padding: 0 16px; 
+    white-space: pre; 
+    border-left: 3px solid transparent;
+  }
   .diff-add {
-    background-color: var(--vscode-diffEditor-insertedLineBackground, rgba(70,150,70,0.12));
-    color: var(--vscode-gitDecoration-addedResourceForeground);
+    background-color: var(--vscode-diffEditor-insertedLineBackground, rgba(70,150,70,0.15));
+    border-left-color: var(--vscode-gitDecoration-addedResourceForeground);
   }
   .diff-del {
-    background-color: var(--vscode-diffEditor-removedLineBackground, rgba(150,70,70,0.12));
-    color: var(--vscode-gitDecoration-deletedResourceForeground);
+    background-color: var(--vscode-diffEditor-removedLineBackground, rgba(150,70,70,0.15));
+    border-left-color: var(--vscode-gitDecoration-deletedResourceForeground);
   }
   .diff-hunk {
-    color: var(--vscode-gitDecoration-untrackedResourceForeground);
+    color: var(--vscode-descriptionForeground);
     font-weight: 600;
-    background-color: var(--vscode-editor-hoverHighlightBackground, rgba(128,128,128,0.06));
+    background-color: var(--vscode-editor-hoverHighlightBackground, rgba(128,128,128,0.1));
+    opacity: 0.8;
   }
-  .diff-ctx { color: var(--vscode-foreground); opacity: 0.85; }
-  .no-changes { color: var(--vscode-descriptionForeground); font-size: 12px; padding: 10px 0; }
+  .diff-ctx { color: var(--vscode-foreground); opacity: 0.9; }
+  .no-changes { color: var(--vscode-descriptionForeground); font-size: 13px; padding: 20px 0; text-align: center; }
   .copyable {
     cursor: pointer;
-    border-radius: 3px;
-    padding: 1px 3px;
-    margin: -1px -3px;
-    transition: background-color 0.1s ease;
+    border-radius: 4px;
+    padding: 2px 4px;
+    margin: -2px -4px;
+    transition: background-color 0.15s ease, color 0.15s ease;
   }
-  .copyable:hover { background-color: var(--vscode-list-hoverBackground); }
+  .copyable:hover { 
+    background-color: var(--vscode-button-hoverBackground);
+    color: var(--vscode-button-foreground);
+  }
   #copy-toast {
     position: fixed;
-    bottom: 20px;
-    right: 20px;
-    background-color: var(--vscode-editorWidget-background);
-    border: 1px solid var(--vscode-panel-border);
-    color: var(--vscode-foreground);
-    padding: 5px 14px;
-    border-radius: 4px;
+    bottom: 24px;
+    right: 24px;
+    background-color: var(--vscode-notifications-background, var(--vscode-editorWidget-background));
+    border: 1px solid var(--vscode-notifications-border, var(--vscode-panel-border));
+    color: var(--vscode-notifications-foreground, var(--vscode-foreground));
+    padding: 8px 16px;
+    border-radius: 6px;
     font-size: 12px;
+    font-weight: 600;
     opacity: 0;
-    transition: opacity 0.15s ease;
+    transform: translateY(10px);
+    transition: opacity 0.2s ease, transform 0.2s ease;
     pointer-events: none;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    z-index: 1000;
   }
-  #copy-toast.show { opacity: 1; }
+  #copy-toast.show { 
+    opacity: 1; 
+    transform: translateY(0);
+  }
 </style>
 </head>
 <body>
     <div id="root"></div>
-    <script nonce="${nonce}">window.__VIEW__ = 'commitDetails'; window.__COMMIT_DETAILS__ = ${safeJson(data)};</script>
+    <script nonce="${nonce}">window.__VIEW__ = 'commitDetails'; window.__COMMIT_DETAILS__ = ${safeJson(data)}; window.__COMMIT_DETAILS_VIEW_MODE__ = ${safeJson(viewMode)};</script>
     <script nonce="${nonce}" src="${scriptUri}"></script>
 </body>
 </html>`;
