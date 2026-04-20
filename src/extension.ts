@@ -6,9 +6,9 @@ import { BranchTreeItem } from './branchTreeProvider';
 import { GitOperations } from './gitOperations';
 
 export function activate(context: vscode.ExtensionContext) {
-    const statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 0);
+    const statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
     statusBarItem.text = '$(git-branch) Git Wiz';
-    statusBarItem.tooltip = 'Open Git Wiz';
+    statusBarItem.tooltip = 'Open Git Wiz Panel';
     statusBarItem.command = 'workbench.view.extension.git-wiz';
     
     const updateStatusBar = () => {

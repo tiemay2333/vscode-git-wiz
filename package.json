@@ -30,6 +30,9 @@
     },
     "icon": "images/icon.png",
     "main": "./out/extension.js",
+    "activationEvents": [
+        "onStartupFinished"
+    ],
     "contributes": {
         "configuration": {
             "title": "Git Wiz",
