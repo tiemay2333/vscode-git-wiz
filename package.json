@@ -3,7 +3,7 @@
     "publisher": "tiemay",
     "displayName": "GitWiz",
     "description": "A minimalist Git extension with a canvas-rendered commit graph and branch management — no bloat, no distractions.",
-    "version": "1.0.1",
+    "version": "1.1.0",
     "engines": {
         "vscode": "^1.75.0",
         "node": ">=24",
