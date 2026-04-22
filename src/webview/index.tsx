@@ -13,6 +13,8 @@ declare global {
         __CURRENT_BRANCH__: string | null;
         __COMMIT_DETAILS__: CommitDetailsData;
         __BRANCHES__: Branch[];
+        __FILES_VIEW_MODE__?: 'list' | 'tree';
+        __COMMIT_DETAILS_VIEW_MODE__?: 'list' | 'tree';
     }
 }
 

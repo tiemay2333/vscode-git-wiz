@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import * as cp from 'child_process';
 import { GitOperations } from './gitOperations';
-import { getHtmlForWebview } from './webviewContent';
+import { getHtmlForWebview, getCommitDetailsHtml } from './webviewContent';
 
 const PAGE_SIZE = 200;
 
@@ -13,6 +13,8 @@ interface WebviewMessage {
     parentHash?: string;
     filePath?: string;
     filters?: { query?: string; author?: string; from?: string; to?: string };
+    tagName?: string;
+    mode?: 'list' | 'tree';
 }
 
 export class GitGraphViewProvider implements vscode.WebviewViewProvider {
@@ -135,7 +137,7 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider {
                 this.createNewTag(message.commitHash!);
                 break;
             case 'pushTag':
-                this._gitOps.pushTag((message as any).tagName!);
+                this._gitOps.pushTag(message.tagName!);
                 break;
             case 'createBranch':
                 this.createBranchFromCommit(message.commitHash!);
@@ -144,11 +146,11 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider {
                 this.getCommitFiles(message.commitHash!, webview);
                 break;
             case 'saveFilesViewMode':
-                const mode = (message as any).mode;
+                const mode = message.mode;
                 vscode.workspace.getConfiguration('git-wiz').update('filesViewMode', mode, vscode.ConfigurationTarget.Global);
                 break;
             case 'saveCommitDetailsViewMode':
-                const detailsMode = (message as any).mode;
+                const detailsMode = message.mode;
                 vscode.workspace.getConfiguration('git-wiz').update('commitDetailsViewMode', detailsMode, vscode.ConfigurationTarget.Global);
                 break;
             case 'openDiff':
@@ -301,7 +303,7 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider {
                 const cwd = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
                 if (!cwd) return resolve('');
                 // Get the patch for the commit
-                cp.exec(`git show ${commitHash} --patch`, { cwd }, (err: any, stdout: string) => {
+                cp.exec(`git show ${commitHash} --patch`, { cwd }, (err: cp.ExecException | null, stdout: string) => {
                     resolve(err ? '' : stdout);
                 });
             });
@@ -321,7 +323,6 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider {
 
             if (GitGraphViewProvider.currentPanel) {
                 const panelWebview = GitGraphViewProvider.currentPanel.webview;
-                const { getCommitDetailsHtml } = require('./webviewContent');
                 panelWebview.html = getCommitDetailsHtml(panelWebview, data, this._extensionUri, detailsMode);
             }
         }

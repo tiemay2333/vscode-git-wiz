@@ -48,7 +48,7 @@ export function activate(context: vscode.ExtensionContext) {
                 }
                 const ops = new GitOperations(() => {});
                 return await ops.getFileContentAtRev(hash, uri.path.substring(1));
-            } catch (err) {
+            } catch {
                 return '';
             }
         }
@@ -227,8 +227,8 @@ export function activate(context: vscode.ExtensionContext) {
     );
 
     context.subscriptions.push(
-        vscode.commands.registerCommand('git-wiz.deleteRemoteBranch', async (branchTreeItem: any) => {
-            const fullName = branchTreeItem.branchName;
+        vscode.commands.registerCommand('git-wiz.deleteRemoteBranch', async (item: string | BranchTreeItem) => {
+            const fullName = typeof item === 'string' ? item : item.branchName;
             if (!fullName) {
                 return;
             }

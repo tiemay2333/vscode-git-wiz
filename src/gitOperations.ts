@@ -156,12 +156,8 @@ fs.writeFileSync(process.argv[2], ${JSON.stringify(newMessage + '\n')});
             };
 
             cp.exec(`git rebase -i ${commitHash}~1`, { cwd, env }, (error, _stdout, stderr) => {
-                try {
-                    fs.unlinkSync(seqEditorPath);
-                } catch {}
-                try {
-                    fs.unlinkSync(msgEditorPath);
-                } catch {}
+                fs.rmSync(seqEditorPath, { force: true });
+                fs.rmSync(msgEditorPath, { force: true });
                 if (error) {
                     cp.exec('git rebase --abort', { cwd }, () => {});
                     vscode.window.showErrorMessage(`Failed to edit commit message: ${error.message}\n${stderr}`);
@@ -394,12 +390,8 @@ fs.writeFileSync(process.argv[2], ${JSON.stringify(newMessage + '\n')});
             };
 
             cp.exec(`git rebase -i ${parentHash}`, { cwd, env }, (error, _stdout, stderr) => {
-                try {
-                    fs.unlinkSync(seqEditorPath);
-                } catch {}
-                try {
-                    fs.unlinkSync(msgEditorPath);
-                } catch {}
+                fs.rmSync(seqEditorPath, { force: true });
+                fs.rmSync(msgEditorPath, { force: true });
                 if (error) {
                     cp.exec('git rebase --abort', { cwd }, () => {});
                     vscode.window.showErrorMessage(`Failed to squash: ${error.message}\n${stderr}`);
@@ -642,7 +634,7 @@ fs.writeFileSync(process.argv[2], ${JSON.stringify(newMessage + '\n')});
                     return;
                 }
                 
-                let output = stdout.trim();
+                const output = stdout.trim();
                 const statusMap = new Map<string, string>();
                 
                 if (output) {

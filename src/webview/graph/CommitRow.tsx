@@ -1,5 +1,4 @@
 import React, { useRef, useEffect } from 'react';
-import { GitCommit } from '../types';
 import { GraphNode } from './graphLayout';
 
 
@@ -104,8 +103,6 @@ export const CommitRow = React.memo(function CommitRow({
     isSelected,
     isMenuOpen,
     isEditing,
-    isFirst,
-    isLast,
     onClick,
     onContextMenu,
     onEditConfirm,

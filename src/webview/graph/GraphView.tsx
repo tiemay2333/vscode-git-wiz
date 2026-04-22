@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useSta
 import { GitCommit } from '../types';
 import { vscode } from '../vscodeApi';
 import { CommitRow } from './CommitRow';
-import { computeGraphLayout, GraphNode } from './graphLayout';
+import { computeGraphLayout } from './graphLayout';
 
 function areCommitsConsecutive(commits: GitCommit[], sortedIndices: number[]): boolean {
     for (let i = 0; i < sortedIndices.length - 1; i++) {
@@ -239,7 +239,7 @@ export function GraphView({ commits: initialCommits, hasMore: initialHasMore, cu
     const [hasMore, setHasMore] = useState(initialHasMore);
     const [currentBranch, setCurrentBranch] = useState(initialCurrentBranch);
     const [isLoadingMore, setIsLoadingMore] = useState(false);
-    const [filesViewMode, setFilesViewMode] = useState<'tree' | 'list'>((window as any).__FILES_VIEW_MODE__ || 'list');
+    const [filesViewMode, setFilesViewMode] = useState<'tree' | 'list'>(window.__FILES_VIEW_MODE__ || 'list');
     
     const [searchQuery, setSearchQuery] = useState('');
     const [searchAuthor, setSearchAuthor] = useState('');
@@ -257,7 +257,6 @@ export function GraphView({ commits: initialCommits, hasMore: initialHasMore, cu
     const ctxMenuRef = useRef<HTMLDivElement>(null);
     const commitsRef = useRef(commits);
     const selectedIndicesRef = useRef(selectedIndices);
-    const isFirstMount = useRef(true);
     const shouldScrollToTopRef = useRef(false);
 
     useLayoutEffect(() => {
@@ -497,7 +496,7 @@ export function GraphView({ commits: initialCommits, hasMore: initialHasMore, cu
     );
 
     const handleSingleAction = useCallback(
-        (action: string, extraArgs: any = {}) => {
+        (action: string, extraArgs: Record<string, unknown> = {}) => {
             if (!singleMenu) {
                 return;
             }
