@@ -428,16 +428,19 @@ export function GraphView({ commits: initialCommits, hasMore: initialHasMore, cu
         if (!el) return;
         const rect = el.getBoundingClientRect();
         let { x, y } = singleMenu || rangeMenu || { x: 0, y: 0 };
+        const winH = window.innerHeight;
+        const winW = window.innerWidth;
 
-        if (x + rect.width > window.innerWidth) {
-            x = window.innerWidth - rect.width - 8;
+        if (x + rect.width > winW) {
+            x = Math.max(8, winW - rect.width - 8);
         }
-        if (y + rect.height > window.innerHeight) {
-            y = window.innerHeight - rect.height - 8;
+        if (y + rect.height > winH) {
+            y = Math.max(8, winH - rect.height - 8);
         }
 
         el.style.left = `${Math.max(8, x)}px`;
         el.style.top = `${Math.max(8, y)}px`;
+        el.style.maxHeight = `${winH - 16}px`;
     }, [singleMenu, rangeMenu]);
 
     const handleRowClick = useCallback(

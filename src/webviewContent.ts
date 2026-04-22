@@ -174,7 +174,8 @@ export function getHtmlForWebview(
             min-width: 200px;
             display: none;
             padding: 4px 0;
-            overflow: hidden;
+            overflow-y: auto;
+            overflow-x: hidden;
         }
         .context-menu-item {
             padding: 6px 18px;
