@@ -553,14 +553,60 @@ fs.writeFileSync(process.argv[2], ${JSON.stringify(newMessage + '\n')});
         if (!cwd) return;
 
         return new Promise<void>((resolve) => {
-            cp.execFile('git', ['tag', tagName, commitHash], { cwd }, (error, _stdout, stderr) => {
+            cp.execFile('git', ['tag', tagName, commitHash], { cwd }, async (error, _stdout, stderr) => {
                 if (error) {
                     vscode.window.showErrorMessage(`Failed to create tag: ${stderr || error.message}`);
                 } else {
-                    vscode.window.showInformationMessage(`Tag '${tagName}' created successfully`);
+                    const action = await vscode.window.showInformationMessage(`Tag '${tagName}' created successfully`, 'Push Tag');
                     this.onRefresh();
+                    if (action === 'Push Tag') {
+                        this.pushTag(tagName);
+                    }
                 }
                 resolve();
+            });
+        });
+    }
+
+    async pushTag(tagName: string) {
+        const cwd = this.getCwd();
+        if (!cwd) return;
+
+        return new Promise<void>((resolve) => {
+            cp.execFile('git', ['remote'], { cwd }, async (error, stdout, stderr) => {
+                if (error) {
+                    vscode.window.showErrorMessage(`Failed to get remotes: ${stderr || error.message}`);
+                    resolve();
+                    return;
+                }
+
+                const remotes = stdout.trim().split('\n').filter(Boolean);
+                if (remotes.length === 0) {
+                    vscode.window.showErrorMessage('No remotes found. Cannot push tag.');
+                    resolve();
+                    return;
+                }
+
+                let targetRemote = remotes.includes('origin') ? 'origin' : remotes[0];
+                if (remotes.length > 1) {
+                    const picked = await vscode.window.showQuickPick(remotes, {
+                        placeHolder: 'Select a remote to push the tag to',
+                    });
+                    if (!picked) {
+                        resolve();
+                        return;
+                    }
+                    targetRemote = picked;
+                }
+
+                cp.execFile('git', ['push', targetRemote, tagName], { cwd }, (pushError, _pushStdout, pushStderr) => {
+                    if (pushError) {
+                        vscode.window.showErrorMessage(`Failed to push tag: ${pushStderr || pushError.message}`);
+                    } else {
+                        vscode.window.showInformationMessage(`Tag '${tagName}' pushed to '${targetRemote}' successfully`);
+                    }
+                    resolve();
+                });
             });
         });
     }

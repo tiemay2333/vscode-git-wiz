@@ -494,7 +494,7 @@ export function GraphView({ commits: initialCommits, hasMore: initialHasMore, cu
     );
 
     const handleSingleAction = useCallback(
-        (action: string) => {
+        (action: string, extraArgs: any = {}) => {
             if (!singleMenu) {
                 return;
             }
@@ -504,7 +504,7 @@ export function GraphView({ commits: initialCommits, hasMore: initialHasMore, cu
                 setEditingHash(singleMenu.hash);
                 return;
             }
-            vscode.postMessage({ command: action, commitHash: singleMenu.hash });
+            vscode.postMessage({ command: action, commitHash: singleMenu.hash, ...extraArgs });
         },
         [singleMenu, closeMenus],
     );
@@ -537,6 +537,12 @@ export function GraphView({ commits: initialCommits, hasMore: initialHasMore, cu
         },
         [commits],
     );
+
+    const singleMenuCommitTags = useMemo(() => {
+        if (!singleMenu) return [];
+        const commit = filteredCommits.find(c => c.hash === singleMenu.hash);
+        return commit?.refs.filter(r => r.startsWith('tag: ')).map(r => r.replace('tag: ', '')) || [];
+    }, [singleMenu, filteredCommits]);
 
     return (
         <div onClick={closeMenus} className="graph-view-container">
@@ -858,6 +864,11 @@ export function GraphView({ commits: initialCommits, hasMore: initialHasMore, cu
                         <div className="context-menu-item" onClick={() => handleSingleAction('newTag')}>
                             New Tag...
                         </div>
+                        {singleMenuCommitTags.map(tag => (
+                            <div key={tag} className="context-menu-item" onClick={() => handleSingleAction('pushTag', { tagName: tag })}>
+                                Push Tag '{tag}'
+                            </div>
+                        ))}
                         <div className="context-menu-item" onClick={() => handleSingleAction('createBranch')}>
                             New Branch from here...
                         </div>

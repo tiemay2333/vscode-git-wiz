@@ -134,6 +134,9 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider {
             case 'newTag':
                 this.createNewTag(message.commitHash!);
                 break;
+            case 'pushTag':
+                this._gitOps.pushTag((message as any).tagName!);
+                break;
             case 'createBranch':
                 this.createBranchFromCommit(message.commitHash!);
                 break;
