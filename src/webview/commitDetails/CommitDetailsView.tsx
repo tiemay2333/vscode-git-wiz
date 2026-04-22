@@ -220,7 +220,9 @@ export interface CommitDetailsData {
 export function CommitDetailsView({ data }: { data: CommitDetailsData }) {
     const { fullHash, authorEmail, authorName, authorDate, commitDate, subject, body, patch } = data;
     const [toastVisible, setToastVisible] = useState(false);
-    const [viewMode, setViewMode] = useState<'list' | 'tree'>(window.__COMMIT_DETAILS_VIEW_MODE__ || 'list');
+    const [viewMode, setViewMode] = useState<'list' | 'tree'>(
+        (window as unknown as { __COMMIT_DETAILS_VIEW_MODE__?: 'list' | 'tree' }).__COMMIT_DETAILS_VIEW_MODE__ || 'list'
+    );
 
     const formattedAuthorDate = authorDate ? new Date(authorDate).toLocaleString() : '';
     const formattedCommitDate = commitDate ? new Date(commitDate).toLocaleString() : '';

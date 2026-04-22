@@ -239,7 +239,9 @@ export function GraphView({ commits: initialCommits, hasMore: initialHasMore, cu
     const [hasMore, setHasMore] = useState(initialHasMore);
     const [currentBranch, setCurrentBranch] = useState(initialCurrentBranch);
     const [isLoadingMore, setIsLoadingMore] = useState(false);
-    const [filesViewMode, setFilesViewMode] = useState<'tree' | 'list'>(window.__FILES_VIEW_MODE__ || 'list');
+    const [filesViewMode, setFilesViewMode] = useState<'tree' | 'list'>(
+        (window as unknown as { __FILES_VIEW_MODE__?: 'tree' | 'list' }).__FILES_VIEW_MODE__ || 'list'
+    );
     
     const [searchQuery, setSearchQuery] = useState('');
     const [searchAuthor, setSearchAuthor] = useState('');
