@@ -230,26 +230,33 @@ body {
     border-radius: 6px;
     box-shadow: 0 4px 16px rgba(0,0,0,0.3), 0 1px 4px rgba(0,0,0,0.15);
     z-index: 1000;
-    min-width: 190px;
+    min-width: 200px;
     padding: 4px 0;
     overflow-x: hidden;
     overflow-y: auto;
 }
 .ctx-item {
-    padding: 6px 16px;
+    padding: 6px 18px;
     cursor: pointer;
     color: var(--vscode-menu-foreground);
-    font-size: 12px;
+    font-size: 12.5px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    user-select: none;
     white-space: nowrap;
-    transition: background 0.08s ease;
+    transition: background-color 0.08s ease;
 }
 .ctx-item:hover {
-    background: var(--vscode-list-hoverBackground);
+    background-color: var(--vscode-list-hoverBackground);
     color: var(--vscode-list-hoverForeground);
 }
-.ctx-sep { height: 1px; background: var(--vscode-panel-border); margin: 3px 6px; }
-.ctx-item-danger { color: var(--vscode-errorForeground, #f14c4c); }
-.ctx-item-danger:hover { color: var(--vscode-errorForeground, #f14c4c); }
+.ctx-sep { height: 1px; background-color: var(--vscode-panel-border); margin: 3px 6px; }
+.ctx-item-danger { color: var(--vscode-errorForeground); }
+.ctx-item-danger:hover { 
+    background-color: var(--vscode-list-hoverBackground);
+    color: var(--vscode-errorForeground); 
+}
 .branch-row.multi-selected {
     background: var(--vscode-list-inactiveSelectionBackground);
     outline: 1px solid var(--vscode-focusBorder);
