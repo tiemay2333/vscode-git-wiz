@@ -372,7 +372,10 @@ export function BranchPanel({ branches: initialBranches }: Props) {
     const [branches, setBranches] = useState(initialBranches);
     const [query, setQuery] = useState('');
     const [selected, setSelected] = useState<string | null>(
-        initialBranches.find((b) => b.isCurrent)?.fullName || null
+        initialBranches.find((b) => b.isHead)?.fullName || null
+    );
+    const [, setLastHead] = useState<string | null>(
+        initialBranches.find((b) => b.isHead)?.fullName || null
     );
     const [multiSelected, setMultiSelected] = useState<Set<string>>(new Set());
     const [rangeAnchor, setRangeAnchor] = useState<string | null>(null);
@@ -384,7 +387,20 @@ export function BranchPanel({ branches: initialBranches }: Props) {
         const handler = (event: MessageEvent) => {
             const msg = event.data;
             if (msg.command === 'replaceBranches') {
-                setBranches(msg.branches);
+                const newBranches = msg.branches as Branch[];
+                setBranches(newBranches);
+                
+                setLastHead((prevLastHead) => {
+                    const newHead = newBranches.find((b) => b.isHead)?.fullName || null;
+                    if (newHead !== prevLastHead) {
+                        setSelected(newHead);
+                        if (newHead) {
+                            vscode.postMessage({ command: 'selectBranch', branchName: newHead });
+                        }
+                        return newHead;
+                    }
+                    return prevLastHead;
+                });
             }
         };
         window.addEventListener('message', handler);
