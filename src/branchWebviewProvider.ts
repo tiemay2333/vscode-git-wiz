@@ -240,6 +240,7 @@ body {
     cursor: pointer;
     color: var(--vscode-menu-foreground);
     font-size: 12.5px;
+    font-weight: 500;
     display: flex;
     align-items: center;
     gap: 8px;
