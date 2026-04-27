@@ -124,7 +124,7 @@ body {
     -webkit-font-smoothing: antialiased;
 }
 .search-wrap {
-    padding: 6px 8px 8px;
+    padding: 8px;
     position: sticky;
     top: 0;
     background: var(--vscode-sideBar-background);
