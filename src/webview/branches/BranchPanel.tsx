@@ -6,6 +6,7 @@ export interface Branch {
     fullName: string;
     isRemote: boolean;
     isHead: boolean;
+    isTag: boolean;
 }
 
 type CtxMenu =
@@ -423,8 +424,9 @@ export function BranchPanel({ branches: initialBranches }: Props) {
     }, []);
 
     const q = query.toLowerCase();
-    const localBranches = branches.filter((b) => !b.isRemote && (!q || b.name.toLowerCase().includes(q)));
-    const remoteBranches = branches.filter((b) => b.isRemote && (!q || b.name.toLowerCase().includes(q)));
+    const localBranches = branches.filter((b) => !b.isRemote && !b.isTag && (!q || b.name.toLowerCase().includes(q)));
+    const remoteBranches = branches.filter((b) => b.isRemote && !b.isTag && (!q || b.name.toLowerCase().includes(q)));
+    const tags = branches.filter((b) => b.isTag && (!q || b.name.toLowerCase().includes(q))).reverse();
 
     const localTree = buildTree(localBranches, 'local');
     const remoteTree = buildRemoteTree(remoteBranches);
@@ -447,7 +449,9 @@ export function BranchPanel({ branches: initialBranches }: Props) {
 
     const handleDoubleClick = useCallback(
         (branch: Branch) => {
-            if (branch.isRemote) {
+            if (branch.isTag) {
+                vscode.postMessage({ command: 'createBranchFromTag', tagName: branch.name });
+            } else if (branch.isRemote) {
                 vscode.postMessage({ command: 'checkoutRemoteBranch', branchName: branch.fullName });
             } else {
                 vscode.postMessage({ command: 'checkoutBranch', branchName: branch.fullName });
@@ -509,9 +513,13 @@ export function BranchPanel({ branches: initialBranches }: Props) {
         setCtxMenu({ kind: 'folder', x: e.clientX, y: e.clientY, branches: deletable, folderKey: groupKey });
     }, []);
 
-    const handleAction = useCallback((command: string, branchName: string) => {
+    const handleAction = useCallback((command: string, name: string) => {
         setCtxMenu(null);
-        vscode.postMessage({ command, branchName });
+        if (command === 'createBranchFromTag' || command === 'pushTag' || command === 'deleteTag') {
+            vscode.postMessage({ command, tagName: name });
+        } else {
+            vscode.postMessage({ command, branchName: name });
+        }
     }, []);
 
     const handleDeleteMultiple = useCallback((branchNames: string[]) => {
@@ -564,7 +572,8 @@ export function BranchPanel({ branches: initialBranches }: Props) {
 
     const localCollapsed = sectionsCollapsed.has('local');
     const remoteCollapsed = sectionsCollapsed.has('remote');
-    const isEmpty = localBranches.length === 0 && remoteBranches.length === 0;
+    const tagsCollapsed = sectionsCollapsed.has('tags');
+    const isEmpty = localBranches.length === 0 && remoteBranches.length === 0 && tags.length === 0;
 
     return (
         <div
@@ -644,7 +653,37 @@ export function BranchPanel({ branches: initialBranches }: Props) {
                 </div>
             )}
 
+            
+            {tags.length > 0 && (
+                <div className="section">
+                    <div className="section-header" onClick={() => toggleSection('tags')}>
+                        <span className="section-chevron">
+                            {tagsCollapsed ? <IconChevronRight /> : <IconChevronDown />}
+                        </span>
+                        <span className="section-label">Tags</span>
+                    </div>
+                    {!tagsCollapsed && tags.map(tag => (
+                        <BranchRow
+                            key={tag.fullName}
+                            branch={tag}
+                            depth={0}
+                            isSelected={selected === tag.fullName}
+                            isMultiSelected={false}
+                            isCtxOpen={ctxMenu?.kind === 'branch' && ctxMenu.branch.fullName === tag.fullName}
+                            onClick={() => handleSelect(tag)}
+                            onDoubleClick={(e) => {
+                                e.stopPropagation();
+                                e.preventDefault();
+                                handleDoubleClick(tag);
+                            }}
+                            onContextMenu={(e) => handleContextMenu(e, tag)}
+                        />
+                    ))}
+                </div>
+            )}
+
             {isEmpty && <div className="empty">No branches match</div>}
+
             </div>
 
             {ctxMenu && (
@@ -656,9 +695,33 @@ export function BranchPanel({ branches: initialBranches }: Props) {
                         style={{ left: ctxMenu.x, top: ctxMenu.y }}
                         onClick={(e) => e.stopPropagation()}
                     >
+
                         {ctxMenu.kind === 'branch' && (
                             <>
-                                {ctxMenu.branch.isRemote ? (
+                                {ctxMenu.branch.isTag ? (
+                                    <>
+                                        <div
+                                            className="ctx-item"
+                                            onClick={() => handleAction('createBranchFromTag', ctxMenu.branch.name)}
+                                        >
+                                            Create Branch from Tag
+                                        </div>
+                                        <div
+                                            className="ctx-item"
+                                            onClick={() => handleAction('pushTag', ctxMenu.branch.name)}
+                                        >
+                                            Push Tag
+                                        </div>
+                                        <div className="ctx-sep" />
+                                        <div
+                                            className="ctx-item ctx-item-danger"
+                                            onClick={() => handleAction('deleteTag', ctxMenu.branch.name)}
+                                        >
+                                            Delete Tag
+                                        </div>
+                                    </>
+                                ) : ctxMenu.branch.isRemote ? (
+
                                     <div
                                         className="ctx-item ctx-item-danger"
                                         onClick={() => handleAction('deleteRemoteBranch', ctxMenu.branch.fullName)}

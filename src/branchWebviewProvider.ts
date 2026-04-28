@@ -3,8 +3,9 @@ import * as cp from 'child_process';
 
 interface WebviewMessage {
     command: string;
-    branchName: string;
+    branchName?: string;
     branchNames?: string[];
+    tagName?: string;
 }
 
 interface Branch {
@@ -93,11 +94,15 @@ export class BranchWebviewProvider implements vscode.WebviewViewProvider {
 
     private handleMessage(message: WebviewMessage) {
         if (message.command === 'selectBranch') {
-            this._onBranchSelected?.(message.branchName);
+            this._onBranchSelected?.(message.branchName || null);
             return;
         }
         if (message.command === 'deleteMultipleBranches') {
             vscode.commands.executeCommand('git-wiz.deleteMultipleBranches', message.branchNames);
+            return;
+        }
+        if (message.command === 'createBranchFromTag' || message.command === 'pushTag' || message.command === 'deleteTag') {
+            vscode.commands.executeCommand(`git-wiz.${message.command}`, message.tagName);
             return;
         }
         vscode.commands.executeCommand(`git-wiz.${message.command}`, { branchName: message.branchName });
@@ -284,7 +289,7 @@ body {
                 resolve([]);
                 return;
             }
-            cp.exec('git branch -a --format="%(refname)|%(refname:short)|%(HEAD)"', { cwd }, (err, stdout) => {
+            cp.exec('git for-each-ref --format="%(refname)|%(refname:short)|%(HEAD)" refs/heads/ refs/remotes/ refs/tags/', { cwd }, (err, stdout) => {
                 if (err) {
                     resolve([]);
                     return;
@@ -299,18 +304,20 @@ body {
                         const head = parts[2];
 
                         const isRemote = refname.startsWith('refs/remotes/');
+                        const isTag = refname.startsWith('refs/tags/');
                         if (isRemote && refname.endsWith('/HEAD')) {
                             return null;
                         }
 
-                        const name = isRemote ? fullName.substring(fullName.indexOf('/') + 1) : fullName;
+                        const name = isTag ? fullName.substring(fullName.indexOf('/') + 1) : (isRemote ? fullName.substring(fullName.indexOf('/') + 1) : fullName);
 
                         return {
                             name,
                             fullName,
                             isRemote,
                             isHead: head === '*',
-                        };
+                            isTag,
+                        } as Branch;
                     })
                     .filter((branch): branch is Branch => branch !== null);
                 resolve(branches);

@@ -276,14 +276,19 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider {
         }
     }
 
-    public async createBranchFromCommit(commitHash: string) {
-        const branchName = await vscode.window.showInputBox({
+    public async pushTag(tagName: string) {
+        return this._gitOps.pushTag(tagName);
+    }
+
+    public async createBranchFromCommit(commitHash: string, providedBranchName?: string) {
+        const branchName = providedBranchName || await vscode.window.showInputBox({
             prompt: 'Enter new branch name',
             placeHolder: 'e.g. feature/new-branch',
         });
         if (branchName) {
             await this._gitOps.createBranch(branchName, commitHash);
             this.refresh();
+            vscode.commands.executeCommand('git-wiz.refreshBranches');
         }
     }
 

@@ -467,6 +467,46 @@ export function activate(context: vscode.ExtensionContext) {
     );
 
     context.subscriptions.push(
+        vscode.commands.registerCommand('git-wiz.createBranchFromTag', async (tagName: string) => {
+            const branchName = await vscode.window.showInputBox({
+                prompt: `Enter new branch name for tag '${tagName}'`,
+                placeHolder: 'e.g. feature/new-branch',
+            });
+            if (branchName) {
+                if (graphProvider) {
+                    await graphProvider.createBranchFromCommit(tagName, branchName);
+                }
+            }
+        }),
+        vscode.commands.registerCommand('git-wiz.pushTag', async (tagName: string) => {
+            if (graphProvider) {
+                await graphProvider.pushTag(tagName);
+            }
+        }),
+        vscode.commands.registerCommand('git-wiz.deleteTag', async (tagName: string) => {
+            const confirm = await vscode.window.showWarningMessage(
+                `Are you sure you want to delete tag '${tagName}'?`,
+                'Delete',
+                'Cancel'
+            );
+            if (confirm === 'Delete') {
+                const cwd = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+                if (!cwd) return;
+                
+                const execFile = require('child_process').execFile;
+                execFile('git', ['tag', '-d', tagName], { cwd }, (error: Error, stdout: string, stderr: string) => {
+                    if (error) {
+                        vscode.window.showErrorMessage(`Failed to delete tag: ${stderr || error.message}`);
+                    } else {
+                        vscode.window.showInformationMessage(`Tag '${tagName}' deleted successfully`);
+                        vscode.commands.executeCommand('git-wiz.refreshBranches');
+                        if (graphProvider) {
+                            graphProvider.refresh();
+                        }
+                    }
+                });
+            }
+        }),
         vscode.commands.registerCommand('git-wiz.createBranch', async (branchTreeItem: BranchTreeItem) => {
             const sourceBranch = branchTreeItem.branchName;
             if (!sourceBranch) {
