@@ -15,6 +15,7 @@ interface WebviewMessage {
     filters?: { query?: string; author?: string; from?: string; to?: string };
     tagName?: string;
     mode?: 'list' | 'tree';
+    error?: string;
 }
 
 export class GitGraphViewProvider implements vscode.WebviewViewProvider {
@@ -147,17 +148,24 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider {
                 break;
             case 'saveFilesViewMode':
                 const mode = message.mode;
-                vscode.workspace.getConfiguration('git-wiz').update('filesViewMode', mode, vscode.ConfigurationTarget.Global);
+                vscode.workspace
+                    .getConfiguration('git-wiz')
+                    .update('filesViewMode', mode, vscode.ConfigurationTarget.Global);
                 break;
             case 'saveCommitDetailsViewMode':
                 const detailsMode = message.mode;
-                vscode.workspace.getConfiguration('git-wiz').update('commitDetailsViewMode', detailsMode, vscode.ConfigurationTarget.Global);
+                vscode.workspace
+                    .getConfiguration('git-wiz')
+                    .update('commitDetailsViewMode', detailsMode, vscode.ConfigurationTarget.Global);
                 break;
             case 'openDiff':
                 this.openDiff(message.commitHash!, message.filePath!);
                 break;
             case 'openFile':
                 this.openFile(message.filePath!);
+                break;
+            case 'showErrorMessage':
+                vscode.window.showErrorMessage(message.error || 'Unknown error');
                 break;
         }
     }
@@ -215,12 +223,19 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider {
         const countToLoad = Math.max(PAGE_SIZE, this._loadedCount);
         const commits = await this._gitOps.getGitLog(this._filterBranch, 0, countToLoad, this._searchFilters);
         const currentBranch = await this._gitOps.getCurrentBranch();
-        
+
         this.updateViewTitle(currentBranch);
 
         this._loadedCount = commits.length;
         const hasMore = commits.length >= countToLoad; // Keep hasMore if we hit the limit
-        const msg = { command: 'replaceCommits', commits, hasMore, filterBranch: this._filterBranch, currentBranch, resetScroll };
+        const msg = {
+            command: 'replaceCommits',
+            commits,
+            hasMore,
+            filterBranch: this._filterBranch,
+            currentBranch,
+            resetScroll,
+        };
         this._view?.webview.postMessage(msg);
         GitGraphViewProvider.currentPanel?.webview.postMessage(msg);
     }
@@ -278,18 +293,33 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider {
         const countToLoad = Math.max(PAGE_SIZE, this._loadedCount);
         const commits = await this._gitOps.getGitLog(this._filterBranch, 0, countToLoad, this._searchFilters);
         const currentBranch = await this._gitOps.getCurrentBranch();
-        const filesViewMode = vscode.workspace.getConfiguration('git-wiz').get<'tree' | 'list'>('filesViewMode', 'list');
+        const filesViewMode = vscode.workspace
+            .getConfiguration('git-wiz')
+            .get<'tree' | 'list'>('filesViewMode', 'list');
 
         this.updateViewTitle(currentBranch);
 
         this._loadedCount = commits.length;
         const hasMore = commits.length >= countToLoad; // Keep hasMore if we hit the limit
-        webview.html = getHtmlForWebview(webview, commits, hasMore, this._filterBranch, currentBranch, this._extensionUri, filesViewMode);
+        webview.html = getHtmlForWebview(
+            webview,
+            commits,
+            hasMore,
+            this._filterBranch,
+            currentBranch,
+            this._extensionUri,
+            filesViewMode,
+        );
         this._initialized = true;
     }
 
     private async loadMoreCommits(webview: vscode.Webview) {
-        const commits = await this._gitOps.getGitLog(this._filterBranch, this._loadedCount, PAGE_SIZE, this._searchFilters);
+        const commits = await this._gitOps.getGitLog(
+            this._filterBranch,
+            this._loadedCount,
+            PAGE_SIZE,
+            this._searchFilters,
+        );
         this._loadedCount += commits.length;
         const hasMore = commits.length === PAGE_SIZE;
         webview.postMessage({ command: 'appendCommits', commits, hasMore });
@@ -316,10 +346,12 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider {
                 commitDate: commit.date, // Simplified for now
                 subject: commit.message,
                 body: '', // git log output parsing might need refinement for body
-                patch: patch
+                patch: patch,
             };
 
-            const detailsMode = vscode.workspace.getConfiguration('git-wiz').get<'tree' | 'list'>('commitDetailsViewMode', 'list');
+            const detailsMode = vscode.workspace
+                .getConfiguration('git-wiz')
+                .get<'tree' | 'list'>('commitDetailsViewMode', 'list');
 
             if (GitGraphViewProvider.currentPanel) {
                 const panelWebview = GitGraphViewProvider.currentPanel.webview;
@@ -327,14 +359,22 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider {
             }
         }
 
-        const filesData = await this._gitOps.getCommitFiles(commitHash);
-        webview.postMessage({ command: 'commitFilesData', commitHash, files: filesData });
+        try {
+            const filesData = await this._gitOps.getCommitFiles(commitHash);
+            webview.postMessage({ command: 'commitFilesData', commitHash, files: filesData });
+        } catch (e: any) {
+            webview.postMessage({
+                command: 'commitFilesData',
+                commitHash,
+                error: e.message || 'Failed to load commit files',
+            });
+        }
     }
 
     private openDiff(commitHash: string, filePath: string) {
         const uri1 = vscode.Uri.parse(`git-wiz:/${filePath}?hash=${commitHash}~1`);
         const uri2 = vscode.Uri.parse(`git-wiz:/${filePath}?hash=${commitHash}`);
-        
+
         // Provide a clearer title for the diff
         const title = `${filePath} (${commitHash.substring(0, 7)}~1 ↔ ${commitHash.substring(0, 7)})`;
         vscode.commands.executeCommand('vscode.diff', uri1, uri2, title);
@@ -345,6 +385,9 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider {
         if (!cwd) {
             return;
         }
-        vscode.commands.executeCommand('vscode.open', vscode.Uri.file(vscode.Uri.joinPath(vscode.Uri.file(cwd), filePath).fsPath));
+        vscode.commands.executeCommand(
+            'vscode.open',
+            vscode.Uri.file(vscode.Uri.joinPath(vscode.Uri.file(cwd), filePath).fsPath),
+        );
     }
 }

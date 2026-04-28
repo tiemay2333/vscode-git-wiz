@@ -1,7 +1,6 @@
 import React, { useRef, useEffect } from 'react';
 import { GraphNode } from './graphLayout';
 
-
 const COLORS = [
     '#3d9fd4', // blue
     '#d43d3d', // red
@@ -24,6 +23,7 @@ interface Props {
     isSelected: boolean;
     isMenuOpen?: boolean;
     isEditing: boolean;
+    isLoading?: boolean;
     isFirst: boolean;
     isLast: boolean;
     onClick: (shiftKey: boolean) => void;
@@ -103,6 +103,7 @@ export const CommitRow = React.memo(function CommitRow({
     isSelected,
     isMenuOpen,
     isEditing,
+    isLoading,
     onClick,
     onContextMenu,
     onEditConfirm,
@@ -134,34 +135,32 @@ export const CommitRow = React.memo(function CommitRow({
                         const y1 = line.y1 === 0 ? 0 : line.y1 === 1 ? 14 : 28;
                         const y2 = line.y2 === 0 ? 0 : line.y2 === 1 ? 14 : 28;
                         const color = getColor(line.color);
-                        
+
                         if (line.x1 !== line.x2) {
                             const cx1 = x1;
                             const cy1 = (y1 + y2) / 2;
                             const cx2 = x2;
                             const cy2 = (y1 + y2) / 2;
-                            return <path key={i} d={`M ${x1} ${y1} C ${cx1} ${cy1}, ${cx2} ${cy2}, ${x2} ${y2}`} fill="none" stroke={color} strokeWidth="1.5" />;
+                            return (
+                                <path
+                                    key={i}
+                                    d={`M ${x1} ${y1} C ${cx1} ${cy1}, ${cx2} ${cy2}, ${x2} ${y2}`}
+                                    fill="none"
+                                    stroke={color}
+                                    strokeWidth="1.5"
+                                />
+                            );
                         }
 
-                        return (
-                            <line
-                                key={i}
-                                x1={x1}
-                                y1={y1}
-                                x2={x2}
-                                y2={y2}
-                                stroke={color}
-                                strokeWidth="1.5"
-                            />
-                        );
+                        return <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke={color} strokeWidth="1.5" />;
                     })}
-                    <circle 
-                        cx={10 + graphNode.x * 12} 
-                        cy="14" 
-                        r="3.5" 
-                        fill={isHead ? 'var(--vscode-editor-background)' : getColor(graphNode.color)} 
-                        stroke={getColor(graphNode.color)} 
-                        strokeWidth="1.5" 
+                    <circle
+                        cx={10 + graphNode.x * 12}
+                        cy="14"
+                        r="3.5"
+                        fill={isHead ? 'var(--vscode-editor-background)' : getColor(graphNode.color)}
+                        stroke={getColor(graphNode.color)}
+                        strokeWidth="1.5"
                     />
                     {isHead && <circle cx={10 + graphNode.x * 12} cy="14" r="1.5" fill={getColor(graphNode.color)} />}
                 </svg>
@@ -187,7 +186,10 @@ export const CommitRow = React.memo(function CommitRow({
                         onClick={(e) => e.stopPropagation()}
                     />
                 ) : (
-                    <span className="message-text">{commit.message}</span>
+                    <>
+                        <span className="message-text">{commit.message}</span>
+                        {isLoading && <span className="row-loading-spinner" title="Loading files..."></span>}
+                    </>
                 )}
             </td>
             <td className="hash-cell">{commit.shortHash}</td>

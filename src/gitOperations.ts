@@ -621,16 +621,16 @@ fs.writeFileSync(process.argv[2], ${JSON.stringify(newMessage + '\n')});
     }
 
     async getCommitFiles(hash: string): Promise<{ status: string; path: string; insertions?: number; deletions?: number }[]> {
-        return new Promise((resolve) => {
+        return new Promise((resolve, reject) => {
             const cwd = this.getCwd();
             if (!cwd) {
-                resolve([]);
+                reject(new Error('No workspace folder found'));
                 return;
             }
             // First get name-status
-            cp.execFile('git', ['diff-tree', '--no-commit-id', '--name-status', '-r', hash, '--root'], { cwd }, (error, stdout) => {
+            cp.execFile('git', ['diff-tree', '--no-commit-id', '--name-status', '-r', hash, '--root'], { cwd }, (error, stdout, stderr) => {
                 if (error) {
-                    resolve([]);
+                    reject(new Error(`Failed to load commit files: ${stderr || error.message}`));
                     return;
                 }
                 

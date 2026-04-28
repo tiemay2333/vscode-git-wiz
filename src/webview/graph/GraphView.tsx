@@ -82,12 +82,35 @@ const FileTreeNode = ({
                 {node.isDirectory ? (
                     <span className="file-tree-folder">
                         <span className="file-tree-folder-icon">
-                            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ transition: 'transform 0.15s ease', transform: expanded ? 'rotate(90deg)' : 'rotate(0deg)' }}>
+                            <svg
+                                width="16"
+                                height="16"
+                                viewBox="0 0 16 16"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="1.5"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                style={{
+                                    transition: 'transform 0.15s ease',
+                                    transform: expanded ? 'rotate(90deg)' : 'rotate(0deg)',
+                                }}
+                            >
                                 <path d="M6 4L10 8L6 12" />
                             </svg>
                         </span>
-                        <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" style={{ marginRight: '6px', opacity: 0.8, flexShrink: 0 }}>
-                            <path fillRule="evenodd" clipRule="evenodd" d="M7.71 4H14.5L15 4.5v9l-.5.5H1.5l-.5-.5v-10l.5-.5h5.5l1.21 1z"/>
+                        <svg
+                            width="14"
+                            height="14"
+                            viewBox="0 0 16 16"
+                            fill="currentColor"
+                            style={{ marginRight: '6px', opacity: 0.8, flexShrink: 0 }}
+                        >
+                            <path
+                                fillRule="evenodd"
+                                clipRule="evenodd"
+                                d="M7.71 4H14.5L15 4.5v9l-.5.5H1.5l-.5-.5v-10l.5-.5h5.5l1.21 1z"
+                            />
                         </svg>
                         {node.name}
                     </span>
@@ -181,13 +204,11 @@ const FileList = ({
             {files
                 .sort((a, b) => a.path.localeCompare(b.path))
                 .map((file) => (
-                    <div
-                        key={file.path}
-                        className="file-list-item"
-                        onClick={() => onOpenDiff(file.path)}
-                    >
+                    <div key={file.path} className="file-list-item" onClick={() => onOpenDiff(file.path)}>
                         <div className="file-list-file">
-                            <span className={`file-status file-status-${file.status?.toLowerCase()}`}>{file.status}</span>
+                            <span className={`file-status file-status-${file.status?.toLowerCase()}`}>
+                                {file.status}
+                            </span>
                             <span className={`file-name file-name-${file.status?.toLowerCase()}`}>{file.path}</span>
                             {(file.insertions! > 0 || file.deletions! > 0) && (
                                 <span className="file-stats">
@@ -233,16 +254,23 @@ interface Props {
     currentBranch?: string | null;
 }
 
-export function GraphView({ commits: initialCommits, hasMore: initialHasMore, currentBranch: initialCurrentBranch, filterBranch }: Props) {
-    const [commitFiles, setCommitFiles] = useState<Record<string, { status: string; path: string; insertions?: number; deletions?: number }[]>>({});
+export function GraphView({
+    commits: initialCommits,
+    hasMore: initialHasMore,
+    currentBranch: initialCurrentBranch,
+    filterBranch,
+}: Props) {
+    const [commitFiles, setCommitFiles] = useState<
+        Record<string, { status: string; path: string; insertions?: number; deletions?: number }[]>
+    >({});
     const [commits, setCommits] = useState(initialCommits);
     const [hasMore, setHasMore] = useState(initialHasMore);
     const [currentBranch, setCurrentBranch] = useState(initialCurrentBranch);
     const [isLoadingMore, setIsLoadingMore] = useState(false);
     const [filesViewMode, setFilesViewMode] = useState<'tree' | 'list'>(
-        (window as unknown as { __FILES_VIEW_MODE__?: 'tree' | 'list' }).__FILES_VIEW_MODE__ || 'list'
+        (window as unknown as { __FILES_VIEW_MODE__?: 'tree' | 'list' }).__FILES_VIEW_MODE__ || 'list',
     );
-    
+
     const [searchQuery, setSearchQuery] = useState('');
     const [searchAuthor, setSearchAuthor] = useState('');
     const [dateFrom, setDateFrom] = useState('');
@@ -251,6 +279,7 @@ export function GraphView({ commits: initialCommits, hasMore: initialHasMore, cu
 
     const [selectedIndices, setSelectedIndices] = useState(new Set<number>());
     const [rangeStartIndex, setRangeStartIndex] = useState<number | null>(null);
+    const [loadingHash, setLoadingHash] = useState<string | null>(null);
     const [singleMenu, setSingleMenu] = useState<SingleMenu | null>(null);
     const [rangeMenu, setRangeMenu] = useState<RangeMenu | null>(null);
     const [editingHash, setEditingHash] = useState<string | null>(null);
@@ -269,6 +298,16 @@ export function GraphView({ commits: initialCommits, hasMore: initialHasMore, cu
     }, [commits]);
 
     const filteredCommits = commits;
+
+    useEffect(() => {
+        if (loadingHash && commitFiles[loadingHash]) {
+            const index = filteredCommits.findIndex((c) => c.hash === loadingHash);
+            if (index !== -1) {
+                setSelectedIndices(new Set([index]));
+            }
+            setLoadingHash(null);
+        }
+    }, [loadingHash, commitFiles, filteredCommits]);
     const isSearching = !!(activeSearch.query || activeSearch.author || activeSearch.from || activeSearch.to);
     const graphNodes = useMemo(() => {
         if (isSearching) {
@@ -276,7 +315,10 @@ export function GraphView({ commits: initialCommits, hasMore: initialHasMore, cu
         }
         return computeGraphLayout(filteredCommits);
     }, [filteredCommits, isSearching]);
-    const globalMaxTrack = useMemo(() => graphNodes.reduce((max, node) => Math.max(max, node.maxTrack), 0), [graphNodes]);
+    const globalMaxTrack = useMemo(
+        () => graphNodes.reduce((max, node) => Math.max(max, node.maxTrack), 0),
+        [graphNodes],
+    );
     const graphWidth = isSearching ? 24 : Math.max(60, globalMaxTrack * 12 + 20);
 
     const closeMenus = useCallback(() => {
@@ -303,7 +345,11 @@ export function GraphView({ commits: initialCommits, hasMore: initialHasMore, cu
 
                 const oldCommits = commitsRef.current;
                 const oldIndices = selectedIndicesRef.current;
-                const oldHashes = new Set(Array.from(oldIndices).map((i) => oldCommits[i]?.hash).filter(Boolean));
+                const oldHashes = new Set(
+                    Array.from(oldIndices)
+                        .map((i) => oldCommits[i]?.hash)
+                        .filter(Boolean),
+                );
                 const newIndices = new Set<number>();
                 msg.commits.forEach((c: GitCommit, i: number) => {
                     if (oldHashes.has(c.hash)) newIndices.add(i);
@@ -320,7 +366,13 @@ export function GraphView({ commits: initialCommits, hasMore: initialHasMore, cu
                 setSingleMenu(null);
                 setRangeMenu(null);
             } else if (msg.command === 'commitFilesData') {
-                setCommitFiles((prev) => ({ ...prev, [msg.commitHash]: msg.files }));
+                if (msg.error) {
+                    vscode.postMessage({ command: 'showErrorMessage', error: msg.error });
+                    setLoadingHash(null);
+                } else {
+                    setCommitFiles((prev) => ({ ...prev, [msg.commitHash]: msg.files }));
+                    setLoadingHash((prev) => (prev === msg.commitHash ? msg.commitHash : prev));
+                }
             }
         };
         window.addEventListener('message', handler);
@@ -347,7 +399,7 @@ export function GraphView({ commits: initialCommits, hasMore: initialHasMore, cu
         setActiveSearch({ query: searchQuery, author: searchAuthor, from: dateFrom, to: dateTo });
         vscode.postMessage({
             command: 'search',
-            filters: { query: searchQuery, author: searchAuthor, from: dateFrom, to: dateTo }
+            filters: { query: searchQuery, author: searchAuthor, from: dateFrom, to: dateTo },
         });
     }, [searchQuery, searchAuthor, dateFrom, dateTo]);
 
@@ -357,7 +409,7 @@ export function GraphView({ commits: initialCommits, hasMore: initialHasMore, cu
                 handleSearch();
             }
         },
-        [handleSearch]
+        [handleSearch],
     );
 
     const headCommitHash = useMemo(() => {
@@ -366,21 +418,19 @@ export function GraphView({ commits: initialCommits, hasMore: initialHasMore, cu
         // 1. Prioritize commit with HEAD pointing to current branch
         if (currentBranch) {
             const headOnBranch = commits.find((c) =>
-                c.refs.some((r) => r === `HEAD -> ${currentBranch}` || r === `refs/heads/${currentBranch}`)
+                c.refs.some((r) => r === `HEAD -> ${currentBranch}` || r === `refs/heads/${currentBranch}`),
             );
             if (headOnBranch) return headOnBranch.hash;
         }
 
         // 2. Look for any HEAD (detached or otherwise)
-        const anyHead = commits.find((c) =>
-            c.refs.some((r) => r.startsWith('HEAD -> ') || r === 'HEAD')
-        );
+        const anyHead = commits.find((c) => c.refs.some((r) => r.startsWith('HEAD -> ') || r === 'HEAD'));
         if (anyHead) return anyHead.hash;
 
         // 3. Look for current branch ref name
         if (currentBranch) {
             const branchRef = commits.find((c) =>
-                c.refs.some((r) => r === currentBranch || r.endsWith(`/${currentBranch}`))
+                c.refs.some((r) => r === currentBranch || r.endsWith(`/${currentBranch}`)),
             );
             if (branchRef) return branchRef.hash;
         }
@@ -461,8 +511,10 @@ export function GraphView({ commits: initialCommits, hasMore: initialHasMore, cu
                 if (selectedIndices.size === 1 && selectedIndices.has(index)) {
                     setSelectedIndices(new Set());
                 } else {
-                    setSelectedIndices(new Set([index]));
-                    if (!commitFiles[hash]) {
+                    if (commitFiles[hash]) {
+                        setSelectedIndices(new Set([index]));
+                    } else {
+                        setLoadingHash(hash);
                         vscode.postMessage({ command: 'getCommitFiles', commitHash: hash });
                     }
                 }
@@ -544,282 +596,391 @@ export function GraphView({ commits: initialCommits, hasMore: initialHasMore, cu
 
     const singleMenuCommitTags = useMemo(() => {
         if (!singleMenu) return [];
-        const commit = filteredCommits.find(c => c.hash === singleMenu.hash);
-        return commit?.refs.filter(r => r.startsWith('tag: ')).map(r => r.replace('tag: ', '')) || [];
+        const commit = filteredCommits.find((c) => c.hash === singleMenu.hash);
+        return commit?.refs.filter((r) => r.startsWith('tag: ')).map((r) => r.replace('tag: ', '')) || [];
     }, [singleMenu, filteredCommits]);
 
     return (
         <div onClick={closeMenus} className="graph-view-container">
             <div className="graph-top-pane">
-            <div className="search-wrap" style={{ display: 'flex', gap: '8px', padding: '8px', flexWrap: 'nowrap' }}>
-                <div style={{ position: 'relative', flex: 1, display: 'flex' }}>
-                    <input
-                        className="search-input"
-                        type="text"
-                        placeholder="Search"
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        onKeyDown={handleKeyDown}
-                        autoComplete="off"
-                        spellCheck={false}
-                        onClick={(e) => e.stopPropagation()}
-                        style={{ flex: 1, minWidth: '0', paddingRight: '28px' }}
-                    />
-                    <div
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            handleSearch();
-                        }}
-                        style={{
-                            position: 'absolute',
-                            right: '6px',
-                            top: '50%',
-                            transform: 'translateY(-50%)',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            color: 'var(--vscode-input-foreground, inherit)',
-                            opacity: 0.6,
-                        }}
-                        title="Search"
-                    >
-                        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                            <circle cx="7" cy="7" r="5"></circle>
-                            <line x1="11" y1="11" x2="15" y2="15"></line>
-                        </svg>
-                    </div>
-                </div>
-                <div style={{ position: 'relative', flex: 1, display: 'flex' }}>
-                    <input
-                        className="search-input"
-                        type="text"
-                        placeholder="Author"
-                        value={searchAuthor}
-                        onChange={(e) => setSearchAuthor(e.target.value)}
-                        onKeyDown={handleKeyDown}
-                        autoComplete="off"
-                        spellCheck={false}
-                        onClick={(e) => e.stopPropagation()}
-                        style={{ flex: 1, minWidth: '0', paddingRight: '28px' }}
-                    />
-                    <div
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            handleSearch();
-                        }}
-                        style={{
-                            position: 'absolute',
-                            right: '6px',
-                            top: '50%',
-                            transform: 'translateY(-50%)',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            color: 'var(--vscode-input-foreground, inherit)',
-                            opacity: 0.6,
-                        }}
-                        title="Search"
-                    >
-                        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                            <circle cx="7" cy="7" r="5"></circle>
-                            <line x1="11" y1="11" x2="15" y2="15"></line>
-                        </svg>
-                    </div>
-                </div>
-                <div style={{ position: 'relative', flex: 1, display: 'flex' }}>
-                    <input
-                        className="search-input"
-                        type="text"
-                        placeholder="YYYY/MM/DD (From)"
-                        value={dateFrom}
-                        onChange={(e) => setDateFrom(e.target.value)}
-                        onKeyDown={handleKeyDown}
-                        onClick={(e) => e.stopPropagation()}
-                        style={{ flex: 1, minWidth: '0', paddingRight: '28px' }}
-                    />
-                    <div
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            handleSearch();
-                        }}
-                        style={{
-                            position: 'absolute',
-                            right: '6px',
-                            top: '50%',
-                            transform: 'translateY(-50%)',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            color: 'var(--vscode-input-foreground, inherit)',
-                            opacity: 0.6,
-                        }}
-                        title="Search"
-                    >
-                        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                            <circle cx="7" cy="7" r="5"></circle>
-                            <line x1="11" y1="11" x2="15" y2="15"></line>
-                        </svg>
-                    </div>
-                </div>
-                <div style={{ position: 'relative', flex: 1, display: 'flex' }}>
-                    <input
-                        className="search-input"
-                        type="text"
-                        placeholder="YYYY/MM/DD (To)"
-                        value={dateTo}
-                        onChange={(e) => setDateTo(e.target.value)}
-                        onKeyDown={handleKeyDown}
-                        onClick={(e) => e.stopPropagation()}
-                        style={{ flex: 1, minWidth: '0', paddingRight: '28px' }}
-                    />
-                    <div
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            handleSearch();
-                        }}
-                        style={{
-                            position: 'absolute',
-                            right: '6px',
-                            top: '50%',
-                            transform: 'translateY(-50%)',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            color: 'var(--vscode-input-foreground, inherit)',
-                            opacity: 0.6,
-                        }}
-                        title="Search"
-                    >
-                        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                            <circle cx="7" cy="7" r="5"></circle>
-                            <line x1="11" y1="11" x2="15" y2="15"></line>
-                        </svg>
-                    </div>
-                </div>
-            </div>
-
-            {filteredCommits.length === 0 ? (
-                <div className="no-commits">
-                    <p>
-                        {(!activeSearch.query && !activeSearch.author && !activeSearch.from && !activeSearch.to) 
-                            ? 'No commits found in this repository' 
-                            : 'No commits match the filters'}
-                    </p>
-                </div>
-            ) : (
-                <div className="table-container" ref={containerRef}>
-                    <table>
-                        <tbody>
-                            {graphNodes.map((node, index) => {
-                                const commit = node.commit;
-                                const isSelected = selectedIndices.has(index);
-                                const isMenuOpen = singleMenu?.index === index || (rangeMenu?.sortedIndices.includes(index));
-                                const singleSelected = selectedIndices.size === 1 && isSelected;
-                                const files = singleSelected ? commitFiles[commit.hash] : null;
-
-                                return (
-                                    <React.Fragment key={commit.hash}>
-                                        <CommitRow
-                                            graphWidth={graphWidth}
-                                            graphNode={node}
-                                            headCommitHash={headCommitHash}
-                                            isSelected={isSelected}
-                                            isMenuOpen={isMenuOpen}
-                                            isEditing={editingHash === commit.hash}
-                                            isFirst={index === 0}
-                                            isLast={index === filteredCommits.length - 1}
-                                            onClick={(shiftKey) => handleRowClick(index, shiftKey)}
-                                            onContextMenu={(e) => handleContextMenu(e, index)}
-                                            onEditConfirm={(msg) => handleEditConfirm(commit.hash, msg)}
-                                            onEditCancel={() => setEditingHash(null)}
-                                        />
-                                        {singleSelected && (
-                                            <tr className="inline-files-row" onClick={(e) => e.stopPropagation()}>
-                                                <td colSpan={5}>
-                                                    <div className="inline-files-container">
-                                                        <div className="inline-files-header">
-                                                            <div style={{ display: 'flex', alignItems: 'center', flex: 1, minWidth: 0 }}>
-                                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1, minWidth: 0 }}>
-                                                                    <span className="inline-files-title">Files modified in {commit.shortHash} - {commit.message}</span>
-                                                                    <span style={{ fontSize: '11px', opacity: 0.8, color: 'var(--vscode-descriptionForeground)' }}>{commit.author} &lt;{commit.email}&gt;</span>
-                                                                </div>
-                                                                <div className="view-toggle">
-                                                                    <button 
-                                                                        className={`toggle-btn ${filesViewMode === 'list' ? 'active' : ''}`}
-                                                                        onClick={() => handleFilesViewModeChange('list')}
-                                                                        title="List View"
-                                                                    >
-                                                                        <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
-                                                                            <path fillRule="evenodd" clipRule="evenodd" d="M2 3h12v1H2V3zm0 4h12v1H2V7zm12 4H2v1h12v-1z"/>
-                                                                        </svg>
-                                                                    </button>
-                                                                    <button 
-                                                                        className={`toggle-btn ${filesViewMode === 'tree' ? 'active' : ''}`}
-                                                                        onClick={() => handleFilesViewModeChange('tree')}
-                                                                        title="Tree View"
-                                                                    >
-                                                                        <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
-                                                                            <path fillRule="evenodd" clipRule="evenodd" d="M1 2v3h1V2h12v12h-3v1h4V1H1v1zm12 12V5H5v9h8zm-1-1H6V6h6v7zM1 9h3V6H1v3zm1 4h3v-3H1v3z"/>
-                                                                        </svg>
-                                                                    </button>
-                                                                </div>
-                                                            </div>
-                                                            <button 
-                                                                className="close-pane-btn" 
-                                                                onClick={() => setSelectedIndices(new Set())}
-                                                            >
-                                                                &#x2715;
-                                                            </button>
-                                                        </div>
-                                                        <div className="inline-files-content">
-                                                        {files ? (
-                                                            files.length > 0 ? (
-                                                                filesViewMode === 'tree' ? (
-                                                                    <FileTree 
-                                                                        files={files} 
-                                                                        onOpenDiff={(path) => vscode.postMessage({ command: 'openDiff', commitHash: commit.hash, filePath: path })}
-                                                                        onOpenFile={(path) => vscode.postMessage({ command: 'openFile', filePath: path })}
-                                                                    />
-                                                                ) : (
-                                                                    <FileList
-                                                                        files={files}
-                                                                        onOpenDiff={(path) => vscode.postMessage({ command: 'openDiff', commitHash: commit.hash, filePath: path })}
-                                                                        onOpenFile={(path) => vscode.postMessage({ command: 'openFile', filePath: path })}
-                                                                    />
-                                                                )
-                                                            ) : (
-                                                                <div className="no-files">No files changed</div>
-                                                            )
-                                                        ) : (
-                                                            <div className="loading-files">Loading files...</div>
-                                                        )}
-                                                        </div>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        )}
-                                    </React.Fragment>
-                                );
-                            })}
-                        </tbody>
-                    </table>
-                    {(hasMore || isLoadingMore) && (
-                        <div className="load-more-container">
-                            <button 
-                                className="load-more-btn" 
-                                onClick={handleLoadMore} 
-                                disabled={isLoadingMore}
+                <div
+                    className="search-wrap"
+                    style={{ display: 'flex', gap: '8px', padding: '8px', flexWrap: 'nowrap' }}
+                >
+                    <div style={{ position: 'relative', flex: 1, display: 'flex' }}>
+                        <input
+                            className="search-input"
+                            type="text"
+                            placeholder="Search"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            onKeyDown={handleKeyDown}
+                            autoComplete="off"
+                            spellCheck={false}
+                            onClick={(e) => e.stopPropagation()}
+                            style={{ flex: 1, minWidth: '0', paddingRight: '28px' }}
+                        />
+                        <div
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                handleSearch();
+                            }}
+                            style={{
+                                position: 'absolute',
+                                right: '6px',
+                                top: '50%',
+                                transform: 'translateY(-50%)',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                color: 'var(--vscode-input-foreground, inherit)',
+                                opacity: 0.6,
+                            }}
+                            title="Search"
+                        >
+                            <svg
+                                width="14"
+                                height="14"
+                                viewBox="0 0 16 16"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="1.5"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
                             >
-                                {isLoadingMore ? 'Loading...' : 'Load More'}
-                            </button>
+                                <circle cx="7" cy="7" r="5"></circle>
+                                <line x1="11" y1="11" x2="15" y2="15"></line>
+                            </svg>
                         </div>
-                    )}
+                    </div>
+                    <div style={{ position: 'relative', flex: 1, display: 'flex' }}>
+                        <input
+                            className="search-input"
+                            type="text"
+                            placeholder="Author"
+                            value={searchAuthor}
+                            onChange={(e) => setSearchAuthor(e.target.value)}
+                            onKeyDown={handleKeyDown}
+                            autoComplete="off"
+                            spellCheck={false}
+                            onClick={(e) => e.stopPropagation()}
+                            style={{ flex: 1, minWidth: '0', paddingRight: '28px' }}
+                        />
+                        <div
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                handleSearch();
+                            }}
+                            style={{
+                                position: 'absolute',
+                                right: '6px',
+                                top: '50%',
+                                transform: 'translateY(-50%)',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                color: 'var(--vscode-input-foreground, inherit)',
+                                opacity: 0.6,
+                            }}
+                            title="Search"
+                        >
+                            <svg
+                                width="14"
+                                height="14"
+                                viewBox="0 0 16 16"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="1.5"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                            >
+                                <circle cx="7" cy="7" r="5"></circle>
+                                <line x1="11" y1="11" x2="15" y2="15"></line>
+                            </svg>
+                        </div>
+                    </div>
+                    <div style={{ position: 'relative', flex: 1, display: 'flex' }}>
+                        <input
+                            className="search-input"
+                            type="text"
+                            placeholder="YYYY/MM/DD (From)"
+                            value={dateFrom}
+                            onChange={(e) => setDateFrom(e.target.value)}
+                            onKeyDown={handleKeyDown}
+                            onClick={(e) => e.stopPropagation()}
+                            style={{ flex: 1, minWidth: '0', paddingRight: '28px' }}
+                        />
+                        <div
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                handleSearch();
+                            }}
+                            style={{
+                                position: 'absolute',
+                                right: '6px',
+                                top: '50%',
+                                transform: 'translateY(-50%)',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                color: 'var(--vscode-input-foreground, inherit)',
+                                opacity: 0.6,
+                            }}
+                            title="Search"
+                        >
+                            <svg
+                                width="14"
+                                height="14"
+                                viewBox="0 0 16 16"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="1.5"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                            >
+                                <circle cx="7" cy="7" r="5"></circle>
+                                <line x1="11" y1="11" x2="15" y2="15"></line>
+                            </svg>
+                        </div>
+                    </div>
+                    <div style={{ position: 'relative', flex: 1, display: 'flex' }}>
+                        <input
+                            className="search-input"
+                            type="text"
+                            placeholder="YYYY/MM/DD (To)"
+                            value={dateTo}
+                            onChange={(e) => setDateTo(e.target.value)}
+                            onKeyDown={handleKeyDown}
+                            onClick={(e) => e.stopPropagation()}
+                            style={{ flex: 1, minWidth: '0', paddingRight: '28px' }}
+                        />
+                        <div
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                handleSearch();
+                            }}
+                            style={{
+                                position: 'absolute',
+                                right: '6px',
+                                top: '50%',
+                                transform: 'translateY(-50%)',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                color: 'var(--vscode-input-foreground, inherit)',
+                                opacity: 0.6,
+                            }}
+                            title="Search"
+                        >
+                            <svg
+                                width="14"
+                                height="14"
+                                viewBox="0 0 16 16"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="1.5"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                            >
+                                <circle cx="7" cy="7" r="5"></circle>
+                                <line x1="11" y1="11" x2="15" y2="15"></line>
+                            </svg>
+                        </div>
+                    </div>
                 </div>
-            )}
+
+                {filteredCommits.length === 0 ? (
+                    <div className="no-commits">
+                        <p>
+                            {!activeSearch.query && !activeSearch.author && !activeSearch.from && !activeSearch.to
+                                ? 'No commits found in this repository'
+                                : 'No commits match the filters'}
+                        </p>
+                    </div>
+                ) : (
+                    <div className="table-container" ref={containerRef}>
+                        <table>
+                            <tbody>
+                                {graphNodes.map((node, index) => {
+                                    const commit = node.commit;
+                                    const isSelected = selectedIndices.has(index);
+                                    const isMenuOpen =
+                                        singleMenu?.index === index || rangeMenu?.sortedIndices.includes(index);
+                                    const singleSelected = selectedIndices.size === 1 && isSelected;
+                                    const files = singleSelected ? commitFiles[commit.hash] : null;
+
+                                    return (
+                                        <React.Fragment key={commit.hash}>
+                                            <CommitRow
+                                                graphWidth={graphWidth}
+                                                graphNode={node}
+                                                headCommitHash={headCommitHash}
+                                                isSelected={isSelected}
+                                                isMenuOpen={isMenuOpen}
+                                                isEditing={editingHash === commit.hash}
+                                                isLoading={loadingHash === commit.hash}
+                                                isFirst={index === 0}
+                                                isLast={index === filteredCommits.length - 1}
+                                                onClick={(shiftKey) => handleRowClick(index, shiftKey)}
+                                                onContextMenu={(e) => handleContextMenu(e, index)}
+                                                onEditConfirm={(msg) => handleEditConfirm(commit.hash, msg)}
+                                                onEditCancel={() => setEditingHash(null)}
+                                            />
+                                            {singleSelected && (
+                                                <tr className="inline-files-row" onClick={(e) => e.stopPropagation()}>
+                                                    <td colSpan={5}>
+                                                        <div className="inline-files-container">
+                                                            <div className="inline-files-header">
+                                                                <div
+                                                                    style={{
+                                                                        display: 'flex',
+                                                                        alignItems: 'center',
+                                                                        flex: 1,
+                                                                        minWidth: 0,
+                                                                    }}
+                                                                >
+                                                                    <div
+                                                                        style={{
+                                                                            display: 'flex',
+                                                                            flexDirection: 'column',
+                                                                            gap: '4px',
+                                                                            flex: 1,
+                                                                            minWidth: 0,
+                                                                        }}
+                                                                    >
+                                                                        <span className="inline-files-title">
+                                                                            Files modified in {commit.shortHash} -{' '}
+                                                                            {commit.message}
+                                                                        </span>
+                                                                        <span
+                                                                            style={{
+                                                                                fontSize: '11px',
+                                                                                opacity: 0.8,
+                                                                                color: 'var(--vscode-descriptionForeground)',
+                                                                            }}
+                                                                        >
+                                                                            {commit.author} &lt;{commit.email}&gt;
+                                                                        </span>
+                                                                    </div>
+                                                                    <div className="view-toggle">
+                                                                        <button
+                                                                            className={`toggle-btn ${filesViewMode === 'list' ? 'active' : ''}`}
+                                                                            onClick={() =>
+                                                                                handleFilesViewModeChange('list')
+                                                                            }
+                                                                            title="List View"
+                                                                        >
+                                                                            <svg
+                                                                                width="14"
+                                                                                height="14"
+                                                                                viewBox="0 0 16 16"
+                                                                                fill="currentColor"
+                                                                            >
+                                                                                <path
+                                                                                    fillRule="evenodd"
+                                                                                    clipRule="evenodd"
+                                                                                    d="M2 3h12v1H2V3zm0 4h12v1H2V7zm12 4H2v1h12v-1z"
+                                                                                />
+                                                                            </svg>
+                                                                        </button>
+                                                                        <button
+                                                                            className={`toggle-btn ${filesViewMode === 'tree' ? 'active' : ''}`}
+                                                                            onClick={() =>
+                                                                                handleFilesViewModeChange('tree')
+                                                                            }
+                                                                            title="Tree View"
+                                                                        >
+                                                                            <svg
+                                                                                width="14"
+                                                                                height="14"
+                                                                                viewBox="0 0 16 16"
+                                                                                fill="currentColor"
+                                                                            >
+                                                                                <path
+                                                                                    fillRule="evenodd"
+                                                                                    clipRule="evenodd"
+                                                                                    d="M1 2v3h1V2h12v12h-3v1h4V1H1v1zm12 12V5H5v9h8zm-1-1H6V6h6v7zM1 9h3V6H1v3zm1 4h3v-3H1v3z"
+                                                                                />
+                                                                            </svg>
+                                                                        </button>
+                                                                    </div>
+                                                                </div>
+                                                                <button
+                                                                    className="close-pane-btn"
+                                                                    onClick={() => setSelectedIndices(new Set())}
+                                                                >
+                                                                    &#x2715;
+                                                                </button>
+                                                            </div>
+                                                            <div className="inline-files-content">
+                                                                {files ? (
+                                                                    files.length > 0 ? (
+                                                                        filesViewMode === 'tree' ? (
+                                                                            <FileTree
+                                                                                files={files}
+                                                                                onOpenDiff={(path) =>
+                                                                                    vscode.postMessage({
+                                                                                        command: 'openDiff',
+                                                                                        commitHash: commit.hash,
+                                                                                        filePath: path,
+                                                                                    })
+                                                                                }
+                                                                                onOpenFile={(path) =>
+                                                                                    vscode.postMessage({
+                                                                                        command: 'openFile',
+                                                                                        filePath: path,
+                                                                                    })
+                                                                                }
+                                                                            />
+                                                                        ) : (
+                                                                            <FileList
+                                                                                files={files}
+                                                                                onOpenDiff={(path) =>
+                                                                                    vscode.postMessage({
+                                                                                        command: 'openDiff',
+                                                                                        commitHash: commit.hash,
+                                                                                        filePath: path,
+                                                                                    })
+                                                                                }
+                                                                                onOpenFile={(path) =>
+                                                                                    vscode.postMessage({
+                                                                                        command: 'openFile',
+                                                                                        filePath: path,
+                                                                                    })
+                                                                                }
+                                                                            />
+                                                                        )
+                                                                    ) : (
+                                                                        <div className="no-files">No files changed</div>
+                                                                    )
+                                                                ) : (
+                                                                    <div className="loading-files">
+                                                                        Loading files...
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            )}
+                                        </React.Fragment>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
+                        {(hasMore || isLoadingMore) && (
+                            <div className="load-more-container">
+                                <button className="load-more-btn" onClick={handleLoadMore} disabled={isLoadingMore}>
+                                    {isLoadingMore ? 'Loading...' : 'Load More'}
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                )}
             </div>
 
             {singleMenu && (
@@ -868,8 +1029,12 @@ export function GraphView({ commits: initialCommits, hasMore: initialHasMore, cu
                         <div className="context-menu-item" onClick={() => handleSingleAction('newTag')}>
                             New Tag...
                         </div>
-                        {singleMenuCommitTags.map(tag => (
-                            <div key={tag} className="context-menu-item" onClick={() => handleSingleAction('pushTag', { tagName: tag })}>
+                        {singleMenuCommitTags.map((tag) => (
+                            <div
+                                key={tag}
+                                className="context-menu-item"
+                                onClick={() => handleSingleAction('pushTag', { tagName: tag })}
+                            >
                                 Push Tag '{tag}'
                             </div>
                         ))}
@@ -888,7 +1053,7 @@ export function GraphView({ commits: initialCommits, hasMore: initialHasMore, cu
                         style={{ display: 'block', left: rangeMenu.x, top: rangeMenu.y }}
                         onClick={(e) => e.stopPropagation()}
                     >
-                        {rangeMenu.consecutive && rangeMenu.hashes.every(h => headCommitAncestors.has(h)) && (
+                        {rangeMenu.consecutive && rangeMenu.hashes.every((h) => headCommitAncestors.has(h)) && (
                             <>
                                 <div className="context-menu-item" onClick={() => handleRangeAction('squashCommits')}>
                                     Squash Commits
@@ -899,12 +1064,12 @@ export function GraphView({ commits: initialCommits, hasMore: initialHasMore, cu
                         <div className="context-menu-item" onClick={() => handleRangeAction('cherryPickRange')}>
                             Cherry-pick Commits
                         </div>
-                        {rangeMenu.hashes.every(h => headCommitAncestors.has(h)) && (
+                        {rangeMenu.hashes.every((h) => headCommitAncestors.has(h)) && (
                             <div className="context-menu-item" onClick={() => handleRangeAction('revertCommits')}>
                                 Revert Commits
                             </div>
                         )}
-                        {rangeMenu.consecutive && rangeMenu.hashes.every(h => headCommitAncestors.has(h)) && (
+                        {rangeMenu.consecutive && rangeMenu.hashes.every((h) => headCommitAncestors.has(h)) && (
                             <>
                                 <div className="context-menu-separator" />
                                 <div

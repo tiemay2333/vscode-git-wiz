@@ -225,6 +225,20 @@ export function getHtmlForWebview(
         }
 
         /* Graph Layout */
+        
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+        .row-loading-spinner {
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-top-color: #007aff;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-left: 8px;
+            flex-shrink: 0;
+        }
+
         .graph-view-container {
             display: flex;
             flex-direction: column;
