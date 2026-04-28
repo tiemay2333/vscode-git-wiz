@@ -2,6 +2,9 @@
 
 All notable changes to Git Lean are documented here.
 
+## [1.1.2] - 2026-04-28
+- Experience optimization
+
 ## [1.1.1] - 2026-04-27
 - Enhanced functions
 - Bug Fixes
