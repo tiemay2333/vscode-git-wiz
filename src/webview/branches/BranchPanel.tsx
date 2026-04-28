@@ -19,6 +19,14 @@ interface Props {
 
 type TreeNode = { type: 'branch'; branch: Branch } | { type: 'group'; key: string; name: string; children: TreeNode[] };
 
+const IMPORTANT_BRANCHES = ['main', 'master', 'develop', 'dev', 'staging', 'production', 'prod'];
+
+function getBranchPriority(name: string): number {
+    const lowerName = name.toLowerCase();
+    const idx = IMPORTANT_BRANCHES.indexOf(lowerName);
+    return idx === -1 ? 999 : idx;
+}
+
 function buildTree(branches: Branch[], keyPrefix: string): TreeNode[] {
     const roots: { type: 'branch'; branch: Branch }[] = [];
     const groupMap = new Map<string, Branch[]>();
@@ -45,8 +53,15 @@ function buildTree(branches: Branch[], keyPrefix: string): TreeNode[] {
         nodes.push({ type: 'group', key, name: prefix, children: buildTree(children, key) });
     }
 
-    // Add individual branches second, sorted alphabetically
-    roots.sort((a, b) => a.branch.name.localeCompare(b.branch.name));
+    // Add individual branches second, sorted by priority then alphabetically
+    roots.sort((a, b) => {
+        const priorityA = getBranchPriority(a.branch.name);
+        const priorityB = getBranchPriority(b.branch.name);
+        if (priorityA !== priorityB) {
+            return priorityA - priorityB;
+        }
+        return a.branch.name.localeCompare(b.branch.name);
+    });
     nodes.push(...roots);
 
     return nodes;
