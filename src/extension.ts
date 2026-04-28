@@ -271,7 +271,13 @@ export function activate(context: vscode.ExtensionContext) {
 
     context.subscriptions.push(
         vscode.commands.registerCommand('git-wiz.refreshBranches', () => {
-            branchProvider.refresh();
+            vscode.window.withProgress(
+                { location: vscode.ProgressLocation.Notification, title: 'Refreshing Branches...' },
+                async () => {
+                    branchProvider.refresh();
+                    await new Promise((resolve) => setTimeout(resolve, 500));
+                }
+            );
         }),
     );
 
@@ -281,14 +287,22 @@ export function activate(context: vscode.ExtensionContext) {
             if (!cwd) {
                 return;
             }
-            cp.execFile('git', ['pull'], { cwd }, (error, _stdout, stderr) => {
-                if (error) {
-                    vscode.window.showErrorMessage(`Pull failed: ${stderr || error.message}`);
-                    return;
+            vscode.window.withProgress(
+                { location: vscode.ProgressLocation.Notification, title: 'Pulling...' },
+                async () => {
+                    return new Promise<void>((resolve) => {
+                        cp.execFile('git', ['pull'], { cwd }, (error, _stdout, stderr) => {
+                            if (error) {
+                                vscode.window.showErrorMessage(`Pull failed: ${stderr || error.message}`);
+                            } else {
+                                vscode.window.showInformationMessage('Pull successful');
+                                branchProvider.refresh();
+                            }
+                            resolve();
+                        });
+                    });
                 }
-                vscode.window.showInformationMessage('Pull successful');
-                branchProvider.refresh();
-            });
+            );
         }),
     );
 
@@ -298,14 +312,22 @@ export function activate(context: vscode.ExtensionContext) {
             if (!cwd) {
                 return;
             }
-            cp.execFile('git', ['push'], { cwd }, (error, _stdout, stderr) => {
-                if (error) {
-                    vscode.window.showErrorMessage(`Push failed: ${stderr || error.message}`);
-                    return;
+            vscode.window.withProgress(
+                { location: vscode.ProgressLocation.Notification, title: 'Pushing...' },
+                async () => {
+                    return new Promise<void>((resolve) => {
+                        cp.execFile('git', ['push'], { cwd }, (error, _stdout, stderr) => {
+                            if (error) {
+                                vscode.window.showErrorMessage(`Push failed: ${stderr || error.message}`);
+                            } else {
+                                vscode.window.showInformationMessage('Push successful');
+                                branchProvider.refresh();
+                            }
+                            resolve();
+                        });
+                    });
                 }
-                vscode.window.showInformationMessage('Push successful');
-                branchProvider.refresh();
-            });
+            );
         }),
     );
 
@@ -323,14 +345,22 @@ export function activate(context: vscode.ExtensionContext) {
             if (!cwd) {
                 return;
             }
-            cp.execFile('git', ['push', '--force-with-lease'], { cwd }, (error, _stdout, stderr) => {
-                if (error) {
-                    vscode.window.showErrorMessage(`Force push failed: ${stderr || error.message}`);
-                    return;
+            vscode.window.withProgress(
+                { location: vscode.ProgressLocation.Notification, title: 'Force Pushing...' },
+                async () => {
+                    return new Promise<void>((resolve) => {
+                        cp.execFile('git', ['push', '--force-with-lease'], { cwd }, (error, _stdout, stderr) => {
+                            if (error) {
+                                vscode.window.showErrorMessage(`Force push failed: ${stderr || error.message}`);
+                            } else {
+                                vscode.window.showInformationMessage('Force push successful');
+                                branchProvider.refresh();
+                            }
+                            resolve();
+                        });
+                    });
                 }
-                vscode.window.showInformationMessage('Force push successful');
-                branchProvider.refresh();
-            });
+            );
         }),
     );
 
