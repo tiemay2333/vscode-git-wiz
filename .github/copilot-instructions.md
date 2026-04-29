@@ -1,4 +1,4 @@
-# Git Lean Project Guidelines
+# Git Wiz Project Guidelines
 
 ## Code Style
 - Use **TypeScript** and **React 19** for development.

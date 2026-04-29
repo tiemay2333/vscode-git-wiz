@@ -26,6 +26,7 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider {
     private _view?: vscode.WebviewView;
     private _watcher?: vscode.FileSystemWatcher;
     private _filterBranch: string | null = null;
+    private _filterFile: string | null = null;
     private _loadedCount = 0;
     private _searchFilters?: { query?: string; author?: string; from?: string; to?: string };
     private readonly _gitOps: GitOperations;
@@ -40,6 +41,11 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider {
 
     public filterByBranch(branch: string | null) {
         this._filterBranch = branch;
+        this.refresh(true);
+    }
+
+    public filterByFile(filePath: string | null) {
+        this._filterFile = filePath;
         this.refresh(true);
     }
 
@@ -80,6 +86,11 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider {
     ) {
         this._view = webviewView;
 
+        webviewView.onDidDispose(() => {
+            this._view = undefined;
+            this._initialized = false;
+        });
+
         webviewView.webview.options = {
             enableScripts: true,
             localResourceRoots: [this._extensionUri],
@@ -103,6 +114,14 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider {
                 break;
             case 'clearBranchFilter':
                 this._filterBranch = null;
+                this.refresh(true);
+                break;
+            case 'filterByFile':
+                this._filterFile = message.filePath || null;
+                this.refresh(true);
+                break;
+            case 'clearFileFilter':
+                this._filterFile = null;
                 this.refresh(true);
                 break;
             case 'loadMoreCommits':
@@ -219,7 +238,9 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider {
     private updateViewTitle(_currentBranch: string | null) {
         if (GitGraphViewProvider.currentPanel) {
             let title = 'Tree';
-            if (this._filterBranch) {
+            if (this._filterFile) {
+                title += ` - ${this._filterFile}`;
+            } else if (this._filterBranch) {
                 title += ` - ${this._filterBranch}`;
                 if (_currentBranch && this._filterBranch !== _currentBranch) {
                     title += ` (HEAD on ${_currentBranch})`;
@@ -240,7 +261,7 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider {
         }
         // Use the current loaded count to ensure we don't shrink the list on refresh
         const countToLoad = Math.max(PAGE_SIZE, this._loadedCount);
-        const commits = await this._gitOps.getGitLog(this._filterBranch, 0, countToLoad, this._searchFilters);
+        const commits = await this._gitOps.getGitLog(this._filterBranch, 0, countToLoad, this._searchFilters, this._filterFile);
         const currentBranch = await this._gitOps.getCurrentBranch();
         const branches = await this._gitOps.getBranches();
 
@@ -253,6 +274,7 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider {
             commits,
             hasMore,
             filterBranch: this._filterBranch,
+            filterFile: this._filterFile,
             currentBranch,
             resetScroll,
         };
@@ -322,7 +344,7 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider {
         this._initialized = false;
         this._loadedCount = 0;
         const countToLoad = Math.max(PAGE_SIZE, this._loadedCount);
-        const commits = await this._gitOps.getGitLog(this._filterBranch, 0, countToLoad, this._searchFilters);
+        const commits = await this._gitOps.getGitLog(this._filterBranch, 0, countToLoad, this._searchFilters, this._filterFile);
         const currentBranch = await this._gitOps.getCurrentBranch();
         const branches = await this._gitOps.getBranches();
         const filesViewMode = vscode.workspace
@@ -342,6 +364,7 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider {
             currentBranch,
             this._extensionUri,
             filesViewMode,
+            this._filterFile,
         );
         this._initialized = true;
     }
@@ -352,6 +375,7 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider {
             this._loadedCount,
             PAGE_SIZE,
             this._searchFilters,
+            this._filterFile,
         );
         this._loadedCount += commits.length;
         const hasMore = commits.length === PAGE_SIZE;

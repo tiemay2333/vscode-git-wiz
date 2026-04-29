@@ -251,6 +251,7 @@ interface Props {
     commits: GitCommit[];
     hasMore: boolean;
     filterBranch?: string | null;
+    filterFile?: string | null;
     currentBranch?: string | null;
 }
 
@@ -259,6 +260,7 @@ export function GraphView({
     hasMore: initialHasMore,
     currentBranch: initialCurrentBranch,
     filterBranch: initialFilterBranch,
+    filterFile: initialFilterFile,
 }: Props) {
     const [commitFiles, setCommitFiles] = useState<
         Record<string, { status: string; path: string; insertions?: number; deletions?: number }[]>
@@ -267,6 +269,7 @@ export function GraphView({
     const [hasMore, setHasMore] = useState(initialHasMore);
     const [currentBranch, setCurrentBranch] = useState(initialCurrentBranch);
     const [filterBranch, setFilterBranch] = useState<string | null | undefined>(initialFilterBranch);
+    const [filterFile, setFilterFile] = useState<string | null | undefined>(initialFilterFile);
     const [isLoadingMore, setIsLoadingMore] = useState(false);
     const [filesViewMode, setFilesViewMode] = useState<'tree' | 'list'>(
         (window as unknown as { __FILES_VIEW_MODE__?: 'tree' | 'list' }).__FILES_VIEW_MODE__ || 'list',
@@ -310,17 +313,18 @@ export function GraphView({
         }
     }, [loadingHash, commitFiles, filteredCommits]);
     const isSearching = !!(activeSearch.query || activeSearch.author || activeSearch.from || activeSearch.to);
+    const isFiltering = isSearching || !!filterFile;
     const graphNodes = useMemo(() => {
-        if (isSearching) {
+        if (isFiltering) {
             return filteredCommits.map((commit) => ({ commit, x: 0, color: 0, lines: [], maxTrack: 0 }));
         }
         return computeGraphLayout(filteredCommits);
-    }, [filteredCommits, isSearching]);
+    }, [filteredCommits, isFiltering]);
     const globalMaxTrack = useMemo(
         () => graphNodes.reduce((max, node) => Math.max(max, node.maxTrack), 0),
         [graphNodes],
     );
-    const graphWidth = isSearching ? 24 : Math.max(60, globalMaxTrack * 12 + 20);
+    const graphWidth = isFiltering ? 24 : Math.max(60, globalMaxTrack * 12 + 20);
 
     const closeMenus = useCallback(() => {
         setSingleMenu(null);
@@ -362,6 +366,9 @@ export function GraphView({
                     setCurrentBranch(msg.currentBranch);
                 }
                 setFilterBranch(msg.filterBranch);
+                if (msg.filterFile !== undefined) {
+                    setFilterFile(msg.filterFile);
+                }
                 setIsLoadingMore(false);
                 setSelectedIndices(newIndices);
                 setRangeStartIndex(null);
@@ -450,8 +457,12 @@ export function GraphView({
             currentBranch && filterBranch !== currentBranch
                 ? ` (HEAD on ${currentBranch})`
                 : '';
-        return (filterBranch || 'All Branches') + headPart;
-    }, [currentBranch, filterBranch]);
+        const branchPart = (filterBranch || 'All Branches') + headPart;
+        if (filterFile) {
+            return `File: ${filterFile} — ${branchPart}`;
+        }
+        return branchPart;
+    }, [currentBranch, filterBranch, filterFile]);
 
     const headCommitAncestors = useMemo(() => {
         const result = new Set<string>();
@@ -803,7 +814,29 @@ export function GraphView({
                     </div>
                 </div>
 
-                <div className="branch-info-bar">{branchLabel}</div>
+                <div
+                    className="branch-info-bar"
+                    style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                    }}
+                >
+                    <span>{branchLabel}</span>
+                    {(filterBranch || filterFile) && (
+                        <button
+                            className="branch-info-close-btn"
+                            onClick={() =>
+                                vscode.postMessage({
+                                    command: filterFile ? 'clearFileFilter' : 'clearBranchFilter',
+                                })
+                            }
+                            title={filterFile ? 'Clear file filter' : 'Clear branch filter'}
+                        >
+                            {'×'}
+                        </button>
+                    )}
+                </div>
 
                 {filteredCommits.length === 0 ? (
                     <div className="no-commits">

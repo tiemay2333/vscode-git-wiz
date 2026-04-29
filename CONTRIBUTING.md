@@ -1,4 +1,4 @@
-# Contributing to Git Lean
+# Contributing to Git Wiz
 
 ## Prerequisites
 

@@ -34,6 +34,7 @@ export function getHtmlForWebview(
     currentBranch: string | null,
     extensionUri: vscode.Uri,
     filesViewMode: 'list' | 'tree' = 'list',
+    filterFile: string | null = null,
 ): string {
     const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, 'out', 'webview', 'index.js'));
     const nonce = getNonce();
@@ -267,6 +268,21 @@ export function getHtmlForWebview(
             color: var(--vscode-descriptionForeground);
             border-bottom: 1px solid var(--vscode-panel-border);
             flex-shrink: 0;
+        }
+        .branch-info-close-btn {
+            background: none;
+            border: none;
+            color: var(--vscode-errorForeground);
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            padding: 3px 6px;
+            line-height: 1;
+            border-radius: 4px;
+            transition: background 0.15s ease, color 0.15s ease;
+        }
+        .branch-info-close-btn:hover {
+            background: color-mix(in srgb, var(--vscode-editor-foreground) 10%, transparent);
         }
 
         /* Inline Files View */
@@ -633,7 +649,7 @@ export function getHtmlForWebview(
 </head>
 <body>
     <div id="root"></div>
-    <script nonce="${nonce}">window.__VIEW__ = 'graph'; window.__COMMITS__ = ${safeJson(commits)}; window.__BRANCHES__ = ${safeJson(branches)}; window.__HAS_MORE__ = ${hasMore}; window.__FILTER_BRANCH__ = ${safeJson(filterBranch)}; window.__CURRENT_BRANCH__ = ${safeJson(currentBranch)}; window.__FILES_VIEW_MODE__ = ${safeJson(filesViewMode)};</script>
+    <script nonce="${nonce}">window.__VIEW__ = 'graph'; window.__COMMITS__ = ${safeJson(commits)}; window.__BRANCHES__ = ${safeJson(branches)}; window.__HAS_MORE__ = ${hasMore}; window.__FILTER_BRANCH__ = ${safeJson(filterBranch)}; window.__CURRENT_BRANCH__ = ${safeJson(currentBranch)}; window.__FILES_VIEW_MODE__ = ${safeJson(filesViewMode)}; window.__FILTER_FILE__ = ${safeJson(filterFile)};</script>
     <script nonce="${nonce}" src="${scriptUri}"></script>
 </body>
 </html>`;

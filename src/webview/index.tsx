@@ -12,6 +12,7 @@ declare global {
         __COMMITS__: GitCommit[];
         __HAS_MORE__: boolean;
         __FILTER_BRANCH__: string | null;
+        __FILTER_FILE__: string | null;
         __CURRENT_BRANCH__: string | null;
         __COMMIT_DETAILS__: CommitDetailsData;
         __BRANCHES__: Branch[];
@@ -95,6 +96,7 @@ function GraphLayout() {
                     commits={window.__COMMITS__}
                     hasMore={window.__HAS_MORE__}
                     filterBranch={window.__FILTER_BRANCH__}
+                    filterFile={window.__FILTER_FILE__}
                     currentBranch={window.__CURRENT_BRANCH__}
                 />
             </div>

@@ -81,6 +81,7 @@ export class GitOperations {
         skip = 0,
         limit = 200,
         filters?: { query?: string; author?: string; from?: string; to?: string },
+        filePath?: string | null,
     ): Promise<GitCommit[]> {
         return new Promise((resolve) => {
             const cwd = this.getCwd();
@@ -111,7 +112,8 @@ export class GitOperations {
                 filterArgs += ` --until="${filters.to} 23:59:59"`;
             }
 
-            const gitCommand = `git log${branchArg}${skipArg} --max-count=${limit}${filterArgs} --pretty=format:"%H|%h|%P|%an|%ae|%ai|%D|%ct|%s" --date-order`;
+            const fileArg = filePath ? ` -- "${filePath}"` : '';
+            const gitCommand = `git log${branchArg}${skipArg} --max-count=${limit}${filterArgs} --pretty=format:"%H|%h|%P|%an|%ae|%ai|%D|%ct|%s" --date-order${fileArg}`;
 
             const runCommand = (cmd: string): Promise<string> => {
                 return new Promise((res) => {

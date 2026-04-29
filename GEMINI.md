@@ -1,8 +1,8 @@
-# Git Lean - GEMINI.md
+# Git Wiz - GEMINI.md
 
 ## Project Overview
 
-**Git Lean** is a minimalist Visual Studio Code extension for Git management. It focuses on a streamlined workflow, providing a side-by-side view of the branch list and a canvas-rendered commit graph.
+**Git Wiz** is a minimalist Visual Studio Code extension for Git management. It focuses on a streamlined workflow, providing a side-by-side view of the branch list and a canvas-rendered commit graph.
 
 - **Purpose:** Provide essential Git functionality (branching, commits, rebasing, squashing) without the bloat of traditional GUIs.
 - **Main Technologies:** TypeScript, React 19 (Webview), VS Code Extension API, Canvas API (for graph rendering), esbuild (for webview bundling).

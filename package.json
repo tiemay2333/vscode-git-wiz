@@ -69,12 +69,26 @@
             "git-wiz": [
                 {
                     "id": "gitLeanGraphView",
-                    "name": "Git Lean",
+                    "name": "Git Wiz",
                     "type": "webview"
                 }
             ]
         },
         "menus": {
+            "editor/context": [
+                {
+                    "command": "git-wiz.showFileHistory",
+                    "when": "resourceScheme == file",
+                    "group": "git-wiz@1"
+                }
+            ],
+            "explorer/context": [
+                {
+                    "command": "git-wiz.showFileHistory",
+                    "when": "resourceScheme == file",
+                    "group": "git-wiz@1"
+                }
+            ],
             "view/title": [
                 {
                     "command": "git-wiz.pull",
@@ -102,6 +116,11 @@
             {
                 "command": "git-wiz.showGraph",
                 "title": "Git Wiz: Show Graph",
+                "category": "Git Wiz"
+            },
+            {
+                "command": "git-wiz.showFileHistory",
+                "title": "Git Wiz: Show File History",
                 "category": "Git Wiz"
             },
             {

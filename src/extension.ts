@@ -60,6 +60,24 @@ export function activate(context: vscode.ExtensionContext) {
     );
 
     context.subscriptions.push(
+        vscode.commands.registerCommand('git-wiz.showFileHistory', (uri?: vscode.Uri) => {
+            let filePath: string | undefined;
+            if (uri) {
+                filePath = vscode.workspace.asRelativePath(uri);
+            } else {
+                const editor = vscode.window.activeTextEditor;
+                if (editor) {
+                    filePath = vscode.workspace.asRelativePath(editor.document.uri);
+                }
+            }
+            if (filePath) {
+                vscode.commands.executeCommand('gitLeanGraphView.focus');
+                graphProvider.filterByFile(filePath);
+            }
+        }),
+    );
+
+    context.subscriptions.push(
         vscode.commands.registerCommand('git-wiz.editCommitMessage', (commitHash: string) => {
             graphProvider.editCommitMessage(commitHash);
         }),
