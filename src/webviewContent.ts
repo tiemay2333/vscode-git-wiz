@@ -259,6 +259,15 @@ export function getHtmlForWebview(
             overflow-y: auto;
         }
 
+        .branch-info-bar {
+            padding: 6px 12px;
+            font-size: 11px;
+            font-weight: 500;
+            color: var(--vscode-descriptionForeground);
+            border-bottom: 1px solid var(--vscode-panel-border);
+            flex-shrink: 0;
+        }
+
         /* Inline Files View */
         .inline-files-row {
             background-color: transparent !important;

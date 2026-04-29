@@ -258,7 +258,7 @@ export function GraphView({
     commits: initialCommits,
     hasMore: initialHasMore,
     currentBranch: initialCurrentBranch,
-    filterBranch,
+    filterBranch: initialFilterBranch,
 }: Props) {
     const [commitFiles, setCommitFiles] = useState<
         Record<string, { status: string; path: string; insertions?: number; deletions?: number }[]>
@@ -266,6 +266,7 @@ export function GraphView({
     const [commits, setCommits] = useState(initialCommits);
     const [hasMore, setHasMore] = useState(initialHasMore);
     const [currentBranch, setCurrentBranch] = useState(initialCurrentBranch);
+    const [filterBranch, setFilterBranch] = useState<string | null | undefined>(initialFilterBranch);
     const [isLoadingMore, setIsLoadingMore] = useState(false);
     const [filesViewMode, setFilesViewMode] = useState<'tree' | 'list'>(
         (window as unknown as { __FILES_VIEW_MODE__?: 'tree' | 'list' }).__FILES_VIEW_MODE__ || 'list',
@@ -360,6 +361,7 @@ export function GraphView({
                 if (msg.currentBranch !== undefined) {
                     setCurrentBranch(msg.currentBranch);
                 }
+                setFilterBranch(msg.filterBranch);
                 setIsLoadingMore(false);
                 setSelectedIndices(newIndices);
                 setRangeStartIndex(null);
@@ -442,6 +444,14 @@ export function GraphView({
 
         return undefined;
     }, [commits, currentBranch, filterBranch]);
+
+    const branchLabel = useMemo(() => {
+        const headPart =
+            currentBranch && filterBranch !== currentBranch
+                ? ` (HEAD on ${currentBranch})`
+                : '';
+        return (filterBranch || 'All Branches') + headPart;
+    }, [currentBranch, filterBranch]);
 
     const headCommitAncestors = useMemo(() => {
         const result = new Set<string>();
@@ -792,6 +802,8 @@ export function GraphView({
                         </div>
                     </div>
                 </div>
+
+                <div className="branch-info-bar">{branchLabel}</div>
 
                 {filteredCommits.length === 0 ? (
                     <div className="no-commits">

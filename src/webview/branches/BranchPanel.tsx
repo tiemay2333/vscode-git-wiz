@@ -220,7 +220,6 @@ function BranchRow({
     isMultiSelected,
     isCtxOpen,
     onClick,
-    onDoubleClick,
     onContextMenu,
 }: {
     branch: Branch;
@@ -229,7 +228,6 @@ function BranchRow({
     isMultiSelected: boolean;
     isCtxOpen?: boolean;
     onClick: (e: React.MouseEvent) => void;
-    onDoubleClick?: (e: React.MouseEvent) => void;
     onContextMenu: (e: React.MouseEvent) => void;
 }) {
     return (
@@ -237,7 +235,6 @@ function BranchRow({
             className={`branch-row${isSelected ? ' selected' : ''}${isMultiSelected ? ' multi-selected' : ''}${branch.isHead ? ' is-head' : ''}${isCtxOpen ? ' context-open' : ''}`}
             style={{ paddingLeft: 20 + (depth * 18) + 18 }}
             onClick={onClick}
-            onDoubleClick={onDoubleClick}
             onContextMenu={onContextMenu}
         >
             {getBranchIcon(branch)}
@@ -284,7 +281,6 @@ function TreeNodes({
     ctxMenu,
     isLocal,
     onSelect,
-    onDoubleClick,
     onShiftClick,
     onCtrlClick,
     onContextMenu,
@@ -299,7 +295,6 @@ function TreeNodes({
     ctxMenu: CtxMenu | null;
     isLocal: boolean;
     onSelect: (branch: Branch) => void;
-    onDoubleClick: (branch: Branch) => void;
     onShiftClick: (branch: Branch) => void;
     onCtrlClick: (branch: Branch) => void;
     onContextMenu: (e: React.MouseEvent, branch: Branch) => void;
@@ -328,11 +323,6 @@ function TreeNodes({
                                 } else {
                                     onSelect(node.branch);
                                 }
-                            }}
-                            onDoubleClick={(e) => {
-                                e.stopPropagation();
-                                e.preventDefault();
-                                onDoubleClick(node.branch);
                             }}
                             onContextMenu={(e) => onContextMenu(e, node.branch)}
                         />
@@ -367,7 +357,6 @@ function TreeNodes({
                                 ctxMenu={ctxMenu}
                                 isLocal={isLocal}
                                 onSelect={onSelect}
-                                onDoubleClick={onDoubleClick}
                                 onShiftClick={onShiftClick}
                                 onCtrlClick={onCtrlClick}
                                 onContextMenu={onContextMenu}
@@ -387,12 +376,8 @@ function TreeNodes({
 export function BranchPanel({ branches: initialBranches }: Props) {
     const [branches, setBranches] = useState(initialBranches);
     const [query, setQuery] = useState('');
-    const [selected, setSelected] = useState<string | null>(
-        initialBranches.find((b) => b.isHead)?.fullName || null
-    );
-    const [, setLastHead] = useState<string | null>(
-        initialBranches.find((b) => b.isHead)?.fullName || null
-    );
+    const [selected, setSelected] = useState<string | null>(null);
+    
     const [multiSelected, setMultiSelected] = useState<Set<string>>(new Set());
     const [rangeAnchor, setRangeAnchor] = useState<string | null>(null);
     const [ctxMenu, setCtxMenu] = useState<CtxMenu | null>(null);
@@ -405,18 +390,6 @@ export function BranchPanel({ branches: initialBranches }: Props) {
             if (msg.command === 'replaceBranches') {
                 const newBranches = msg.branches as Branch[];
                 setBranches(newBranches);
-                
-                setLastHead((prevLastHead) => {
-                    const newHead = newBranches.find((b) => b.isHead)?.fullName || null;
-                    if (newHead !== prevLastHead) {
-                        setSelected(newHead);
-                        if (newHead) {
-                            vscode.postMessage({ command: 'selectBranch', branchName: newHead });
-                        }
-                        return newHead;
-                    }
-                    return prevLastHead;
-                });
             }
         };
         window.addEventListener('message', handler);
@@ -445,19 +418,6 @@ export function BranchPanel({ branches: initialBranches }: Props) {
             }
         },
         [selected],
-    );
-
-    const handleDoubleClick = useCallback(
-        (branch: Branch) => {
-            if (branch.isTag) {
-                vscode.postMessage({ command: 'createBranchFromTag', tagName: branch.name });
-            } else if (branch.isRemote) {
-                vscode.postMessage({ command: 'checkoutRemoteBranch', branchName: branch.fullName });
-            } else {
-                vscode.postMessage({ command: 'checkoutBranch', branchName: branch.fullName });
-            }
-        },
-        []
     );
 
     const handleCtrlClick = useCallback((branch: Branch) => {
@@ -613,7 +573,6 @@ export function BranchPanel({ branches: initialBranches }: Props) {
                             ctxMenu={ctxMenu}
                             isLocal={true}
                             onSelect={(branch) => handleSelect(branch)}
-                            onDoubleClick={handleDoubleClick}
                             onShiftClick={handleShiftClick}
                             onCtrlClick={handleCtrlClick}
                             onContextMenu={handleContextMenu}
@@ -642,7 +601,6 @@ export function BranchPanel({ branches: initialBranches }: Props) {
                             ctxMenu={ctxMenu}
                             isLocal={false}
                             onSelect={(branch) => handleSelect(branch)}
-                            onDoubleClick={handleDoubleClick}
                             onShiftClick={handleShiftClick}
                             onCtrlClick={handleCtrlClick}
                             onContextMenu={handleContextMenu}
@@ -671,11 +629,6 @@ export function BranchPanel({ branches: initialBranches }: Props) {
                             isMultiSelected={false}
                             isCtxOpen={ctxMenu?.kind === 'branch' && ctxMenu.branch.fullName === tag.fullName}
                             onClick={() => handleSelect(tag)}
-                            onDoubleClick={(e) => {
-                                e.stopPropagation();
-                                e.preventDefault();
-                                handleDoubleClick(tag);
-                            }}
                             onContextMenu={(e) => handleContextMenu(e, tag)}
                         />
                     ))}

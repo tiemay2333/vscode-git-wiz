@@ -86,6 +86,7 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider {
         webviewView.webview.onDidReceiveMessage((message) => this.handleMessage(message, webviewView.webview));
 
         this.updateWebview(webviewView.webview);
+        this._initialized = true;
     }
 
     private handleMessage(message: WebviewMessage, webview: vscode.Webview) {
@@ -97,6 +98,10 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider {
                 break;
             case 'refresh':
                 this.updateWebview(webview);
+                break;
+            case 'clearBranchFilter':
+                this._filterBranch = null;
+                this.refresh(true);
                 break;
             case 'loadMoreCommits':
                 this.loadMoreCommits(webview);
@@ -192,26 +197,21 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider {
         this._refreshTimer = setTimeout(() => this.refresh(), 500);
     }
 
-    private updateViewTitle(currentBranch: string | null) {
-        // Build the description suffix
-        let description = '';
-        if (this._filterBranch) {
-            description = this._filterBranch;
-            if (currentBranch && this._filterBranch !== currentBranch) {
-                description += ` (HEAD on ${currentBranch})`;
-            }
-        } else {
-            description = 'All Branches';
-            if (currentBranch) {
-                description += ` (HEAD on ${currentBranch})`;
-            }
-        }
-
-        if (this._view) {
-            this._view.description = description;
-        }
+    private updateViewTitle(_currentBranch: string | null) {
         if (GitGraphViewProvider.currentPanel) {
-            GitGraphViewProvider.currentPanel.title = `Tree${description ? ` - ${description}` : ''}`;
+            let title = 'Tree';
+            if (this._filterBranch) {
+                title += ` - ${this._filterBranch}`;
+                if (_currentBranch && this._filterBranch !== _currentBranch) {
+                    title += ` (HEAD on ${_currentBranch})`;
+                }
+            } else {
+                title += ' - All Branches';
+                if (_currentBranch) {
+                    title += ` (HEAD on ${_currentBranch})`;
+                }
+            }
+            GitGraphViewProvider.currentPanel.title = title;
         }
     }
 
