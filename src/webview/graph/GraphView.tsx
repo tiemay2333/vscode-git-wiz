@@ -615,7 +615,7 @@ export function GraphView({
             <div className="graph-top-pane">
                 <div
                     className="search-wrap"
-                    style={{ display: 'flex', gap: '8px', padding: '8px', flexWrap: 'nowrap' }}
+                    style={{ display: 'flex', gap: '8px', padding: '0 8px 8px', flexWrap: 'nowrap' }}
                 >
                     <div style={{ position: 'relative', flex: 1, display: 'flex' }}>
                         <input

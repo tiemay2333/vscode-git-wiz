@@ -1,8 +1,6 @@
 import * as vscode from 'vscode';
 import * as cp from 'child_process';
 import { GitGraphViewProvider } from './gitGraphView';
-import { BranchWebviewProvider } from './branchWebviewProvider';
-import { BranchTreeItem } from './branchTreeProvider';
 import { GitOperations } from './gitOperations';
 
 export function activate(context: vscode.ExtensionContext) {
@@ -31,10 +29,8 @@ export function activate(context: vscode.ExtensionContext) {
     );
 
     const graphProvider = new GitGraphViewProvider(context.extensionUri);
-    const branchProvider = new BranchWebviewProvider(context.extensionUri);
 
     const gitOps = new GitOperations(() => {
-        branchProvider.refresh();
         graphProvider.refresh();
     });
 
@@ -56,11 +52,6 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(vscode.workspace.registerTextDocumentContentProvider('git-wiz', provider));
 
     context.subscriptions.push(vscode.window.registerWebviewViewProvider(GitGraphViewProvider.viewType, graphProvider));
-    context.subscriptions.push(
-        vscode.window.registerWebviewViewProvider(BranchWebviewProvider.viewType, branchProvider),
-    );
-
-    branchProvider.onBranchSelected = (branch) => graphProvider.filterByBranch(branch);
 
     context.subscriptions.push(
         vscode.commands.registerCommand('git-wiz.showGraph', () => {
@@ -99,7 +90,7 @@ export function activate(context: vscode.ExtensionContext) {
     );
 
     context.subscriptions.push(
-        vscode.commands.registerCommand('git-wiz.checkoutBranch', async (item: string | BranchTreeItem) => {
+        vscode.commands.registerCommand('git-wiz.checkoutBranch', async (item: string | { branchName: string }) => {
             const branchName = typeof item === 'string' ? item : item.branchName;
             if (!branchName) {
                 return;
@@ -116,13 +107,13 @@ export function activate(context: vscode.ExtensionContext) {
                     return;
                 }
                 vscode.window.showInformationMessage(`Switched to branch '${branchName}'`);
-                branchProvider.refresh();
+                graphProvider.refresh();
             });
         }),
     );
 
     context.subscriptions.push(
-        vscode.commands.registerCommand('git-wiz.checkoutRemoteBranch', async (item: string | BranchTreeItem) => {
+        vscode.commands.registerCommand('git-wiz.checkoutRemoteBranch', async (item: string | { branchName: string }) => {
             const branchName = typeof item === 'string' ? item : item.branchName;
             if (!branchName) return;
             const workspaceFolders = vscode.workspace.workspaceFolders;
@@ -157,7 +148,7 @@ export function activate(context: vscode.ExtensionContext) {
                                         vscode.window.showErrorMessage(`Failed to checkout remote branch: ${checkoutError.message}`);
                                     } else {
                                         vscode.window.showInformationMessage(`Switched to existing branch '${localBranchName}'`);
-                                        branchProvider.refresh();
+                                        graphProvider.refresh();
                                     }
                                     resolve();
                                 });
@@ -165,7 +156,7 @@ export function activate(context: vscode.ExtensionContext) {
                             }
                             
                             vscode.window.showInformationMessage(`Checked out and tracking '${branchName}'`);
-                            branchProvider.refresh();
+                            graphProvider.refresh();
                             resolve();
                         });
                     });
@@ -175,7 +166,7 @@ export function activate(context: vscode.ExtensionContext) {
     );
 
     context.subscriptions.push(
-        vscode.commands.registerCommand('git-wiz.deleteBranch', async (branchTreeItem: BranchTreeItem) => {
+        vscode.commands.registerCommand('git-wiz.deleteBranch', async (branchTreeItem: { branchName: string }) => {
             const branchName = branchTreeItem.branchName;
             if (!branchName) {
                 return;
@@ -213,7 +204,7 @@ export function activate(context: vscode.ExtensionContext) {
                                 return;
                             }
                             vscode.window.showInformationMessage(`Deleted branch '${branchName}'`);
-                            branchProvider.refresh();
+                            graphProvider.refresh();
                         });
                         return;
                     }
@@ -221,13 +212,13 @@ export function activate(context: vscode.ExtensionContext) {
                     return;
                 }
                 vscode.window.showInformationMessage(`Deleted branch '${branchName}'`);
-                branchProvider.refresh();
+                graphProvider.refresh();
             });
         }),
     );
 
     context.subscriptions.push(
-        vscode.commands.registerCommand('git-wiz.deleteRemoteBranch', async (item: string | BranchTreeItem) => {
+        vscode.commands.registerCommand('git-wiz.deleteRemoteBranch', async (item: string | { branchName: string }) => {
             const fullName = typeof item === 'string' ? item : item.branchName;
             if (!fullName) {
                 return;
@@ -264,7 +255,7 @@ export function activate(context: vscode.ExtensionContext) {
                     return;
                 }
                 vscode.window.showInformationMessage(`Deleted remote branch '${branch}' from '${remote}'`);
-                branchProvider.refresh();
+                graphProvider.refresh();
             });
         }),
     );
@@ -274,7 +265,7 @@ export function activate(context: vscode.ExtensionContext) {
             vscode.window.withProgress(
                 { location: vscode.ProgressLocation.Notification, title: 'Refreshing Branches...' },
                 async () => {
-                    branchProvider.refresh();
+                    graphProvider.refresh();
                     await new Promise((resolve) => setTimeout(resolve, 500));
                 }
             );
@@ -296,7 +287,7 @@ export function activate(context: vscode.ExtensionContext) {
                                 vscode.window.showErrorMessage(`Pull failed: ${stderr || error.message}`);
                             } else {
                                 vscode.window.showInformationMessage('Pull successful');
-                                branchProvider.refresh();
+                                graphProvider.refresh();
                             }
                             resolve();
                         });
@@ -321,7 +312,7 @@ export function activate(context: vscode.ExtensionContext) {
                                 vscode.window.showErrorMessage(`Push failed: ${stderr || error.message}`);
                             } else {
                                 vscode.window.showInformationMessage('Push successful');
-                                branchProvider.refresh();
+                                graphProvider.refresh();
                             }
                             resolve();
                         });
@@ -354,7 +345,7 @@ export function activate(context: vscode.ExtensionContext) {
                                 vscode.window.showErrorMessage(`Force push failed: ${stderr || error.message}`);
                             } else {
                                 vscode.window.showInformationMessage('Force push successful');
-                                branchProvider.refresh();
+                                graphProvider.refresh();
                             }
                             resolve();
                         });
@@ -365,7 +356,7 @@ export function activate(context: vscode.ExtensionContext) {
     );
 
     context.subscriptions.push(
-        vscode.commands.registerCommand('git-wiz.rebaseBranch', async (branchTreeItem: BranchTreeItem) => {
+        vscode.commands.registerCommand('git-wiz.rebaseBranch', async (branchTreeItem: { branchName: string }) => {
             const targetBranch = branchTreeItem.branchName;
             if (targetBranch) {
                 await gitOps.rebaseBranch(targetBranch);
@@ -374,7 +365,7 @@ export function activate(context: vscode.ExtensionContext) {
     );
 
     context.subscriptions.push(
-        vscode.commands.registerCommand('git-wiz.mergeBranch', async (branchTreeItem: BranchTreeItem) => {
+        vscode.commands.registerCommand('git-wiz.mergeBranch', async (branchTreeItem: { branchName: string }) => {
             const sourceBranch = branchTreeItem.branchName;
             if (sourceBranch) {
                 await gitOps.mergeBranch(sourceBranch);
@@ -462,7 +453,7 @@ export function activate(context: vscode.ExtensionContext) {
                 vscode.window.showInformationMessage(`Deleted ${deletedCount} branch${deletedCount > 1 ? 'es' : ''}`);
             }
 
-            branchProvider.refresh();
+            graphProvider.refresh();
         }),
     );
 
@@ -507,7 +498,7 @@ export function activate(context: vscode.ExtensionContext) {
                 });
             }
         }),
-        vscode.commands.registerCommand('git-wiz.createBranch', async (branchTreeItem: BranchTreeItem) => {
+        vscode.commands.registerCommand('git-wiz.createBranch', async (branchTreeItem: { branchName: string }) => {
             const sourceBranch = branchTreeItem.branchName;
             if (!sourceBranch) {
                 return;
@@ -542,7 +533,7 @@ export function activate(context: vscode.ExtensionContext) {
                     return;
                 }
                 vscode.window.showInformationMessage(`Created and switched to branch '${newBranchName}'`);
-                branchProvider.refresh();
+                graphProvider.refresh();
             });
         }),
     );

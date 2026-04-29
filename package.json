@@ -68,13 +68,8 @@
         "views": {
             "git-wiz": [
                 {
-                    "id": "gitLeanBranchView",
-                    "name": "Branches",
-                    "type": "webview"
-                },
-                {
                     "id": "gitLeanGraphView",
-                    "name": "Graph",
+                    "name": "Git Lean",
                     "type": "webview"
                 }
             ]
@@ -83,22 +78,22 @@
             "view/title": [
                 {
                     "command": "git-wiz.pull",
-                    "when": "view == gitLeanBranchView",
+                    "when": "view == gitLeanGraphView",
                     "group": "navigation@1"
                 },
                 {
                     "command": "git-wiz.push",
-                    "when": "view == gitLeanBranchView",
+                    "when": "view == gitLeanGraphView",
                     "group": "navigation@2"
                 },
                 {
                     "command": "git-wiz.pushForce",
-                    "when": "view == gitLeanBranchView",
+                    "when": "view == gitLeanGraphView",
                     "group": "navigation@3"
                 },
                 {
                     "command": "git-wiz.refreshBranches",
-                    "when": "view == gitLeanBranchView",
+                    "when": "view == gitLeanGraphView",
                     "group": "navigation@4"
                 }
             ]

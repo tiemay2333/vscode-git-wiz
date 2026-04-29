@@ -13,6 +13,8 @@ interface WebviewMessage {
     parentHash?: string;
     filePath?: string;
     filters?: { query?: string; author?: string; from?: string; to?: string };
+    branchName?: string;
+    branchNames?: string[];
     tagName?: string;
     mode?: 'list' | 'tree';
     error?: string;
@@ -148,6 +150,23 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider {
             case 'createBranch':
                 this.createBranchFromCommit(message.commitHash!);
                 break;
+            case 'selectBranch':
+                this.filterByBranch(message.branchName || null);
+                break;
+            case 'deleteMultipleBranches':
+                vscode.commands.executeCommand('git-wiz.deleteMultipleBranches', message.branchNames);
+                break;
+            case 'createBranchFromTag':
+            case 'deleteTag':
+                vscode.commands.executeCommand(`git-wiz.${message.command}`, message.tagName);
+                break;
+            case 'checkoutBranch':
+            case 'deleteBranch':
+            case 'deleteRemoteBranch':
+            case 'rebaseBranch':
+            case 'mergeBranch':
+                vscode.commands.executeCommand(`git-wiz.${message.command}`, { branchName: message.branchName });
+                break;
             case 'getCommitFiles':
                 this.getCommitFiles(message.commitHash!, webview);
                 break;
@@ -223,6 +242,7 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider {
         const countToLoad = Math.max(PAGE_SIZE, this._loadedCount);
         const commits = await this._gitOps.getGitLog(this._filterBranch, 0, countToLoad, this._searchFilters);
         const currentBranch = await this._gitOps.getCurrentBranch();
+        const branches = await this._gitOps.getBranches();
 
         this.updateViewTitle(currentBranch);
 
@@ -236,8 +256,14 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider {
             currentBranch,
             resetScroll,
         };
+        const branchMsg = {
+            command: 'replaceBranches',
+            branches,
+        };
         this._view?.webview.postMessage(msg);
+        this._view?.webview.postMessage(branchMsg);
         GitGraphViewProvider.currentPanel?.webview.postMessage(msg);
+        GitGraphViewProvider.currentPanel?.webview.postMessage(branchMsg);
     }
 
     public dispose() {
@@ -298,6 +324,7 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider {
         const countToLoad = Math.max(PAGE_SIZE, this._loadedCount);
         const commits = await this._gitOps.getGitLog(this._filterBranch, 0, countToLoad, this._searchFilters);
         const currentBranch = await this._gitOps.getCurrentBranch();
+        const branches = await this._gitOps.getBranches();
         const filesViewMode = vscode.workspace
             .getConfiguration('git-wiz')
             .get<'tree' | 'list'>('filesViewMode', 'list');
@@ -309,6 +336,7 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider {
         webview.html = getHtmlForWebview(
             webview,
             commits,
+            branches,
             hasMore,
             this._filterBranch,
             currentBranch,

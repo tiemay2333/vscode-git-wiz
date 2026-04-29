@@ -28,6 +28,7 @@ function getNonce(): string {
 export function getHtmlForWebview(
     webview: vscode.Webview,
     commits: GitCommit[],
+    branches: any[],
     hasMore: boolean,
     filterBranch: string | null,
     currentBranch: string | null,
@@ -143,7 +144,7 @@ export function getHtmlForWebview(
         }
         .no-commits { text-align: center; padding: 48px 20px; color: var(--vscode-descriptionForeground); font-size: 13px; }
         .search-wrap {
-            padding: 8px 10px;
+            padding: 0 8px 10px;
             position: sticky;
             top: 0;
             background: var(--vscode-editor-background);
@@ -507,11 +508,132 @@ export function getHtmlForWebview(
             opacity: 0.5;
             cursor: default;
         }
+
+        /* --- Branch Webview Styles --- */
+        .section { margin-bottom: 2px; }
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 3px;
+            padding: 4px 8px;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color: var(--vscode-sideBarSectionHeader-foreground, var(--vscode-foreground));
+            cursor: pointer;
+            user-select: none;
+        }
+        .section-header:hover { background: var(--vscode-list-hoverBackground); }
+        .section-chevron {
+            display: flex;
+            align-items: center;
+            flex-shrink: 0;
+            opacity: 0.55;
+        }
+        .group-row {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding-top: 2px;
+            padding-bottom: 2px;
+            padding-right: 8px;
+            min-height: 22px;
+            cursor: pointer;
+            user-select: none;
+        }
+        .group-row:hover { background: var(--vscode-list-hoverBackground); }
+        .row-chevron {
+            display: flex;
+            align-items: center;
+            flex-shrink: 0;
+            opacity: 0.45;
+        }
+        .branch-row {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding-top: 2px;
+            padding-bottom: 2px;
+            padding-right: 8px;
+            min-height: 22px;
+            cursor: pointer;
+            user-select: none;
+            transition: background 0.07s ease;
+        }
+        .branch-row:hover, .branch-row.context-open { background: var(--vscode-list-hoverBackground); }
+        .branch-row.selected {
+            background: var(--vscode-list-activeSelectionBackground);
+            color: var(--vscode-list-activeSelectionForeground);
+        }
+        .group-row:hover, .group-row.context-open { background: var(--vscode-list-hoverBackground); }
+        .branch-row.is-head {
+            border-left: 2px solid var(--vscode-gitDecoration-modifiedResourceForeground);
+        }
+        .branch-row.is-head .row-label {
+            color: var(--vscode-gitDecoration-modifiedResourceForeground);
+            font-weight: 600;
+        }
+        .branch-row.is-head.selected .row-label { color: inherit; }
+        .row-label {
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .icon-star { flex-shrink: 0; }
+        .icon-tag { flex-shrink: 0; }
+        .icon-folder { flex-shrink: 0; opacity: 0.65; }
+        .icon-branch { flex-shrink: 0; opacity: 0.6; }
+        .branch-row.selected svg { opacity: 1; }
+        .empty { padding: 10px 12px; opacity: 0.5; font-style: italic; font-size: 12px; }
+        .ctx-menu {
+            position: fixed;
+            background: var(--vscode-menu-background);
+            border: 1px solid var(--vscode-menu-border, var(--vscode-panel-border));
+            border-radius: 6px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.3), 0 1px 4px rgba(0,0,0,0.15);
+            z-index: 1000;
+            min-width: 200px;
+            padding: 4px 0;
+            overflow-x: hidden;
+            overflow-y: auto;
+        }
+        .ctx-item {
+            padding: 6px 18px;
+            cursor: pointer;
+            color: var(--vscode-menu-foreground);
+            font-size: 12.5px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            user-select: none;
+            white-space: nowrap;
+            transition: background-color 0.08s ease;
+        }
+        .ctx-item:hover {
+            background-color: var(--vscode-list-hoverBackground);
+            color: var(--vscode-list-hoverForeground);
+        }
+        .ctx-sep { height: 1px; background-color: var(--vscode-panel-border); margin: 3px 6px; }
+        .ctx-item-danger { color: var(--vscode-errorForeground); }
+        .ctx-item-danger:hover { 
+            background-color: var(--vscode-list-hoverBackground);
+            color: var(--vscode-errorForeground); 
+        }
+        .branch-row.multi-selected {
+            background: var(--vscode-list-inactiveSelectionBackground);
+            outline: 1px solid var(--vscode-focusBorder);
+            outline-offset: -1px;
+        }
     </style>
 </head>
 <body>
     <div id="root"></div>
-    <script nonce="${nonce}">window.__VIEW__ = 'graph'; window.__COMMITS__ = ${safeJson(commits)}; window.__HAS_MORE__ = ${hasMore}; window.__FILTER_BRANCH__ = ${safeJson(filterBranch)}; window.__CURRENT_BRANCH__ = ${safeJson(currentBranch)}; window.__FILES_VIEW_MODE__ = ${safeJson(filesViewMode)};</script>
+    <script nonce="${nonce}">window.__VIEW__ = 'graph'; window.__COMMITS__ = ${safeJson(commits)}; window.__BRANCHES__ = ${safeJson(branches)}; window.__HAS_MORE__ = ${hasMore}; window.__FILTER_BRANCH__ = ${safeJson(filterBranch)}; window.__CURRENT_BRANCH__ = ${safeJson(currentBranch)}; window.__FILES_VIEW_MODE__ = ${safeJson(filesViewMode)};</script>
     <script nonce="${nonce}" src="${scriptUri}"></script>
 </body>
 </html>`;

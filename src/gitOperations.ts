@@ -7,6 +7,14 @@ import { parseGitLogOutput, type GitCommit } from './gitParser';
 
 export type { GitCommit } from './gitParser';
 
+export interface Branch {
+    name: string;
+    fullName: string;
+    isRemote: boolean;
+    isHead: boolean;
+    isTag: boolean;
+}
+
 export class GitOperations {
     constructor(private readonly onRefresh: () => void) {}
 
@@ -14,6 +22,48 @@ export class GitOperations {
         return vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? null;
     }
 
+    async getBranches(): Promise<Branch[]> {
+        return new Promise((resolve) => {
+            const cwd = this.getCwd();
+            if (!cwd) {
+                resolve([]);
+                return;
+            }
+            cp.exec('git for-each-ref --format="%(refname)|%(refname:short)|%(HEAD)" refs/heads/ refs/remotes/ refs/tags/', { cwd }, (err, stdout) => {
+                if (err) {
+                    resolve([]);
+                    return;
+                }
+                const branches: Branch[] = stdout
+                    .split('\n')
+                    .filter((line) => line.trim())
+                    .map((line) => {
+                        const parts = line.split('|');
+                        const refname = parts[0];
+                        const fullName = parts[1];
+                        const head = parts[2];
+
+                        const isRemote = refname.startsWith('refs/remotes/');
+                        const isTag = refname.startsWith('refs/tags/');
+                        if (isRemote && refname.endsWith('/HEAD')) {
+                            return null as any;
+                        }
+
+                        const name = isTag ? fullName.substring(fullName.indexOf('/') + 1) : (isRemote ? fullName.substring(fullName.indexOf('/') + 1) : fullName);
+
+                        return {
+                            name,
+                            fullName,
+                            isRemote,
+                            isHead: head === '*',
+                            isTag,
+                        };
+                    })
+                    .filter(b => b !== null);
+                resolve(branches);
+            });
+        });
+    }
 
     async getCurrentBranch(): Promise<string | null> {
         return new Promise((resolve) => {
