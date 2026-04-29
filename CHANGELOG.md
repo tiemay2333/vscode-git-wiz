@@ -2,6 +2,12 @@
 
 All notable changes to Git Wiz are documented here.
 
+## [1.2.0] - 2026-04-29
+- Added history file function
+- New tag management function
+- Style Optimization
+- Bug Fixes
+
 ## [1.1.2] - 2026-04-28
 - Experience optimization
 
