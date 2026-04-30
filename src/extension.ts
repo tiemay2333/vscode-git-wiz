@@ -156,7 +156,7 @@ export function activate(context: vscode.ExtensionContext) {
             const localBranchName = parts.slice(1).join('/');
 
             vscode.window.withProgress({
-                location: vscode.ProgressLocation.Notification,
+                location: vscode.ProgressLocation.Window,
                 title: `Fetching ${remote} and tracking ${branchName}...`,
                 cancellable: false
             }, () => {
@@ -240,7 +240,7 @@ export function activate(context: vscode.ExtensionContext) {
             const doDeleteRemote = confirm === 'Delete Both';
 
             await vscode.window.withProgress(
-                { location: vscode.ProgressLocation.Notification, title: `Deleting branch '${branchName}'...` },
+                { location: vscode.ProgressLocation.Window, title: `Deleting branch '${branchName}'...` },
                 async () => {
                     const deleteLocalCommand = (force: boolean): Promise<void> => {
                         return new Promise((resolve, reject) => {
@@ -349,7 +349,7 @@ export function activate(context: vscode.ExtensionContext) {
 
             const cwd = workspaceFolders[0].uri.fsPath;
             await vscode.window.withProgress(
-                { location: vscode.ProgressLocation.Notification, title: `Deleting remote branch '${branch}'...` },
+                { location: vscode.ProgressLocation.Window, title: `Deleting remote branch '${branch}'...` },
                 async () => {
                     return new Promise<void>((resolve) => {
                         cp.execFile('git', ['push', remote, '--delete', branch], { cwd }, (error, _stdout, stderr) => {
@@ -370,7 +370,7 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(
         vscode.commands.registerCommand('git-wiz.refreshBranches', () => {
             vscode.window.withProgress(
-                { location: vscode.ProgressLocation.Notification, title: 'Refreshing Branches...' },
+                { location: vscode.ProgressLocation.Window, title: 'Refreshing Branches...' },
                 async () => {
                     graphProvider.refresh();
                     await new Promise((resolve) => setTimeout(resolve, 500));
@@ -386,7 +386,7 @@ export function activate(context: vscode.ExtensionContext) {
                 return;
             }
             vscode.window.withProgress(
-                { location: vscode.ProgressLocation.Notification, title: 'Fetching...' },
+                { location: vscode.ProgressLocation.Window, title: 'Fetching...' },
                 async () => {
                     return new Promise<void>((resolve) => {
                         cp.execFile('git', ['fetch', '--all'], { cwd }, (error, _stdout, stderr) => {
@@ -411,7 +411,7 @@ export function activate(context: vscode.ExtensionContext) {
                 return;
             }
             vscode.window.withProgress(
-                { location: vscode.ProgressLocation.Notification, title: 'Pulling...' },
+                { location: vscode.ProgressLocation.Window, title: 'Pulling...' },
                 async () => {
                     return new Promise<void>((resolve) => {
                         cp.execFile('git', ['pull'], { cwd }, (error, _stdout, stderr) => {
@@ -436,7 +436,7 @@ export function activate(context: vscode.ExtensionContext) {
                 return;
             }
             vscode.window.withProgress(
-                { location: vscode.ProgressLocation.Notification, title: 'Pushing...' },
+                { location: vscode.ProgressLocation.Window, title: 'Pushing...' },
                 async () => {
                     return new Promise<void>((resolve) => {
                         cp.execFile('git', ['push'], { cwd }, (error, _stdout, stderr) => {
@@ -490,7 +490,7 @@ export function activate(context: vscode.ExtensionContext) {
                 return;
             }
             vscode.window.withProgress(
-                { location: vscode.ProgressLocation.Notification, title: 'Force Pushing...' },
+                { location: vscode.ProgressLocation.Window, title: 'Force Pushing...' },
                 async () => {
                     return new Promise<void>((resolve) => {
                         cp.execFile('git', ['push', '--force-with-lease'], { cwd }, (error, _stdout, stderr) => {
@@ -569,65 +569,70 @@ export function activate(context: vscode.ExtensionContext) {
                 return;
             }
 
-            const tryDelete = (
-                name: string,
-                force: boolean,
-            ): Promise<{ name: string; notMerged: boolean; error?: string }> =>
-                new Promise((resolve) => {
-                    cp.execFile('git', ['branch', force ? '-D' : '-d', name], { cwd }, (err, _stdout, stderr) => {
-                        if (err) {
-                            if (!force && stderr.includes('not fully merged')) {
-                                resolve({ name, notMerged: true });
-                            } else {
-                                resolve({ name, notMerged: false, error: stderr || err.message });
-                            }
-                        } else {
-                            resolve({ name, notMerged: false });
-                        }
-                    });
-                });
+            await vscode.window.withProgress(
+                { location: vscode.ProgressLocation.Window, title: `Deleting ${label}...` },
+                async () => {
+                    const tryDelete = (
+                        name: string,
+                        force: boolean,
+                    ): Promise<{ name: string; notMerged: boolean; error?: string }> =>
+                        new Promise((resolve) => {
+                            cp.execFile('git', ['branch', force ? '-D' : '-d', name], { cwd }, (err, _stdout, stderr) => {
+                                if (err) {
+                                    if (!force && stderr.includes('not fully merged')) {
+                                        resolve({ name, notMerged: true });
+                                    } else {
+                                        resolve({ name, notMerged: false, error: stderr || err.message });
+                                    }
+                                } else {
+                                    resolve({ name, notMerged: false });
+                                }
+                            });
+                        });
 
-            const results = await Promise.all(branchNames.map((name) => tryDelete(name, false)));
-            const notMerged = results.filter((r) => r.notMerged).map((r) => r.name);
-            const failed = results.filter((r) => !r.notMerged && r.error);
-            const deletedCount = results.filter((r) => !r.notMerged && !r.error).length;
+                    const results = await Promise.all(branchNames.map((name) => tryDelete(name, false)));
+                    const notMerged = results.filter((r) => r.notMerged).map((r) => r.name);
+                    const failed = results.filter((r) => !r.notMerged && r.error);
+                    const deletedCount = results.filter((r) => !r.notMerged && !r.error).length;
 
-            if (failed.length > 0) {
-                vscode.window.showErrorMessage(`Failed to delete: ${failed.map((r) => r.name).join(', ')}`);
-            }
+                    if (failed.length > 0) {
+                        vscode.window.showErrorMessage(`Failed to delete: ${failed.map((r) => r.name).join(', ')}`);
+                    }
 
-            if (notMerged.length > 0) {
-                const notMergedLabel =
-                    notMerged.length === 1 ? `Branch '${notMerged[0]}' is` : `${notMerged.length} branches are`;
-                const forceConfirm = await vscode.window.showWarningMessage(
-                    `${notMergedLabel} not fully merged. Force delete?`,
-                    { detail: notMerged.join(', ') },
-                    'Force Delete',
-                    'Cancel',
-                );
-                if (forceConfirm === 'Force Delete') {
-                    const forceResults = await Promise.all(notMerged.map((name) => tryDelete(name, true)));
-                    const forceDeleted = forceResults.filter((r) => !r.error).length;
-                    const forceFailed = forceResults.filter((r) => r.error);
-                    if (forceFailed.length > 0) {
-                        vscode.window.showErrorMessage(
-                            `Failed to force delete: ${forceFailed.map((r) => r.name).join(', ')}`,
+                    if (notMerged.length > 0) {
+                        const notMergedLabel =
+                            notMerged.length === 1 ? `Branch '${notMerged[0]}' is` : `${notMerged.length} branches are`;
+                        const forceConfirm = await vscode.window.showWarningMessage(
+                            `${notMergedLabel} not fully merged. Force delete?`,
+                            { detail: notMerged.join(', ') },
+                            'Force Delete',
+                            'Cancel',
                         );
+                        if (forceConfirm === 'Force Delete') {
+                            const forceResults = await Promise.all(notMerged.map((name) => tryDelete(name, true)));
+                            const forceDeleted = forceResults.filter((r) => !r.error).length;
+                            const forceFailed = forceResults.filter((r) => r.error);
+                            if (forceFailed.length > 0) {
+                                vscode.window.showErrorMessage(
+                                    `Failed to force delete: ${forceFailed.map((r) => r.name).join(', ')}`,
+                                );
+                            }
+                            const total = deletedCount + forceDeleted;
+                            if (total > 0) {
+                                vscode.window.showInformationMessage(`Deleted ${total} branch${total > 1 ? 'es' : ''}`);
+                            }
+                        } else if (deletedCount > 0) {
+                            vscode.window.showInformationMessage(
+                                `Deleted ${deletedCount} branch${deletedCount > 1 ? 'es' : ''}`,
+                            );
+                        }
+                    } else if (deletedCount > 0) {
+                        vscode.window.showInformationMessage(`Deleted ${deletedCount} branch${deletedCount > 1 ? 'es' : ''}`);
                     }
-                    const total = deletedCount + forceDeleted;
-                    if (total > 0) {
-                        vscode.window.showInformationMessage(`Deleted ${total} branch${total > 1 ? 'es' : ''}`);
-                    }
-                } else if (deletedCount > 0) {
-                    vscode.window.showInformationMessage(
-                        `Deleted ${deletedCount} branch${deletedCount > 1 ? 'es' : ''}`,
-                    );
-                }
-            } else if (deletedCount > 0) {
-                vscode.window.showInformationMessage(`Deleted ${deletedCount} branch${deletedCount > 1 ? 'es' : ''}`);
-            }
 
-            graphProvider.refresh();
+                    graphProvider.refresh();
+                }
+            );
         }),
     );
 
@@ -657,21 +662,28 @@ export function activate(context: vscode.ExtensionContext) {
             if (confirm === 'Delete') {
                 const cwd = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
                 if (!cwd) return;
-                
+
                 const execFile = require('child_process').execFile;
-                execFile('git', ['tag', '-d', tagName], { cwd }, (error: Error, stdout: string, stderr: string) => {
-                    if (error) {
-                        vscode.window.showErrorMessage(`Failed to delete tag: ${stderr || error.message}`);
-                    } else {
-                        vscode.window.showInformationMessage(`Tag '${tagName}' deleted successfully`);
-                        vscode.commands.executeCommand('git-wiz.refreshBranches');
-                        if (graphProvider) {
-                            graphProvider.refresh();
-                        }
+                await vscode.window.withProgress(
+                    { location: vscode.ProgressLocation.Window, title: `Deleting tag '${tagName}'...` },
+                    async () => {
+                        return new Promise<void>((resolve) => {
+                            execFile('git', ['tag', '-d', tagName], { cwd }, (error: Error, stdout: string, stderr: string) => {
+                                if (error) {
+                                    vscode.window.showErrorMessage(`Failed to delete tag: ${stderr || error.message}`);
+                                } else {
+                                    vscode.window.showInformationMessage(`Tag '${tagName}' deleted successfully`);
+                                    vscode.commands.executeCommand('git-wiz.refreshBranches');
+                                    if (graphProvider) {
+                                        graphProvider.refresh();
+                                    }
+                                }
+                                resolve();
+                            });
+                        });
                     }
-                });
-            }
-        }),
+                );
+            }        }),
         vscode.commands.registerCommand('git-wiz.createBranch', async (branchTreeItem: { branchName: string }) => {
             const sourceBranch = branchTreeItem.branchName;
             if (!sourceBranch) {

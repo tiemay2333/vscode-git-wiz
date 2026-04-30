@@ -167,14 +167,22 @@ export class GitOperations {
         const escaped = newMessage.replace(/"/g, '\\"');
 
         if (commitHash === headHash) {
-            cp.exec(`git commit --amend -m "${escaped}"`, { cwd }, (error) => {
-                if (error) {
-                    vscode.window.showErrorMessage(`Failed to edit commit message: ${error.message}`);
-                    return;
+            await vscode.window.withProgress(
+                { location: vscode.ProgressLocation.Window, title: 'Editing commit message...' },
+                async () => {
+                    return new Promise<void>((resolve) => {
+                        cp.exec(`git commit --amend -m "${escaped}"`, { cwd }, (error) => {
+                            if (error) {
+                                vscode.window.showErrorMessage(`Failed to edit commit message: ${error.message}`);
+                            } else {
+                                vscode.window.showInformationMessage('Commit message updated successfully');
+                                this.onRefresh();
+                            }
+                            resolve();
+                        });
+                    });
                 }
-                vscode.window.showInformationMessage('Commit message updated successfully');
-                this.onRefresh();
-            });
+            );
         } else {
             const seqEditorScript = `
 const fs = require('fs');
@@ -207,17 +215,25 @@ fs.writeFileSync(process.argv[2], ${JSON.stringify(newMessage + '\n')});
                 GIT_EDITOR: `node "${msgEditorPath}"`,
             };
 
-            cp.exec(`git rebase -i ${commitHash}~1`, { cwd, env }, (error, _stdout, stderr) => {
-                fs.rmSync(seqEditorPath, { force: true });
-                fs.rmSync(msgEditorPath, { force: true });
-                if (error) {
-                    cp.exec('git rebase --abort', { cwd }, () => {});
-                    vscode.window.showErrorMessage(`Failed to edit commit message: ${error.message}\n${stderr}`);
-                    return;
+            await vscode.window.withProgress(
+                { location: vscode.ProgressLocation.Window, title: 'Editing commit message...' },
+                async () => {
+                    return new Promise<void>((resolve) => {
+                        cp.exec(`git rebase -i ${commitHash}~1`, { cwd, env }, (error, _stdout, stderr) => {
+                            fs.rmSync(seqEditorPath, { force: true });
+                            fs.rmSync(msgEditorPath, { force: true });
+                            if (error) {
+                                cp.exec('git rebase --abort', { cwd }, () => {});
+                                vscode.window.showErrorMessage(`Failed to edit commit message: ${error.message}\n${stderr}`);
+                            } else {
+                                vscode.window.showInformationMessage('Commit message updated successfully');
+                                this.onRefresh();
+                            }
+                            resolve();
+                        });
+                    });
                 }
-                vscode.window.showInformationMessage('Commit message updated successfully');
-                this.onRefresh();
-            });
+            );
         }
     }
 
@@ -236,14 +252,22 @@ fs.writeFileSync(process.argv[2], ${JSON.stringify(newMessage + '\n')});
             return;
         }
 
-        cp.execFile('git', ['commit', '--amend', '--no-edit'], { cwd }, (error, _stdout, stderr) => {
-            if (error) {
-                vscode.window.showErrorMessage(`Failed to amend commit: ${stderr || error.message}`);
-                return;
+        await vscode.window.withProgress(
+            { location: vscode.ProgressLocation.Window, title: 'Amending commit...' },
+            async () => {
+                return new Promise<void>((resolve) => {
+                    cp.execFile('git', ['commit', '--amend', '--no-edit'], { cwd }, (error, _stdout, stderr) => {
+                        if (error) {
+                            vscode.window.showErrorMessage(`Failed to amend commit: ${stderr || error.message}`);
+                        } else {
+                            vscode.window.showInformationMessage('Commit amended successfully');
+                            this.onRefresh();
+                        }
+                        resolve();
+                    });
+                });
             }
-            vscode.window.showInformationMessage('Commit amended successfully');
-            this.onRefresh();
-        });
+        );
     }
 
     async cherryPickCommit(commitHash: string) {
@@ -252,14 +276,22 @@ fs.writeFileSync(process.argv[2], ${JSON.stringify(newMessage + '\n')});
             return;
         }
 
-        cp.exec(`git cherry-pick ${commitHash}`, { cwd }, (error, _stdout, stderr) => {
-            if (error) {
-                vscode.window.showErrorMessage(`Failed to cherry-pick commit: ${error.message}\n${stderr}`);
-                return;
+        await vscode.window.withProgress(
+            { location: vscode.ProgressLocation.Window, title: `Cherry-picking commit ${commitHash.substring(0, 7)}...` },
+            async () => {
+                return new Promise<void>((resolve) => {
+                    cp.exec(`git cherry-pick ${commitHash}`, { cwd }, (error, _stdout, stderr) => {
+                        if (error) {
+                            vscode.window.showErrorMessage(`Failed to cherry-pick commit: ${error.message}\n${stderr}`);
+                        } else {
+                            vscode.window.showInformationMessage('Commit cherry-picked successfully');
+                            this.onRefresh();
+                        }
+                        resolve();
+                    });
+                });
             }
-            vscode.window.showInformationMessage('Commit cherry-picked successfully');
-            this.onRefresh();
-        });
+        );
     }
 
     async copyCommitHash(commitHash: string) {
@@ -282,14 +314,22 @@ fs.writeFileSync(process.argv[2], ${JSON.stringify(newMessage + '\n')});
             return;
         }
 
-        cp.exec(`git revert ${commitHash} --no-edit`, { cwd }, (error, _stdout, stderr) => {
-            if (error) {
-                vscode.window.showErrorMessage(`Failed to revert commit: ${error.message}\n${stderr}`);
-                return;
+        await vscode.window.withProgress(
+            { location: vscode.ProgressLocation.Window, title: `Reverting commit ${commitHash.substring(0, 7)}...` },
+            async () => {
+                return new Promise<void>((resolve) => {
+                    cp.exec(`git revert ${commitHash} --no-edit`, { cwd }, (error, _stdout, stderr) => {
+                        if (error) {
+                            vscode.window.showErrorMessage(`Failed to revert commit: ${error.message}\n${stderr}`);
+                        } else {
+                            vscode.window.showInformationMessage('Commit reverted successfully');
+                            this.onRefresh();
+                        }
+                        resolve();
+                    });
+                });
             }
-            vscode.window.showInformationMessage('Commit reverted successfully');
-            this.onRefresh();
-        });
+        );
     }
 
     async dropCommit(commitHash: string) {
@@ -307,14 +347,22 @@ fs.writeFileSync(process.argv[2], ${JSON.stringify(newMessage + '\n')});
             return;
         }
 
-        cp.exec(`git rebase --onto ${commitHash}^ ${commitHash}`, { cwd }, (error, _stdout, stderr) => {
-            if (error) {
-                vscode.window.showErrorMessage(`Failed to drop commit: ${error.message}\n${stderr}`);
-                return;
+        await vscode.window.withProgress(
+            { location: vscode.ProgressLocation.Window, title: `Dropping commit ${commitHash.substring(0, 7)}...` },
+            async () => {
+                return new Promise<void>((resolve) => {
+                    cp.exec(`git rebase --onto ${commitHash}^ ${commitHash}`, { cwd }, (error, _stdout, stderr) => {
+                        if (error) {
+                            vscode.window.showErrorMessage(`Failed to drop commit: ${error.message}\n${stderr}`);
+                        } else {
+                            vscode.window.showInformationMessage('Commit dropped successfully');
+                            this.onRefresh();
+                        }
+                        resolve();
+                    });
+                });
             }
-            vscode.window.showInformationMessage('Commit dropped successfully');
-            this.onRefresh();
-        });
+        );
     }
 
     async resetToCommit(commitHash: string) {
@@ -351,14 +399,22 @@ fs.writeFileSync(process.argv[2], ${JSON.stringify(newMessage + '\n')});
             return;
         }
 
-        cp.exec(`git reset ${resetType.value} "${commitHash}"`, { cwd }, (error, _stdout, stderr) => {
-            if (error) {
-                vscode.window.showErrorMessage(`Failed to reset: ${error.message}\n${stderr}`);
-                return;
+        await vscode.window.withProgress(
+            { location: vscode.ProgressLocation.Window, title: `Resetting to commit ${commitHash.substring(0, 7)} (${resetType.label})...` },
+            async () => {
+                return new Promise<void>((resolve) => {
+                    cp.exec(`git reset ${resetType.value} "${commitHash}"`, { cwd }, (error, _stdout, stderr) => {
+                        if (error) {
+                            vscode.window.showErrorMessage(`Failed to reset: ${error.message}\n${stderr}`);
+                        } else {
+                            vscode.window.showInformationMessage(`Reset to commit ${commitHash.substring(0, 7)} successfully`);
+                            this.onRefresh();
+                        }
+                        resolve();
+                    });
+                });
             }
-            vscode.window.showInformationMessage(`Reset to commit ${commitHash.substring(0, 7)} successfully`);
-            this.onRefresh();
-        });
+        );
     }
 
     async squashCommits(hashes: string[], parentHash: string) {
@@ -388,20 +444,29 @@ fs.writeFileSync(process.argv[2], ${JSON.stringify(newMessage + '\n')});
         if (hashes[0] === headHash) {
             // Selection ends at HEAD — simple reset + commit
             const escaped = newMessage.replace(/"/g, '\\"');
-            cp.exec(`git reset --soft ${parentHash}`, { cwd }, (error) => {
-                if (error) {
-                    vscode.window.showErrorMessage(`Failed to squash: ${error.message}`);
-                    return;
+            await vscode.window.withProgress(
+                { location: vscode.ProgressLocation.Window, title: `Squashing ${hashes.length} commits...` },
+                async () => {
+                    return new Promise<void>((resolve) => {
+                        cp.exec(`git reset --soft ${parentHash}`, { cwd }, (error) => {
+                            if (error) {
+                                vscode.window.showErrorMessage(`Failed to squash: ${error.message}`);
+                                resolve();
+                                return;
+                            }
+                            cp.exec(`git commit -m "${escaped}"`, { cwd }, (err2) => {
+                                if (err2) {
+                                    vscode.window.showErrorMessage(`Failed to commit squash: ${err2.message}`);
+                                } else {
+                                    vscode.window.showInformationMessage(`Squashed ${hashes.length} commits successfully`);
+                                    this.onRefresh();
+                                }
+                                resolve();
+                            });
+                        });
+                    });
                 }
-                cp.exec(`git commit -m "${escaped}"`, { cwd }, (err2) => {
-                    if (err2) {
-                        vscode.window.showErrorMessage(`Failed to commit squash: ${err2.message}`);
-                        return;
-                    }
-                    vscode.window.showInformationMessage(`Squashed ${hashes.length} commits successfully`);
-                    this.onRefresh();
-                });
-            });
+            );
         } else {
             // Selection is in the middle — use interactive rebase with scripted editors.
             // hashes[hashes.length-1] is the oldest selected (stays 'pick');
@@ -441,17 +506,25 @@ fs.writeFileSync(process.argv[2], ${JSON.stringify(newMessage + '\n')});
                 GIT_EDITOR: `node "${msgEditorPath}"`,
             };
 
-            cp.exec(`git rebase -i ${parentHash}`, { cwd, env }, (error, _stdout, stderr) => {
-                fs.rmSync(seqEditorPath, { force: true });
-                fs.rmSync(msgEditorPath, { force: true });
-                if (error) {
-                    cp.exec('git rebase --abort', { cwd }, () => {});
-                    vscode.window.showErrorMessage(`Failed to squash: ${error.message}\n${stderr}`);
-                    return;
+            await vscode.window.withProgress(
+                { location: vscode.ProgressLocation.Window, title: `Squashing ${hashes.length} commits...` },
+                async () => {
+                    return new Promise<void>((resolve) => {
+                        cp.exec(`git rebase -i ${parentHash}`, { cwd, env }, (error, _stdout, stderr) => {
+                            fs.rmSync(seqEditorPath, { force: true });
+                            fs.rmSync(msgEditorPath, { force: true });
+                            if (error) {
+                                cp.exec('git rebase --abort', { cwd }, () => {});
+                                vscode.window.showErrorMessage(`Failed to squash: ${error.message}\n${stderr}`);
+                            } else {
+                                vscode.window.showInformationMessage(`Squashed ${hashes.length} commits successfully`);
+                                this.onRefresh();
+                            }
+                            resolve();
+                        });
+                    });
                 }
-                vscode.window.showInformationMessage(`Squashed ${hashes.length} commits successfully`);
-                this.onRefresh();
-            });
+            );
         }
     }
 
@@ -470,15 +543,23 @@ fs.writeFileSync(process.argv[2], ${JSON.stringify(newMessage + '\n')});
             return;
         }
 
-        // hashes are newest-first; revert in that order so each revert applies cleanly
-        cp.exec(`git revert ${hashes.join(' ')} --no-edit`, { cwd }, (error, _stdout, stderr) => {
-            if (error) {
-                vscode.window.showErrorMessage(`Failed to revert commits: ${error.message}\n${stderr}`);
-                return;
+        await vscode.window.withProgress(
+            { location: vscode.ProgressLocation.Window, title: `Reverting ${hashes.length} commits...` },
+            async () => {
+                return new Promise<void>((resolve) => {
+                    // hashes are newest-first; revert in that order so each revert applies cleanly
+                    cp.exec(`git revert ${hashes.join(' ')} --no-edit`, { cwd }, (error, _stdout, stderr) => {
+                        if (error) {
+                            vscode.window.showErrorMessage(`Failed to revert commits: ${error.message}\n${stderr}`);
+                        } else {
+                            vscode.window.showInformationMessage(`Reverted ${hashes.length} commits successfully`);
+                            this.onRefresh();
+                        }
+                        resolve();
+                    });
+                });
             }
-            vscode.window.showInformationMessage(`Reverted ${hashes.length} commits successfully`);
-            this.onRefresh();
-        });
+        );
     }
 
     async dropCommits(hashes: string[], parentHash: string) {
@@ -501,15 +582,23 @@ fs.writeFileSync(process.argv[2], ${JSON.stringify(newMessage + '\n')});
             return;
         }
 
-        // hashes[0] is newest; rebase everything after it onto parentHash, dropping the whole range
-        cp.exec(`git rebase --onto ${parentHash} ${hashes[0]}`, { cwd }, (error, _stdout, stderr) => {
-            if (error) {
-                vscode.window.showErrorMessage(`Failed to drop commits: ${error.message}\n${stderr}`);
-                return;
+        await vscode.window.withProgress(
+            { location: vscode.ProgressLocation.Window, title: `Dropping ${hashes.length} commits...` },
+            async () => {
+                return new Promise<void>((resolve) => {
+                    // hashes[0] is newest; rebase everything after it onto parentHash, dropping the whole range
+                    cp.exec(`git rebase --onto ${parentHash} ${hashes[0]}`, { cwd }, (error, _stdout, stderr) => {
+                        if (error) {
+                            vscode.window.showErrorMessage(`Failed to drop commits: ${error.message}\n${stderr}`);
+                        } else {
+                            vscode.window.showInformationMessage(`Dropped ${hashes.length} commits successfully`);
+                            this.onRefresh();
+                        }
+                        resolve();
+                    });
+                });
             }
-            vscode.window.showInformationMessage(`Dropped ${hashes.length} commits successfully`);
-            this.onRefresh();
-        });
+        );
     }
 
     async cherryPickRange(hashes: string[]) {
@@ -518,61 +607,86 @@ fs.writeFileSync(process.argv[2], ${JSON.stringify(newMessage + '\n')});
             return;
         }
 
-        // hashes are newest-first; cherry-pick oldest to newest
-        const ordered = [...hashes].reverse().join(' ');
-        cp.exec(`git cherry-pick ${ordered}`, { cwd }, (error, _stdout, stderr) => {
-            if (error) {
-                vscode.window.showErrorMessage(`Failed to cherry-pick: ${error.message}\n${stderr}`);
-                return;
+        await vscode.window.withProgress(
+            { location: vscode.ProgressLocation.Window, title: `Cherry-picking ${hashes.length} commits...` },
+            async () => {
+                return new Promise<void>((resolve) => {
+                    // hashes are newest-first; cherry-pick oldest to newest
+                    const ordered = [...hashes].reverse().join(' ');
+                    cp.exec(`git cherry-pick ${ordered}`, { cwd }, (error, _stdout, stderr) => {
+                        if (error) {
+                            vscode.window.showErrorMessage(`Failed to cherry-pick: ${error.message}\n${stderr}`);
+                        } else {
+                            vscode.window.showInformationMessage(`Cherry-picked ${hashes.length} commits successfully`);
+                            this.onRefresh();
+                        }
+                        resolve();
+                    });
+                });
             }
-            vscode.window.showInformationMessage(`Cherry-picked ${hashes.length} commits successfully`);
-            this.onRefresh();
-        });
+        );
     }
 
     async mergeBranch(sourceBranch: string) {
         const cwd = this.getCwd();
         if (!cwd) return;
 
-        cp.execFile('git', ['merge', sourceBranch], { cwd }, (error, _stdout, stderr) => {
-            if (error) {
-                const message = stderr || error.message;
-                const isConflict = message.includes('CONFLICT') || message.includes('Conflict');
-                if (isConflict) {
-                    vscode.window.showErrorMessage(`Merge failed with conflicts: ${message}`, 'Abort Merge', 'Close')
-                        .then(choice => {
-                            if (choice === 'Abort Merge') {
-                                cp.execFile('git', ['merge', '--abort'], { cwd }, () => {
-                                    vscode.window.showInformationMessage('Merge aborted');
-                                    this.onRefresh();
-                                });
+        await vscode.window.withProgress(
+            { location: vscode.ProgressLocation.Window, title: `Merging '${sourceBranch}'...` },
+            async () => {
+                return new Promise<void>((resolve) => {
+                    cp.execFile('git', ['merge', sourceBranch], { cwd }, (error, _stdout, stderr) => {
+                        if (error) {
+                            const message = stderr || error.message;
+                            const isConflict = message.includes('CONFLICT') || message.includes('Conflict');
+                            if (isConflict) {
+                                vscode.window.showErrorMessage(`Merge failed with conflicts: ${message}`, 'Abort Merge', 'Close')
+                                    .then(choice => {
+                                        if (choice === 'Abort Merge') {
+                                            cp.execFile('git', ['merge', '--abort'], { cwd }, () => {
+                                                vscode.window.showInformationMessage('Merge aborted');
+                                                this.onRefresh();
+                                            });
+                                        }
+                                    });
+                            } else {
+                                vscode.window.showErrorMessage(`Merge failed: ${message}`);
                             }
-                        });
-                } else {
-                    vscode.window.showErrorMessage(`Merge failed: ${message}`);
-                }
-            } else {
-                vscode.window.showInformationMessage(`Merged '${sourceBranch}' successfully`);
+                        } else {
+                            vscode.window.showInformationMessage(`Merged '${sourceBranch}' successfully`);
+                        }
+                        this.onRefresh();
+                        resolve();
+                    });
+                });
             }
-            this.onRefresh();
-        });
+        );
     }
 
     async rebaseBranch(targetBranch: string) {
         const cwd = this.getCwd();
         if (!cwd) return;
 
-        cp.execFile('git', ['rebase', targetBranch], { cwd }, (error, _stdout, stderr) => {
-            if (error) {
-                cp.execFile('git', ['rebase', '--abort'], { cwd }, () => {
-                    vscode.window.showErrorMessage(`Rebase failed: ${stderr || error.message}. Rebase aborted.`);
-                    this.onRefresh();
+        await vscode.window.withProgress(
+            { location: vscode.ProgressLocation.Window, title: `Rebasing onto '${targetBranch}'...` },
+            async () => {
+                return new Promise<void>((resolve) => {
+                    cp.execFile('git', ['rebase', targetBranch], { cwd }, (error, _stdout, stderr) => {
+                        if (error) {
+                            cp.execFile('git', ['rebase', '--abort'], { cwd }, () => {
+                                vscode.window.showErrorMessage(`Rebase failed: ${stderr || error.message}. Rebase aborted.`);
+                                this.onRefresh();
+                                resolve();
+                            });
+                        } else {
+                            vscode.window.showInformationMessage(`Rebased onto '${targetBranch}' successfully`);
+                            this.onRefresh();
+                            resolve();
+                        }
+                    });
                 });
-            } else {
-                vscode.window.showInformationMessage(`Rebased onto '${targetBranch}' successfully`);
-                this.onRefresh();
             }
-        });
+        );
     }
 
     async createBranch(branchName: string, startPoint: string) {
@@ -580,15 +694,23 @@ fs.writeFileSync(process.argv[2], ${JSON.stringify(newMessage + '\n')});
         if (!cwd) return;
 
         return new Promise<void>((resolve) => {
-            cp.execFile('git', ['branch', branchName, startPoint], { cwd }, (error, _stdout, stderr) => {
-                if (error) {
-                    vscode.window.showErrorMessage(`Failed to create branch: ${stderr || error.message}`);
-                } else {
-                    vscode.window.showInformationMessage(`Branch '${branchName}' created successfully`);
-                    this.onRefresh();
+            vscode.window.withProgress(
+                { location: vscode.ProgressLocation.Window, title: `Creating branch '${branchName}'...` },
+                async () => {
+                    return new Promise<void>((res) => {
+                        cp.execFile('git', ['branch', branchName, startPoint], { cwd }, (error, _stdout, stderr) => {
+                            if (error) {
+                                vscode.window.showErrorMessage(`Failed to create branch: ${stderr || error.message}`);
+                            } else {
+                                vscode.window.showInformationMessage(`Branch '${branchName}' created successfully`);
+                                this.onRefresh();
+                            }
+                            res();
+                            resolve();
+                        });
+                    });
                 }
-                resolve();
-            });
+            );
         });
     }
 
@@ -597,18 +719,26 @@ fs.writeFileSync(process.argv[2], ${JSON.stringify(newMessage + '\n')});
         if (!cwd) return;
 
         return new Promise<void>((resolve) => {
-            cp.execFile('git', ['tag', tagName, commitHash], { cwd }, async (error, _stdout, stderr) => {
-                if (error) {
-                    vscode.window.showErrorMessage(`Failed to create tag: ${stderr || error.message}`);
-                } else {
-                    const action = await vscode.window.showInformationMessage(`Tag '${tagName}' created successfully`, 'Push Tag');
-                    this.onRefresh();
-                    if (action === 'Push Tag') {
-                        this.pushTag(tagName);
-                    }
+            vscode.window.withProgress(
+                { location: vscode.ProgressLocation.Window, title: `Creating tag '${tagName}'...` },
+                async () => {
+                    return new Promise<void>((res) => {
+                        cp.execFile('git', ['tag', tagName, commitHash], { cwd }, async (error, _stdout, stderr) => {
+                            if (error) {
+                                vscode.window.showErrorMessage(`Failed to create tag: ${stderr || error.message}`);
+                            } else {
+                                const action = await vscode.window.showInformationMessage(`Tag '${tagName}' created successfully`, 'Push Tag');
+                                this.onRefresh();
+                                if (action === 'Push Tag') {
+                                    this.pushTag(tagName);
+                                }
+                            }
+                            res();
+                            resolve();
+                        });
+                    });
                 }
-                resolve();
-            });
+            );
         });
     }
 
@@ -643,14 +773,22 @@ fs.writeFileSync(process.argv[2], ${JSON.stringify(newMessage + '\n')});
                     targetRemote = picked;
                 }
 
-                cp.execFile('git', ['push', targetRemote, tagName], { cwd }, (pushError, _pushStdout, pushStderr) => {
-                    if (pushError) {
-                        vscode.window.showErrorMessage(`Failed to push tag: ${pushStderr || pushError.message}`);
-                    } else {
-                        vscode.window.showInformationMessage(`Tag '${tagName}' pushed to '${targetRemote}' successfully`);
+                await vscode.window.withProgress(
+                    { location: vscode.ProgressLocation.Window, title: `Pushing tag '${tagName}' to '${targetRemote}'...` },
+                    async () => {
+                        return new Promise<void>((res) => {
+                            cp.execFile('git', ['push', targetRemote, tagName], { cwd }, (pushError, _pushStdout, pushStderr) => {
+                                if (pushError) {
+                                    vscode.window.showErrorMessage(`Failed to push tag: ${pushStderr || pushError.message}`);
+                                } else {
+                                    vscode.window.showInformationMessage(`Tag '${tagName}' pushed to '${targetRemote}' successfully`);
+                                }
+                                res();
+                                resolve();
+                            });
+                        });
                     }
-                    resolve();
-                });
+                );
             });
         });
     }
