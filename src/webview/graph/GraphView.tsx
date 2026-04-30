@@ -1054,9 +1054,11 @@ export function GraphView({
                                 Revert Commit
                             </div>
                         )}
-                        <div className="context-menu-item" onClick={() => handleSingleAction('resetToCommit')}>
-                            Reset to Commit
-                        </div>
+                        {singleMenu.hash !== headCommitHash && (
+                            <div className="context-menu-item" onClick={() => handleSingleAction('resetToCommit')}>
+                                Reset to Commit
+                            </div>
+                        )}
                         {headCommitAncestors.has(singleMenu.hash) && (
                             <div
                                 className="context-menu-item context-menu-item--danger"
