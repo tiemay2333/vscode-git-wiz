@@ -167,7 +167,11 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider {
                 this._gitOps.pushTag(message.tagName!);
                 break;
             case 'createBranch':
-                this.createBranchFromCommit(message.commitHash!);
+                if (message.branchName) {
+                    vscode.commands.executeCommand('git-wiz.createBranch', { branchName: message.branchName });
+                } else {
+                    this.createBranchFromCommit(message.commitHash!);
+                }
                 break;
             case 'selectBranch':
                 this.filterByBranch(message.branchName || null);
