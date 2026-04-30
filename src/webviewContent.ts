@@ -262,6 +262,9 @@ export function getHtmlForWebview(
         }
 
         .branch-info-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
             padding: 6px 12px;
             font-size: 11px;
             font-weight: 500;
@@ -276,7 +279,8 @@ export function getHtmlForWebview(
             font-size: 14px;
             font-weight: 700;
             cursor: pointer;
-            padding: 3px 6px;
+            height: 13px;
+            padding: 0 4px;
             line-height: 1;
             border-radius: 4px;
             transition: background 0.15s ease, color 0.15s ease;

@@ -814,14 +814,7 @@ export function GraphView({
                     </div>
                 </div>
 
-                <div
-                    className="branch-info-bar"
-                    style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                    }}
-                >
+                <div className="branch-info-bar">
                     <span>{branchLabel}</span>
                     {(filterBranch || filterFile) && (
                         <button
