@@ -129,7 +129,9 @@ export const CommitRow = React.memo(function CommitRow({
         >
             <td className="graph-cell" style={{ width: graphWidth, minWidth: graphWidth, maxWidth: graphWidth }}>
                 <svg width={graphWidth} height="28" style={{ display: 'block' }}>
-                    {graphNode.lines.map((line, i) => {
+                    {[...graphNode.lines]
+                        .sort((a, b) => Math.abs(b.x2 - b.x1) - Math.abs(a.x2 - a.x1))
+                        .map((line, i) => {
                         const x1 = 10 + line.x1 * 12;
                         const x2 = 10 + line.x2 * 12;
                         const y1 = line.y1 === 0 ? 0 : line.y1 === 1 ? 14 : 28;
@@ -137,14 +139,14 @@ export const CommitRow = React.memo(function CommitRow({
                         const color = getColor(line.color);
 
                         if (line.x1 !== line.x2) {
-                            const cx1 = x1;
-                            const cy1 = (y1 + y2) / 2;
-                            const cx2 = x2;
-                            const cy2 = (y1 + y2) / 2;
+                            const r = 6;
+                            const dir = x2 > x1 ? 1 : -1;
+                            const yMid = (y1 + y2) / 2;
+                            const d = `M ${x1} ${y1} L ${x1} ${yMid - r} A ${r} ${r} 0 0 ${dir === 1 ? 0 : 1} ${x1 + r * dir} ${yMid} L ${x2 - r * dir} ${yMid} A ${r} ${r} 0 0 ${dir === 1 ? 1 : 0} ${x2} ${yMid + r} L ${x2} ${y2}`;
                             return (
                                 <path
                                     key={i}
-                                    d={`M ${x1} ${y1} C ${cx1} ${cy1}, ${cx2} ${cy2}, ${x2} ${y2}`}
+                                    d={d}
                                     fill="none"
                                     stroke={color}
                                     strokeWidth="1.5"

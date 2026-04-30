@@ -39,11 +39,12 @@ export function activate(context: vscode.ExtensionContext) {
             try {
                 const params = new URLSearchParams(uri.query);
                 const hash = params.get('hash');
+                const fileParam = params.get('file');
                 if (!hash) {
                     return '';
                 }
                 const ops = new GitOperations(() => {});
-                return await ops.getFileContentAtRev(hash, uri.path.substring(1));
+                return await ops.getFileContentAtRev(hash, fileParam || uri.path.substring(1));
             } catch {
                 return '';
             }

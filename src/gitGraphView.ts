@@ -32,6 +32,7 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider {
     private readonly _gitOps: GitOperations;
     private _refreshTimer?: ReturnType<typeof setTimeout>;
     private _initialized = false;
+    private _pendingRefresh = false;
     private _isFirstLoad = true;
 
     constructor(private readonly _extensionUri: vscode.Uri) {
@@ -100,6 +101,10 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider {
 
         this.updateWebview(webviewView.webview);
         this._initialized = true;
+        if (this._pendingRefresh) {
+            this._pendingRefresh = false;
+            this.refresh();
+        }
     }
 
     private handleMessage(message: WebviewMessage, webview: vscode.Webview) {
@@ -206,7 +211,7 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider {
                     .update('commitDetailsViewMode', detailsMode, vscode.ConfigurationTarget.Global);
                 break;
             case 'openDiff':
-                this.openDiff(message.commitHash!, message.filePath!);
+                this.openDiff(message.commitHash!, message.filePath!, message.parentHash);
                 break;
             case 'openFile':
                 this.openFile(message.filePath!);
@@ -261,6 +266,7 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider {
 
     public async refresh(resetScroll: boolean = false) {
         if (!this._initialized) {
+            this._pendingRefresh = true;
             return;
         }
         // Use the current loaded count to ensure we don't shrink the list on refresh
@@ -371,6 +377,10 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider {
             this._filterFile,
         );
         this._initialized = true;
+        if (this._pendingRefresh) {
+            this._pendingRefresh = false;
+            this.refresh();
+        }
     }
 
     private async loadMoreCommits(webview: vscode.Webview) {
@@ -432,12 +442,20 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider {
         }
     }
 
-    private openDiff(commitHash: string, filePath: string) {
-        const uri1 = vscode.Uri.parse(`git-wiz:/${filePath}?hash=${commitHash}~1`);
-        const uri2 = vscode.Uri.parse(`git-wiz:/${filePath}?hash=${commitHash}`);
+    private openDiff(commitHash: string, filePath: string, parentHash?: string) {
+        const shortCommit = commitHash.substring(0, 7);
+        const diffParent = parentHash ? parentHash : `${commitHash}~1`;
+        const shortParent = parentHash ? parentHash.substring(0, 7) : `${shortCommit}~1`;
+
+        const fileName = filePath.split('/').pop() || filePath;
+
+        // By changing the path to /hash/filename, VS Code will use hash/filename as the side labels
+        // and we pass the actual file path in the 'file' query parameter so the provider can read it.
+        const uri1 = vscode.Uri.parse(`git-wiz:/${shortParent}/${fileName}?hash=${diffParent}&file=${encodeURIComponent(filePath)}`);
+        const uri2 = vscode.Uri.parse(`git-wiz:/${shortCommit}/${fileName}?hash=${commitHash}&file=${encodeURIComponent(filePath)}`);
 
         // Provide a clearer title for the diff
-        const title = `${filePath} (${commitHash.substring(0, 7)}~1 ↔ ${commitHash.substring(0, 7)})`;
+        const title = `${fileName} (${shortParent} ↔ ${shortCommit})`;
         vscode.commands.executeCommand('vscode.diff', uri1, uri2, title);
     }
 

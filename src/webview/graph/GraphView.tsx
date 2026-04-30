@@ -964,6 +964,7 @@ export function GraphView({
                                                                                     vscode.postMessage({
                                                                                         command: 'openDiff',
                                                                                         commitHash: commit.hash,
+                                                                                        parentHash: commit.parents?.[0],
                                                                                         filePath: path,
                                                                                     })
                                                                                 }
@@ -981,6 +982,7 @@ export function GraphView({
                                                                                     vscode.postMessage({
                                                                                         command: 'openDiff',
                                                                                         commitHash: commit.hash,
+                                                                                        parentHash: commit.parents?.[0],
                                                                                         filePath: path,
                                                                                     })
                                                                                 }
