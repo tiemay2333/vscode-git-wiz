@@ -189,49 +189,119 @@ export function activate(context: vscode.ExtensionContext) {
             if (!branchName) {
                 return;
             }
-            const confirm = await vscode.window.showWarningMessage(
-                `Are you sure you want to delete branch '${branchName}'?`,
-                'Yes',
-                'No',
-            );
-
-            if (confirm !== 'Yes') {
-                return;
-            }
 
             const workspaceFolders = vscode.workspace.workspaceFolders;
             if (!workspaceFolders) {
                 return;
             }
-
             const cwd = workspaceFolders[0].uri.fsPath;
-            cp.execFile('git', ['branch', '-d', branchName], { cwd }, async (error, _stdout, stderr) => {
-                if (error) {
-                    if (stderr.includes('not fully merged')) {
-                        const forceConfirm = await vscode.window.showWarningMessage(
-                            `Branch '${branchName}' is not fully merged. Force delete anyway?`,
-                            'Force Delete',
-                            'Cancel',
-                        );
-                        if (forceConfirm !== 'Force Delete') {
-                            return;
-                        }
-                        cp.execFile('git', ['branch', '-D', branchName], { cwd }, (err2, _stdout2, stderr2) => {
-                            if (err2) {
-                                vscode.window.showErrorMessage(`Failed to delete branch: ${err2.message}\n${stderr2}`);
+
+            const upstream = await new Promise<string | null>((resolve) => {
+                cp.execFile('git', ['rev-parse', '--abbrev-ref', `${branchName}@{upstream}`], { cwd }, (err, stdout) => {
+                    if (err) {
+                        resolve(null);
+                    } else {
+                        resolve(stdout.trim());
+                    }
+                });
+            });
+
+            let confirm: string | undefined;
+            if (upstream) {
+                confirm = await vscode.window.showWarningMessage(
+                    `Are you sure you want to delete branch '${branchName}'? It has a remote tracking branch '${upstream}'.`,
+                    'Delete Both',
+                    'Delete Local',
+                    'Cancel'
+                );
+            } else {
+                confirm = await vscode.window.showWarningMessage(
+                    `Are you sure you want to delete branch '${branchName}'?`,
+                    'Yes',
+                    'No'
+                );
+            }
+
+            if (!['Yes', 'Delete Local', 'Delete Both'].includes(confirm || '')) {
+                return;
+            }
+
+            const doDeleteRemote = confirm === 'Delete Both';
+
+            await vscode.window.withProgress(
+                { location: vscode.ProgressLocation.Notification, title: `Deleting branch '${branchName}'...` },
+                async () => {
+                    const deleteLocalCommand = (force: boolean): Promise<void> => {
+                        return new Promise((resolve, reject) => {
+                            cp.execFile('git', ['branch', force ? '-D' : '-d', branchName], { cwd }, (error, _stdout, stderr) => {
+                                if (error) {
+                                    if (!force && stderr.includes('not fully merged')) {
+                                        reject(new Error('not fully merged'));
+                                    } else {
+                                        reject(new Error(`Failed to delete branch: ${error.message}\n${stderr}`));
+                                    }
+                                } else {
+                                    resolve();
+                                }
+                            });
+                        });
+                    };
+
+                    const deleteRemoteCommand = async (remoteStr: string): Promise<void> => {
+                        const firstSlash = remoteStr.indexOf('/');
+                        if (firstSlash === -1) return;
+                        const remoteName = remoteStr.substring(0, firstSlash);
+                        const remoteBranch = remoteStr.substring(firstSlash + 1);
+                        
+                        return new Promise((resolve, reject) => {
+                            cp.execFile('git', ['push', remoteName, '--delete', remoteBranch], { cwd }, (error, _stdout, stderr) => {
+                                if (error) {
+                                    reject(new Error(`${stderr || error.message}`));
+                                } else {
+                                    resolve();
+                                }
+                            });
+                        });
+                    };
+
+                    try {
+                        await deleteLocalCommand(false);
+                    } catch (err: any) {
+                        if (err.message === 'not fully merged') {
+                            const forceConfirm = await vscode.window.showWarningMessage(
+                                `Branch '${branchName}' is not fully merged. Force delete anyway?`,
+                                'Force Delete',
+                                'Cancel',
+                            );
+                            if (forceConfirm !== 'Force Delete') {
                                 return;
                             }
-                            vscode.window.showInformationMessage(`Deleted branch '${branchName}'`);
-                            graphProvider.refresh();
-                        });
-                        return;
+                            try {
+                                await deleteLocalCommand(true);
+                            } catch (err2: any) {
+                                vscode.window.showErrorMessage(err2.message);
+                                return;
+                            }
+                        } else {
+                            vscode.window.showErrorMessage(err.message);
+                            return;
+                        }
                     }
-                    vscode.window.showErrorMessage(`Failed to delete branch: ${error.message}\n${stderr}`);
-                    return;
+
+                    if (doDeleteRemote && upstream) {
+                        try {
+                            await deleteRemoteCommand(upstream);
+                            vscode.window.showInformationMessage(`Deleted branch '${branchName}' and its remote tracking branch '${upstream}'`);
+                        } catch (err: any) {
+                            vscode.window.showErrorMessage(`Deleted local branch, but failed to delete remote branch: ${err.message}`);
+                        }
+                    } else {
+                        vscode.window.showInformationMessage(`Deleted branch '${branchName}'`);
+                    }
+                    
+                    graphProvider.refresh();
                 }
-                vscode.window.showInformationMessage(`Deleted branch '${branchName}'`);
-                graphProvider.refresh();
-            });
+            );
         }),
     );
 
@@ -267,14 +337,22 @@ export function activate(context: vscode.ExtensionContext) {
             }
 
             const cwd = workspaceFolders[0].uri.fsPath;
-            cp.execFile('git', ['push', remote, '--delete', branch], { cwd }, (error, _stdout, stderr) => {
-                if (error) {
-                    vscode.window.showErrorMessage(`Failed to delete remote branch: ${stderr || error.message}`);
-                    return;
+            await vscode.window.withProgress(
+                { location: vscode.ProgressLocation.Notification, title: `Deleting remote branch '${branch}'...` },
+                async () => {
+                    return new Promise<void>((resolve) => {
+                        cp.execFile('git', ['push', remote, '--delete', branch], { cwd }, (error, _stdout, stderr) => {
+                            if (error) {
+                                vscode.window.showErrorMessage(`Failed to delete remote branch: ${stderr || error.message}`);
+                            } else {
+                                vscode.window.showInformationMessage(`Deleted remote branch '${branch}' from '${remote}'`);
+                                graphProvider.refresh();
+                            }
+                            resolve();
+                        });
+                    });
                 }
-                vscode.window.showInformationMessage(`Deleted remote branch '${branch}' from '${remote}'`);
-                graphProvider.refresh();
-            });
+            );
         }),
     );
 
@@ -327,12 +405,33 @@ export function activate(context: vscode.ExtensionContext) {
                     return new Promise<void>((resolve) => {
                         cp.execFile('git', ['push'], { cwd }, (error, _stdout, stderr) => {
                             if (error) {
-                                vscode.window.showErrorMessage(`Push failed: ${stderr || error.message}`);
+                                if (stderr.includes('has no upstream branch')) {
+                                    cp.execFile('git', ['rev-parse', '--abbrev-ref', 'HEAD'], { cwd }, (err, stdout) => {
+                                        if (err) {
+                                            vscode.window.showErrorMessage(`Push failed: ${stderr || error.message}`);
+                                            resolve();
+                                            return;
+                                        }
+                                        const branch = stdout.trim();
+                                        cp.execFile('git', ['push', '-u', 'origin', branch], { cwd }, (err2, _stdout2, stderr2) => {
+                                            if (err2) {
+                                                vscode.window.showErrorMessage(`Push failed: ${stderr2 || err2.message}`);
+                                            } else {
+                                                vscode.window.showInformationMessage('Push successful (set upstream to origin)');
+                                                graphProvider.refresh();
+                                            }
+                                            resolve();
+                                        });
+                                    });
+                                } else {
+                                    vscode.window.showErrorMessage(`Push failed: ${stderr || error.message}`);
+                                    resolve();
+                                }
                             } else {
                                 vscode.window.showInformationMessage('Push successful');
                                 graphProvider.refresh();
+                                resolve();
                             }
-                            resolve();
                         });
                     });
                 }
@@ -360,12 +459,33 @@ export function activate(context: vscode.ExtensionContext) {
                     return new Promise<void>((resolve) => {
                         cp.execFile('git', ['push', '--force-with-lease'], { cwd }, (error, _stdout, stderr) => {
                             if (error) {
-                                vscode.window.showErrorMessage(`Force push failed: ${stderr || error.message}`);
+                                if (stderr.includes('has no upstream branch')) {
+                                    cp.execFile('git', ['rev-parse', '--abbrev-ref', 'HEAD'], { cwd }, (err, stdout) => {
+                                        if (err) {
+                                            vscode.window.showErrorMessage(`Force push failed: ${stderr || error.message}`);
+                                            resolve();
+                                            return;
+                                        }
+                                        const branch = stdout.trim();
+                                        cp.execFile('git', ['push', '--force-with-lease', '-u', 'origin', branch], { cwd }, (err2, _stdout2, stderr2) => {
+                                            if (err2) {
+                                                vscode.window.showErrorMessage(`Force push failed: ${stderr2 || err2.message}`);
+                                            } else {
+                                                vscode.window.showInformationMessage('Force push successful (set upstream to origin)');
+                                                graphProvider.refresh();
+                                            }
+                                            resolve();
+                                        });
+                                    });
+                                } else {
+                                    vscode.window.showErrorMessage(`Force push failed: ${stderr || error.message}`);
+                                    resolve();
+                                }
                             } else {
                                 vscode.window.showInformationMessage('Force push successful');
                                 graphProvider.refresh();
+                                resolve();
                             }
-                            resolve();
                         });
                     });
                 }
