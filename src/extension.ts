@@ -380,6 +380,31 @@ export function activate(context: vscode.ExtensionContext) {
     );
 
     context.subscriptions.push(
+        vscode.commands.registerCommand('git-wiz.fetch', () => {
+            const cwd = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+            if (!cwd) {
+                return;
+            }
+            vscode.window.withProgress(
+                { location: vscode.ProgressLocation.Notification, title: 'Fetching...' },
+                async () => {
+                    return new Promise<void>((resolve) => {
+                        cp.execFile('git', ['fetch', '--all'], { cwd }, (error, _stdout, stderr) => {
+                            if (error) {
+                                vscode.window.showErrorMessage(`Fetch failed: ${stderr || error.message}`);
+                            } else {
+                                vscode.window.showInformationMessage('Fetch successful');
+                                graphProvider.refresh();
+                            }
+                            resolve();
+                        });
+                    });
+                },
+            );
+        }),
+    );
+
+    context.subscriptions.push(
         vscode.commands.registerCommand('git-wiz.pull', () => {
             const cwd = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
             if (!cwd) {

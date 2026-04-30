@@ -91,6 +91,11 @@
             ],
             "view/title": [
                 {
+                    "command": "git-wiz.fetch",
+                    "when": "view == gitLeanGraphView",
+                    "group": "navigation@0"
+                },
+                {
                     "command": "git-wiz.pull",
                     "when": "view == gitLeanGraphView",
                     "group": "navigation@1"
@@ -159,6 +164,11 @@
             {
                 "command": "git-wiz.deleteRemoteBranch",
                 "title": "Delete Remote Branch"
+            },
+            {
+                "command": "git-wiz.fetch",
+                "title": "Fetch",
+                "icon": "$(repo-fetch)"
             },
             {
                 "command": "git-wiz.pull",
