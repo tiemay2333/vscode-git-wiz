@@ -674,13 +674,21 @@ export function BranchPanel({ branches: initialBranches }: Props) {
                                         </div>
                                     </>
                                 ) : ctxMenu.branch.isRemote ? (
-
-                                    <div
-                                        className="ctx-item ctx-item-danger"
-                                        onClick={() => handleAction('deleteRemoteBranch', ctxMenu.branch.fullName)}
-                                    >
-                                        Delete Remote Branch
-                                    </div>
+                                    <>
+                                        <div
+                                            className="ctx-item"
+                                            onClick={() => handleAction('checkoutBranch', ctxMenu.branch.fullName)}
+                                        >
+                                            Checkout
+                                        </div>
+                                        <div className="ctx-sep" />
+                                        <div
+                                            className="ctx-item ctx-item-danger"
+                                            onClick={() => handleAction('deleteRemoteBranch', ctxMenu.branch.fullName)}
+                                        >
+                                            Delete Remote Branch
+                                        </div>
+                                    </>
                                 ) : (
                                     <>
                                         <div

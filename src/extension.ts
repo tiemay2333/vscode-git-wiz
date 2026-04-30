@@ -119,9 +119,20 @@ export function activate(context: vscode.ExtensionContext) {
             }
 
             const cwd = workspaceFolders[0].uri.fsPath;
-            cp.execFile('git', ['checkout', branchName], { cwd }, (error, _stdout, _stderr) => {
+            const isRemote = branchName.includes('/');
+            const args = isRemote ? ['checkout', '--track', branchName] : ['checkout', branchName];
+            
+            cp.execFile('git', args, { cwd }, (error, _stdout, _stderr) => {
                 if (error) {
-                    vscode.window.showErrorMessage(`Failed to checkout branch: ${error.message}`);
+                    // Try detached HEAD or simple checkout as fallback if --track fails (e.g. branch exists)
+                    cp.execFile('git', ['checkout', branchName], { cwd }, (err2, _out2, _err2) => {
+                        if (err2) {
+                            vscode.window.showErrorMessage(`Failed to checkout branch: ${err2.message}`);
+                            return;
+                        }
+                        vscode.window.showInformationMessage(`Switched to tracking branch '${branchName}'`);
+                        graphProvider.refresh();
+                    });
                     return;
                 }
                 vscode.window.showInformationMessage(`Switched to branch '${branchName}'`);
