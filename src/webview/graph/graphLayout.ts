@@ -17,8 +17,6 @@ export interface GraphNode {
 type Track = { hash: string; color: number } | null;
 
 export function computeGraphLayout(commits: GitCommit[]): GraphNode[] {
-    const sortedCommits = [...commits].sort((a, b) => b.timestamp - a.timestamp);
-    
     const activeTracks: Track[] = [];
     const nodes: GraphNode[] = [];
     let nextColor = 0;
@@ -30,8 +28,8 @@ export function computeGraphLayout(commits: GitCommit[]): GraphNode[] {
         return activeTracks.length - 1;
     };
 
-    for (let i = 0; i < sortedCommits.length; i++) {
-        const commit = sortedCommits[i];
+    for (let i = 0; i < commits.length; i++) {
+        const commit = commits[i];
         
         // Find all tracks from previous row targeting this commit
         const cTopIndices: number[] = [];
