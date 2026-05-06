@@ -1,9 +1,10 @@
-import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { GitCommit } from '../../gitParser';
-import { vscode } from '../vscodeApi';
-import { CommitRow } from './CommitRow';
-import { computeGraphLayout } from './graphLayout';
-import { SettingsForm, SettingsData } from '../settings/SettingsForm';
+import type { GitCommit } from "../../gitParser";
+import type { SettingsData } from "../settings/SettingsForm";
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { SettingsForm } from "../settings/SettingsForm";
+import { vscode } from "../vscodeApi";
+import { CommitRow } from "./CommitRow";
+import { computeGraphLayout } from "./graphLayout";
 
 function areCommitsConsecutive(commits: GitCommit[], sortedIndices: number[]): boolean {
     for (let i = 0; i < sortedIndices.length - 1; i++) {
@@ -29,7 +30,7 @@ interface FileNode {
 function buildFileTree(files: { status: string; path: string; insertions?: number; deletions?: number }[]) {
     const root: { [key: string]: FileNode } = {};
     for (const file of files) {
-        const parts = file.path.split('/');
+        const parts = file.path.split("/");
         let currentLevel = root;
         for (let i = 0; i < parts.length; i++) {
             const part = parts[i];
@@ -37,7 +38,7 @@ function buildFileTree(files: { status: string; path: string; insertions?: numbe
             if (!currentLevel[part]) {
                 currentLevel[part] = {
                     name: part,
-                    path: isLast ? file.path : parts.slice(0, i + 1).join('/'),
+                    path: isLast ? file.path : parts.slice(0, i + 1).join("/"),
                     isDirectory: !isLast,
                     status: isLast ? file.status : undefined,
                     insertions: isLast ? file.insertions : undefined,
@@ -53,7 +54,7 @@ function buildFileTree(files: { status: string; path: string; insertions?: numbe
     return root;
 }
 
-const FileTreeNode = ({
+function FileTreeNode({
     node,
     level,
     onOpenDiff,
@@ -63,89 +64,103 @@ const FileTreeNode = ({
     level: number;
     onOpenDiff: (path: string) => void;
     onOpenFile: (path: string) => void;
-}) => {
+}) {
     const [expanded, setExpanded] = useState(true);
 
     return (
         <div className="file-tree-node-wrapper">
             <div
                 className="file-tree-node"
-                style={{ '--tree-level': level } as React.CSSProperties}
+                style={{ "--tree-level": level } as React.CSSProperties}
                 onClick={(e) => {
                     e.stopPropagation();
                     if (node.isDirectory) {
                         setExpanded(!expanded);
-                    } else {
+                    }
+                    else {
                         onOpenDiff(node.path);
                     }
                 }}
             >
-                {node.isDirectory ? (
-                    <span className="file-tree-folder">
-                        <span className="file-tree-folder-icon">
-                            <svg
-                                width="16"
-                                height="16"
-                                viewBox="0 0 16 16"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="1.5"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                style={{
-                                    transition: 'transform 0.15s ease',
-                                    transform: expanded ? 'rotate(90deg)' : 'rotate(0deg)',
-                                }}
-                            >
-                                <path d="M6 4L10 8L6 12" />
-                            </svg>
-                        </span>
-                        <svg
-                            width="14"
-                            height="14"
-                            viewBox="0 0 16 16"
-                            fill="currentColor"
-                            style={{ marginRight: '6px', opacity: 0.8, flexShrink: 0 }}
-                        >
-                            <path
-                                fillRule="evenodd"
-                                clipRule="evenodd"
-                                d="M7.71 4H14.5L15 4.5v9l-.5.5H1.5l-.5-.5v-10l.5-.5h5.5l1.21 1z"
-                            />
-                        </svg>
-                        {node.name}
-                    </span>
-                ) : (
-                    <div className="file-tree-file">
-                        <span className={`file-status file-status-${node.status?.toLowerCase()}`}>{node.status}</span>
-                        <span className={`file-name file-name-${node.status?.toLowerCase()}`}>{node.name}</span>
-                        {(node.insertions! > 0 || node.deletions! > 0) && (
-                            <span className="file-stats">
-                                {node.insertions! > 0 && <span className="stat-added">+{node.insertions}</span>}
-                                {node.deletions! > 0 && <span className="stat-removed">-{node.deletions}</span>}
+                {node.isDirectory
+                    ? (
+                            <span className="file-tree-folder">
+                                <span className="file-tree-folder-icon">
+                                    <svg
+                                        width="16"
+                                        height="16"
+                                        viewBox="0 0 16 16"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        strokeWidth="1.5"
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        style={{
+                                            transition: "transform 0.15s ease",
+                                            transform: expanded ? "rotate(90deg)" : "rotate(0deg)",
+                                        }}
+                                    >
+                                        <path d="M6 4L10 8L6 12" />
+                                    </svg>
+                                </span>
+                                <svg
+                                    width="14"
+                                    height="14"
+                                    viewBox="0 0 16 16"
+                                    fill="currentColor"
+                                    style={{ marginRight: "6px", opacity: 0.8, flexShrink: 0 }}
+                                >
+                                    <path
+                                        fillRule="evenodd"
+                                        clipRule="evenodd"
+                                        d="M7.71 4H14.5L15 4.5v9l-.5.5H1.5l-.5-.5v-10l.5-.5h5.5l1.21 1z"
+                                    />
+                                </svg>
+                                {node.name}
                             </span>
+                        )
+                    : (
+                            <div className="file-tree-file">
+                                <span className={`file-status file-status-${node.status?.toLowerCase()}`}>{node.status}</span>
+                                <span className={`file-name file-name-${node.status?.toLowerCase()}`}>{node.name}</span>
+                                {(node.insertions! > 0 || node.deletions! > 0) && (
+                                    <span className="file-stats">
+                                        {node.insertions! > 0 && (
+                                            <span className="stat-added">
+                                                +
+                                                {node.insertions}
+                                            </span>
+                                        )}
+                                        {node.deletions! > 0 && (
+                                            <span className="stat-removed">
+                                                -
+                                                {node.deletions}
+                                            </span>
+                                        )}
+                                    </span>
+                                )}
+                                <span
+                                    className="open-file-btn"
+                                    title="Open locally"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        onOpenFile(node.path);
+                                    }}
+                                >
+                                    ↗
+                                </span>
+                            </div>
                         )}
-                        <span
-                            className="open-file-btn"
-                            title="Open locally"
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                onOpenFile(node.path);
-                            }}
-                        >
-                            ↗
-                        </span>
-                    </div>
-                )}
             </div>
             {node.isDirectory && expanded && node.children && (
                 <div className="file-tree-children">
                     {Object.values(node.children)
                         .sort((a, b) => {
-                            if (a.isDirectory === b.isDirectory) return a.name.localeCompare(b.name);
+                            if (a.isDirectory === b.isDirectory)
+                                return a.name.localeCompare(b.name);
                             return a.isDirectory ? -1 : 1;
                         })
-                        .map((child) => (
+                        .map(child => (
                             <FileTreeNode
                                 key={child.name}
                                 node={child}
@@ -158,9 +173,9 @@ const FileTreeNode = ({
             )}
         </div>
     );
-};
+}
 
-const FileTree = ({
+function FileTree({
     files,
     onOpenDiff,
     onOpenFile,
@@ -168,17 +183,18 @@ const FileTree = ({
     files: { status: string; path: string; insertions?: number; deletions?: number }[];
     onOpenDiff: (path: string) => void;
     onOpenFile: (path: string) => void;
-}) => {
+}) {
     const tree = useMemo(() => buildFileTree(files), [files]);
 
     return (
         <div className="file-tree">
             {Object.values(tree)
                 .sort((a, b) => {
-                    if (a.isDirectory === b.isDirectory) return a.name.localeCompare(b.name);
+                    if (a.isDirectory === b.isDirectory)
+                        return a.name.localeCompare(b.name);
                     return a.isDirectory ? -1 : 1;
                 })
-                .map((node) => (
+                .map(node => (
                     <FileTreeNode
                         key={node.name}
                         node={node}
@@ -189,9 +205,9 @@ const FileTree = ({
                 ))}
         </div>
     );
-};
+}
 
-const FileList = ({
+function FileList({
     files,
     onOpenDiff,
     onOpenFile,
@@ -199,12 +215,12 @@ const FileList = ({
     files: { status: string; path: string; insertions?: number; deletions?: number }[];
     onOpenDiff: (path: string) => void;
     onOpenFile: (path: string) => void;
-}) => {
+}) {
     return (
         <div className="file-list">
             {files
                 .sort((a, b) => a.path.localeCompare(b.path))
-                .map((file) => (
+                .map(file => (
                     <div key={file.path} className="file-list-item" onClick={() => onOpenDiff(file.path)}>
                         <div className="file-list-file">
                             <span className={`file-status file-status-${file.status?.toLowerCase()}`}>
@@ -213,8 +229,18 @@ const FileList = ({
                             <span className={`file-name file-name-${file.status?.toLowerCase()}`}>{file.path}</span>
                             {(file.insertions! > 0 || file.deletions! > 0) && (
                                 <span className="file-stats">
-                                    {file.insertions! > 0 && <span className="stat-added">+{file.insertions}</span>}
-                                    {file.deletions! > 0 && <span className="stat-removed">-{file.deletions}</span>}
+                                    {file.insertions! > 0 && (
+                                        <span className="stat-added">
+                                            +
+                                            {file.insertions}
+                                        </span>
+                                    )}
+                                    {file.deletions! > 0 && (
+                                        <span className="stat-removed">
+                                            -
+                                            {file.deletions}
+                                        </span>
+                                    )}
                                 </span>
                             )}
                             <span
@@ -232,7 +258,7 @@ const FileList = ({
                 ))}
         </div>
     );
-};
+}
 
 interface SingleMenu {
     x: number;
@@ -272,24 +298,24 @@ export function GraphView({
     const [filterBranch, setFilterBranch] = useState<string | null | undefined>(initialFilterBranch);
     const [filterFile, setFilterFile] = useState<string | null | undefined>(initialFilterFile);
     const [isLoadingMore, setIsLoadingMore] = useState(false);
-    const [filesViewMode, setFilesViewMode] = useState<'tree' | 'list'>(
-        (window as unknown as { __FILES_VIEW_MODE__?: 'tree' | 'list' }).__FILES_VIEW_MODE__ || 'list',
+    const [filesViewMode, setFilesViewMode] = useState<"tree" | "list">(
+        (window as unknown as { __FILES_VIEW_MODE__?: "tree" | "list" }).__FILES_VIEW_MODE__ || "list",
     );
 
-    const [searchQuery, setSearchQuery] = useState('');
-    const [searchAuthor, setSearchAuthor] = useState('');
-    const [dateFrom, setDateFrom] = useState('');
-    const [dateTo, setDateTo] = useState('');
-    const [activeSearch, setActiveSearch] = useState({ query: '', author: '', from: '', to: '' });
+    const [searchQuery, setSearchQuery] = useState("");
+    const [searchAuthor, setSearchAuthor] = useState("");
+    const [dateFrom, setDateFrom] = useState("");
+    const [dateTo, setDateTo] = useState("");
+    const [activeSearch, setActiveSearch] = useState({ query: "", author: "", from: "", to: "" });
 
     const [highlightCurrent, setHighlightCurrent] = useState<boolean>(
-        (window as unknown as { __HIGHLIGHT_CURRENT_BRANCH__?: boolean }).__HIGHLIGHT_CURRENT_BRANCH__ || false
+        (window as unknown as { __HIGHLIGHT_CURRENT_BRANCH__?: boolean }).__HIGHLIGHT_CURRENT_BRANCH__ || false,
     );
     const [showTags, setShowTags] = useState<boolean>(
-        (window as unknown as { __SHOW_TAGS__?: boolean }).__SHOW_TAGS__ ?? true
+        (window as unknown as { __SHOW_TAGS__?: boolean }).__SHOW_TAGS__ ?? true,
     );
     const [showRemoteBranches, setShowRemoteBranches] = useState<boolean>(
-        (window as unknown as { __SHOW_REMOTE_BRANCHES__?: boolean }).__SHOW_REMOTE_BRANCHES__ ?? true
+        (window as unknown as { __SHOW_REMOTE_BRANCHES__?: boolean }).__SHOW_REMOTE_BRANCHES__ ?? true,
     );
 
     const [selectedIndices, setSelectedIndices] = useState(new Set<number>());
@@ -318,7 +344,7 @@ export function GraphView({
 
     useEffect(() => {
         if (loadingHash && commitFiles[loadingHash]) {
-            const index = filteredCommits.findIndex((c) => c.hash === loadingHash);
+            const index = filteredCommits.findIndex(c => c.hash === loadingHash);
             if (index !== -1) {
                 setSelectedIndices(new Set([index]));
             }
@@ -329,7 +355,7 @@ export function GraphView({
     const isFiltering = isSearching || !!filterFile;
     const graphNodes = useMemo(() => {
         if (isFiltering) {
-            return filteredCommits.map((commit) => ({ commit, x: 0, color: 0, lines: [], maxTrack: 0 }));
+            return filteredCommits.map(commit => ({ commit, x: 0, color: 0, lines: [], maxTrack: 0 }));
         }
         return computeGraphLayout(filteredCommits);
     }, [filteredCommits, isFiltering]);
@@ -352,11 +378,12 @@ export function GraphView({
     useEffect(() => {
         const handler = (event: MessageEvent) => {
             const msg = event.data;
-            if (msg.command === 'appendCommits') {
-                setCommits((prev) => [...prev, ...msg.commits]);
+            if (msg.command === "appendCommits") {
+                setCommits(prev => [...prev, ...msg.commits]);
                 setHasMore(msg.hasMore);
                 setIsLoadingMore(false);
-            } else if (msg.command === 'replaceCommits') {
+            }
+            else if (msg.command === "replaceCommits") {
                 if (msg.resetScroll) {
                     shouldScrollToTopRef.current = true;
                 }
@@ -365,12 +392,13 @@ export function GraphView({
                 const oldIndices = selectedIndicesRef.current;
                 const oldHashes = new Set(
                     Array.from(oldIndices)
-                        .map((i) => oldCommits[i]?.hash)
+                        .map(i => oldCommits[i]?.hash)
                         .filter(Boolean),
                 );
                 const newIndices = new Set<number>();
                 msg.commits.forEach((c: GitCommit, i: number) => {
-                    if (oldHashes.has(c.hash)) newIndices.add(i);
+                    if (oldHashes.has(c.hash))
+                        newIndices.add(i);
                 });
 
                 setCommits(msg.commits);
@@ -396,42 +424,48 @@ export function GraphView({
                 setRangeStartIndex(null);
                 setSingleMenu(null);
                 setRangeMenu(null);
-            } else if (msg.command === 'commitFilesData') {
+            }
+            else if (msg.command === "commitFilesData") {
                 if (msg.error) {
-                    vscode.postMessage({ command: 'showErrorMessage', error: msg.error });
+                    vscode.postMessage({ command: "showErrorMessage", error: msg.error });
                     setLoadingHash(null);
-                } else {
-                    setCommitFiles((prev) => ({ ...prev, [msg.commitHash]: msg.files }));
-                    setLoadingHash((prev) => (prev === msg.commitHash ? msg.commitHash : prev));
                 }
-            } else if (msg.command === 'showSettingsModal') {
+                else {
+                    setCommitFiles(prev => ({ ...prev, [msg.commitHash]: msg.files }));
+                    setLoadingHash(prev => (prev === msg.commitHash ? msg.commitHash : prev));
+                }
+            }
+            else if (msg.command === "showSettingsModal") {
                 setSettingsData(msg.data);
                 setShowSettings(true);
-            } else if (msg.command === 'updateShowTags') {
+            }
+            else if (msg.command === "updateShowTags") {
                 setShowTags(msg.value as boolean);
-            } else if (msg.command === 'updateShowRemoteBranches') {
+            }
+            else if (msg.command === "updateShowRemoteBranches") {
                 setShowRemoteBranches(msg.value as boolean);
             }
         };
-        window.addEventListener('message', handler);
+        window.addEventListener("message", handler);
 
         const clickOutside = (e: MouseEvent) => {
-            if (ctxMenuRef.current?.contains(e.target as Node) || (e.target as Element).closest('.settings-modal-content')) {
+            if (ctxMenuRef.current?.contains(e.target as Node) || (e.target as Element).closest(".settings-modal-content")) {
                 return;
             }
             closeMenus();
         };
-        window.addEventListener('click', clickOutside);
+        window.addEventListener("click", clickOutside);
 
         const escHandler = (e: KeyboardEvent) => {
-            if (e.key === 'Escape') setShowSettings(false);
+            if (e.key === "Escape")
+                setShowSettings(false);
         };
-        window.addEventListener('keydown', escHandler);
+        window.addEventListener("keydown", escHandler);
 
         return () => {
-            window.removeEventListener('message', handler);
-            window.removeEventListener('click', clickOutside);
-            window.removeEventListener('keydown', escHandler);
+            window.removeEventListener("message", handler);
+            window.removeEventListener("click", clickOutside);
+            window.removeEventListener("keydown", escHandler);
         };
     }, [closeMenus]);
 
@@ -442,14 +476,14 @@ export function GraphView({
         }
         setActiveSearch({ query: searchQuery, author: searchAuthor, from: dateFrom, to: dateTo });
         vscode.postMessage({
-            command: 'search',
+            command: "search",
             filters: { query: searchQuery, author: searchAuthor, from: dateFrom, to: dateTo },
         });
     }, [searchQuery, searchAuthor, dateFrom, dateTo]);
 
     const handleKeyDown = useCallback(
         (e: React.KeyboardEvent<HTMLInputElement>) => {
-            if (e.key === 'Enter') {
+            if (e.key === "Enter") {
                 handleSearch();
             }
         },
@@ -457,26 +491,30 @@ export function GraphView({
     );
 
     const headCommitHash = useMemo(() => {
-        if (!commits.length) return undefined;
+        if (!commits.length)
+            return undefined;
 
         // 1. Prioritize commit with HEAD pointing to current branch
         if (currentBranch) {
-            const headOnBranch = commits.find((c) =>
-                c.refs.some((r) => r === `HEAD -> ${currentBranch}` || r === `refs/heads/${currentBranch}`),
+            const headOnBranch = commits.find(c =>
+                c.refs.some(r => r === `HEAD -> ${currentBranch}` || r === `refs/heads/${currentBranch}`),
             );
-            if (headOnBranch) return headOnBranch.hash;
+            if (headOnBranch)
+                return headOnBranch.hash;
         }
 
         // 2. Look for any HEAD (detached or otherwise)
-        const anyHead = commits.find((c) => c.refs.some((r) => r.startsWith('HEAD -> ') || r === 'HEAD'));
-        if (anyHead) return anyHead.hash;
+        const anyHead = commits.find(c => c.refs.some(r => r.startsWith("HEAD -> ") || r === "HEAD"));
+        if (anyHead)
+            return anyHead.hash;
 
         // 3. Look for current branch ref name
         if (currentBranch) {
-            const branchRef = commits.find((c) =>
-                c.refs.some((r) => r === currentBranch || r.endsWith(`/${currentBranch}`)),
+            const branchRef = commits.find(c =>
+                c.refs.some(r => r === currentBranch || r.endsWith(`/${currentBranch}`)),
             );
-            if (branchRef) return branchRef.hash;
+            if (branchRef)
+                return branchRef.hash;
         }
 
         // 4. Fallback if strictly filtering by current branch
@@ -488,11 +526,11 @@ export function GraphView({
     }, [commits, currentBranch, filterBranch]);
 
     const branchLabel = useMemo(() => {
-        const headPart =
-            currentBranch && filterBranch !== currentBranch
+        const headPart
+            = currentBranch && filterBranch !== currentBranch
                 ? ` (HEAD on ${currentBranch})`
-                : '';
-        const branchPart = (filterBranch || 'All Branches') + headPart;
+                : "";
+        const branchPart = (filterBranch || "All Branches") + headPart;
         if (filterFile) {
             return `File: ${filterFile} — ${branchPart}`;
         }
@@ -501,7 +539,8 @@ export function GraphView({
 
     const headCommitAncestors = useMemo(() => {
         const result = new Set<string>();
-        if (!headCommitHash || !commits.length) return result;
+        if (!headCommitHash || !commits.length)
+            return result;
 
         const queue = [headCommitHash];
         const parentMap = new Map<string, string[]>();
@@ -511,27 +550,32 @@ export function GraphView({
 
         while (queue.length > 0) {
             const current = queue.shift()!;
-            if (result.has(current)) continue;
+            if (result.has(current))
+                continue;
             result.add(current);
 
             const parents = parentMap.get(current);
             if (parents) {
                 for (const p of parents) {
-                    if (!result.has(p)) queue.push(p);
+                    if (!result.has(p))
+                        queue.push(p);
                 }
             }
         }
         return result;
-        }, [commits, headCommitHash]);
+    }, [commits, headCommitHash]);
 
-        const handleLoadMore = () => {        if (!hasMore || isLoadingMore) return;
+    const handleLoadMore = () => {
+        if (!hasMore || isLoadingMore)
+            return;
         setIsLoadingMore(true);
-        vscode.postMessage({ command: 'loadMoreCommits' });
+        vscode.postMessage({ command: "loadMoreCommits" });
     };
 
     useLayoutEffect(() => {
         const el = ctxMenuRef.current;
-        if (!el) return;
+        if (!el)
+            return;
         const rect = el.getBoundingClientRect();
         let { x, y } = singleMenu || rangeMenu || { x: 0, y: 0 };
         const winH = window.innerHeight;
@@ -559,18 +603,21 @@ export function GraphView({
                     next.add(i);
                 }
                 setSelectedIndices(next);
-            } else {
+            }
+            else {
                 setRangeStartIndex(index);
                 const hash = filteredCommits[index].hash;
 
                 if (selectedIndices.size === 1 && selectedIndices.has(index)) {
                     setSelectedIndices(new Set());
-                } else {
+                }
+                else {
                     if (commitFiles[hash]) {
                         setSelectedIndices(new Set([index]));
-                    } else {
+                    }
+                    else {
                         setLoadingHash(hash);
-                        vscode.postMessage({ command: 'getCommitFiles', commitHash: hash });
+                        vscode.postMessage({ command: "getCommitFiles", commitHash: hash });
                     }
                 }
             }
@@ -586,7 +633,7 @@ export function GraphView({
 
             if (selectedIndices.size > 1 && selectedIndices.has(index)) {
                 const sortedIndices = Array.from(selectedIndices).sort((a, b) => a - b);
-                const hashes = sortedIndices.map((i) => filteredCommits[i].hash);
+                const hashes = sortedIndices.map(i => filteredCommits[i].hash);
                 setRangeMenu({
                     x: e.clientX,
                     y: e.clientY,
@@ -595,7 +642,8 @@ export function GraphView({
                     consecutive: areCommitsConsecutive(filteredCommits, sortedIndices),
                 });
                 setSingleMenu(null);
-            } else {
+            }
+            else {
                 const hash = filteredCommits[index].hash;
                 setSingleMenu({ x: e.clientX, y: e.clientY, hash, index });
                 setRangeMenu(null);
@@ -611,7 +659,7 @@ export function GraphView({
             }
             closeMenus();
 
-            if (action === 'editCommitMessage') {
+            if (action === "editCommitMessage") {
                 setEditingHash(singleMenu.hash);
                 return;
             }
@@ -626,7 +674,7 @@ export function GraphView({
                 return;
             }
             const { sortedIndices } = rangeMenu;
-            const hashes = sortedIndices.map((i) => filteredCommits[i].hash);
+            const hashes = sortedIndices.map(i => filteredCommits[i].hash);
             const parentHash = filteredCommits[sortedIndices[sortedIndices.length - 1]].parents[0];
             closeMenus();
             vscode.postMessage({ command: action, hashes, parentHash });
@@ -634,25 +682,26 @@ export function GraphView({
         [rangeMenu, filteredCommits, closeMenus],
     );
 
-    const handleFilesViewModeChange = (mode: 'tree' | 'list') => {
+    const handleFilesViewModeChange = (mode: "tree" | "list") => {
         setFilesViewMode(mode);
-        vscode.postMessage({ command: 'saveFilesViewMode', mode });
+        vscode.postMessage({ command: "saveFilesViewMode", mode });
     };
 
     const handleEditConfirm = useCallback(
         (hash: string, newMessage: string) => {
             setEditingHash(null);
-            if (newMessage && newMessage !== commits.find((c) => c.hash === hash)?.message) {
-                vscode.postMessage({ command: 'editCommitMessage', commitHash: hash, newMessage });
+            if (newMessage && newMessage !== commits.find(c => c.hash === hash)?.message) {
+                vscode.postMessage({ command: "editCommitMessage", commitHash: hash, newMessage });
             }
         },
         [commits],
     );
 
     const singleMenuCommitTags = useMemo(() => {
-        if (!singleMenu) return [];
-        const commit = filteredCommits.find((c) => c.hash === singleMenu.hash);
-        return commit?.refs.filter((r) => r.startsWith('tag: ')).map((r) => r.replace('tag: ', '')) || [];
+        if (!singleMenu)
+            return [];
+        const commit = filteredCommits.find(c => c.hash === singleMenu.hash);
+        return commit?.refs.filter(r => r.startsWith("tag: ")).map(r => r.replace("tag: ", "")) || [];
     }, [singleMenu, filteredCommits]);
 
     return (
@@ -660,20 +709,20 @@ export function GraphView({
             <div className="graph-top-pane">
                 <div
                     className="search-wrap"
-                    style={{ display: 'flex', gap: '8px', padding: '0 8px 8px', flexWrap: 'nowrap' }}
+                    style={{ display: "flex", gap: "8px", padding: "0 8px 8px", flexWrap: "nowrap" }}
                 >
-                    <div style={{ position: 'relative', flex: 1, display: 'flex' }}>
+                    <div style={{ position: "relative", flex: 1, display: "flex" }}>
                         <input
                             className="search-input"
                             type="text"
                             placeholder="Search"
                             value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
+                            onChange={e => setSearchQuery(e.target.value)}
                             onKeyDown={handleKeyDown}
                             autoComplete="off"
                             spellCheck={false}
-                            onClick={(e) => e.stopPropagation()}
-                            style={{ flex: 1, minWidth: '0', paddingRight: '28px' }}
+                            onClick={e => e.stopPropagation()}
+                            style={{ flex: 1, minWidth: "0", paddingRight: "28px" }}
                         />
                         <div
                             onClick={(e) => {
@@ -681,15 +730,15 @@ export function GraphView({
                                 handleSearch();
                             }}
                             style={{
-                                position: 'absolute',
-                                right: '6px',
-                                top: '50%',
-                                transform: 'translateY(-50%)',
-                                cursor: 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                color: 'var(--vscode-input-foreground, inherit)',
+                                position: "absolute",
+                                right: "6px",
+                                top: "50%",
+                                transform: "translateY(-50%)",
+                                cursor: "pointer",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                color: "var(--vscode-input-foreground, inherit)",
                                 opacity: 0.6,
                             }}
                             title="Search"
@@ -709,18 +758,18 @@ export function GraphView({
                             </svg>
                         </div>
                     </div>
-                    <div style={{ position: 'relative', flex: 1, display: 'flex' }}>
+                    <div style={{ position: "relative", flex: 1, display: "flex" }}>
                         <input
                             className="search-input"
                             type="text"
                             placeholder="Author"
                             value={searchAuthor}
-                            onChange={(e) => setSearchAuthor(e.target.value)}
+                            onChange={e => setSearchAuthor(e.target.value)}
                             onKeyDown={handleKeyDown}
                             autoComplete="off"
                             spellCheck={false}
-                            onClick={(e) => e.stopPropagation()}
-                            style={{ flex: 1, minWidth: '0', paddingRight: '28px' }}
+                            onClick={e => e.stopPropagation()}
+                            style={{ flex: 1, minWidth: "0", paddingRight: "28px" }}
                         />
                         <div
                             onClick={(e) => {
@@ -728,15 +777,15 @@ export function GraphView({
                                 handleSearch();
                             }}
                             style={{
-                                position: 'absolute',
-                                right: '6px',
-                                top: '50%',
-                                transform: 'translateY(-50%)',
-                                cursor: 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                color: 'var(--vscode-input-foreground, inherit)',
+                                position: "absolute",
+                                right: "6px",
+                                top: "50%",
+                                transform: "translateY(-50%)",
+                                cursor: "pointer",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                color: "var(--vscode-input-foreground, inherit)",
                                 opacity: 0.6,
                             }}
                             title="Search"
@@ -756,16 +805,16 @@ export function GraphView({
                             </svg>
                         </div>
                     </div>
-                    <div style={{ position: 'relative', flex: 1, display: 'flex' }}>
+                    <div style={{ position: "relative", flex: 1, display: "flex" }}>
                         <input
                             className="search-input"
                             type="text"
                             placeholder="YYYY/MM/DD (From)"
                             value={dateFrom}
-                            onChange={(e) => setDateFrom(e.target.value)}
+                            onChange={e => setDateFrom(e.target.value)}
                             onKeyDown={handleKeyDown}
-                            onClick={(e) => e.stopPropagation()}
-                            style={{ flex: 1, minWidth: '0', paddingRight: '28px' }}
+                            onClick={e => e.stopPropagation()}
+                            style={{ flex: 1, minWidth: "0", paddingRight: "28px" }}
                         />
                         <div
                             onClick={(e) => {
@@ -773,15 +822,15 @@ export function GraphView({
                                 handleSearch();
                             }}
                             style={{
-                                position: 'absolute',
-                                right: '6px',
-                                top: '50%',
-                                transform: 'translateY(-50%)',
-                                cursor: 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                color: 'var(--vscode-input-foreground, inherit)',
+                                position: "absolute",
+                                right: "6px",
+                                top: "50%",
+                                transform: "translateY(-50%)",
+                                cursor: "pointer",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                color: "var(--vscode-input-foreground, inherit)",
                                 opacity: 0.6,
                             }}
                             title="Search"
@@ -801,16 +850,16 @@ export function GraphView({
                             </svg>
                         </div>
                     </div>
-                    <div style={{ position: 'relative', flex: 1, display: 'flex' }}>
+                    <div style={{ position: "relative", flex: 1, display: "flex" }}>
                         <input
                             className="search-input"
                             type="text"
                             placeholder="YYYY/MM/DD (To)"
                             value={dateTo}
-                            onChange={(e) => setDateTo(e.target.value)}
+                            onChange={e => setDateTo(e.target.value)}
                             onKeyDown={handleKeyDown}
-                            onClick={(e) => e.stopPropagation()}
-                            style={{ flex: 1, minWidth: '0', paddingRight: '28px' }}
+                            onClick={e => e.stopPropagation()}
+                            style={{ flex: 1, minWidth: "0", paddingRight: "28px" }}
                         />
                         <div
                             onClick={(e) => {
@@ -818,15 +867,15 @@ export function GraphView({
                                 handleSearch();
                             }}
                             style={{
-                                position: 'absolute',
-                                right: '6px',
-                                top: '50%',
-                                transform: 'translateY(-50%)',
-                                cursor: 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                color: 'var(--vscode-input-foreground, inherit)',
+                                position: "absolute",
+                                right: "6px",
+                                top: "50%",
+                                transform: "translateY(-50%)",
+                                cursor: "pointer",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                color: "var(--vscode-input-foreground, inherit)",
                                 opacity: 0.6,
                             }}
                             title="Search"
@@ -849,7 +898,7 @@ export function GraphView({
                 </div>
 
                 <div className="branch-info-bar">
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                         <span>{branchLabel}</span>
                     </div>
                     {(filterBranch || filterFile) && (
@@ -857,209 +906,219 @@ export function GraphView({
                             className="branch-info-close-btn"
                             onClick={() =>
                                 vscode.postMessage({
-                                    command: filterFile ? 'clearFileFilter' : 'clearBranchFilter',
-                                })
-                            }
-                            title={filterFile ? 'Clear file filter' : 'Clear branch filter'}
+                                    command: filterFile ? "clearFileFilter" : "clearBranchFilter",
+                                })}
+                            title={filterFile ? "Clear file filter" : "Clear branch filter"}
                         >
-                            {'×'}
+                            ×
                         </button>
                     )}
                 </div>
 
-                {filteredCommits.length === 0 ? (
-                    <div className="no-commits">
-                        <p>
-                            {!activeSearch.query && !activeSearch.author && !activeSearch.from && !activeSearch.to
-                                ? 'No commits found in this repository'
-                                : 'No commits match the filters'}
-                        </p>
-                    </div>
-                ) : (
-                    <div className="table-container" ref={containerRef}>
-                        <table>
-                            <tbody>
-                                {graphNodes.map((node, index) => {
-                                    const commit = node.commit;
-                                    const isSelected = selectedIndices.has(index);
-                                    const isMenuOpen =
-                                        singleMenu?.index === index || rangeMenu?.sortedIndices.includes(index);
-                                    const singleSelected = selectedIndices.size === 1 && isSelected;
-                                    const files = singleSelected ? commitFiles[commit.hash] : null;
+                {filteredCommits.length === 0
+                    ? (
+                            <div className="no-commits">
+                                <p>
+                                    {!activeSearch.query && !activeSearch.author && !activeSearch.from && !activeSearch.to
+                                        ? "No commits found in this repository"
+                                        : "No commits match the filters"}
+                                </p>
+                            </div>
+                        )
+                    : (
+                            <div className="table-container" ref={containerRef}>
+                                <table>
+                                    <tbody>
+                                        {graphNodes.map((node, index) => {
+                                            const commit = node.commit;
+                                            const isSelected = selectedIndices.has(index);
+                                            const isMenuOpen
+                                                = singleMenu?.index === index || rangeMenu?.sortedIndices.includes(index);
+                                            const singleSelected = selectedIndices.size === 1 && isSelected;
+                                            const files = singleSelected ? commitFiles[commit.hash] : null;
 
-                                    return (
-                                        <React.Fragment key={commit.hash}>
-                                            <CommitRow
-                                                graphWidth={graphWidth}
-                                                graphNode={node}
-                                                headCommitHash={headCommitHash}
-                                                isSelected={isSelected}
-                                                isMenuOpen={isMenuOpen}
-                                                isEditing={editingHash === commit.hash}
-                                                isLoading={loadingHash === commit.hash}
-                                                isFirst={index === 0}
-                                                isLast={index === filteredCommits.length - 1}
-                                                isDimmed={highlightCurrent && !commit.isCurrentBranch}
-                                                showTags={showTags}
-                                                showRemoteBranches={showRemoteBranches}
-                                                onClick={(shiftKey) => handleRowClick(index, shiftKey)}
-                                                onContextMenu={(e) => handleContextMenu(e, index)}
-                                                onEditConfirm={(msg) => handleEditConfirm(commit.hash, msg)}
-                                                onEditCancel={() => setEditingHash(null)}
-                                            />
-                                            {singleSelected && (
-                                                <tr className="inline-files-row" onClick={(e) => e.stopPropagation()}>
-                                                    <td colSpan={5}>
-                                                        <div className="inline-files-container">
-                                                            <div className="inline-files-header">
-                                                                <div
-                                                                    style={{
-                                                                        display: 'flex',
-                                                                        alignItems: 'center',
-                                                                        flex: 1,
-                                                                        minWidth: 0,
-                                                                    }}
-                                                                >
-                                                                    <div
-                                                                        style={{
-                                                                            display: 'flex',
-                                                                            flexDirection: 'column',
-                                                                            gap: '4px',
-                                                                            flex: 1,
-                                                                            minWidth: 0,
-                                                                        }}
-                                                                    >
-                                                                        <span className="inline-files-title">
-                                                                            Files modified in {commit.shortHash} -{' '}
-                                                                            {commit.message}
-                                                                        </span>
-                                                                        <span
+                                            return (
+                                                <React.Fragment key={commit.hash}>
+                                                    <CommitRow
+                                                        graphWidth={graphWidth}
+                                                        graphNode={node}
+                                                        headCommitHash={headCommitHash}
+                                                        isSelected={isSelected}
+                                                        isMenuOpen={isMenuOpen}
+                                                        isEditing={editingHash === commit.hash}
+                                                        isLoading={loadingHash === commit.hash}
+                                                        isFirst={index === 0}
+                                                        isLast={index === filteredCommits.length - 1}
+                                                        isDimmed={highlightCurrent && !commit.isCurrentBranch}
+                                                        showTags={showTags}
+                                                        showRemoteBranches={showRemoteBranches}
+                                                        onClick={shiftKey => handleRowClick(index, shiftKey)}
+                                                        onContextMenu={e => handleContextMenu(e, index)}
+                                                        onEditConfirm={msg => handleEditConfirm(commit.hash, msg)}
+                                                        onEditCancel={() => setEditingHash(null)}
+                                                    />
+                                                    {singleSelected && (
+                                                        <tr className="inline-files-row" onClick={e => e.stopPropagation()}>
+                                                            <td colSpan={5}>
+                                                                <div className="inline-files-container">
+                                                                    <div className="inline-files-header">
+                                                                        <div
                                                                             style={{
-                                                                                fontSize: '11px',
-                                                                                opacity: 0.8,
-                                                                                color: 'var(--vscode-descriptionForeground)',
+                                                                                display: "flex",
+                                                                                alignItems: "center",
+                                                                                flex: 1,
+                                                                                minWidth: 0,
                                                                             }}
                                                                         >
-                                                                            {commit.author} &lt;{commit.email}&gt;
-                                                                        </span>
+                                                                            <div
+                                                                                style={{
+                                                                                    display: "flex",
+                                                                                    flexDirection: "column",
+                                                                                    gap: "4px",
+                                                                                    flex: 1,
+                                                                                    minWidth: 0,
+                                                                                }}
+                                                                            >
+                                                                                <span className="inline-files-title">
+                                                                                    Files modified in
+                                                                                    {" "}
+                                                                                    {commit.shortHash}
+                                                                                    {" "}
+                                                                                    -
+                                                                                    {" "}
+                                                                                    {commit.message}
+                                                                                </span>
+                                                                                <span
+                                                                                    style={{
+                                                                                        fontSize: "11px",
+                                                                                        opacity: 0.8,
+                                                                                        color: "var(--vscode-descriptionForeground)",
+                                                                                    }}
+                                                                                >
+                                                                                    {commit.author}
+                                                                                    {" "}
+                                                                                    &lt;
+                                                                                    {commit.email}
+                                                                                    &gt;
+                                                                                </span>
+                                                                            </div>
+                                                                            <div className="view-toggle">
+                                                                                <button
+                                                                                    className={`toggle-btn ${filesViewMode === "list" ? "active" : ""}`}
+                                                                                    onClick={() =>
+                                                                                        handleFilesViewModeChange("list")}
+                                                                                    title="List View"
+                                                                                >
+                                                                                    <svg
+                                                                                        width="14"
+                                                                                        height="14"
+                                                                                        viewBox="0 0 16 16"
+                                                                                        fill="currentColor"
+                                                                                    >
+                                                                                        <path
+                                                                                            fillRule="evenodd"
+                                                                                            clipRule="evenodd"
+                                                                                            d="M2 3h12v1H2V3zm0 4h12v1H2V7zm12 4H2v1h12v-1z"
+                                                                                        />
+                                                                                    </svg>
+                                                                                </button>
+                                                                                <button
+                                                                                    className={`toggle-btn ${filesViewMode === "tree" ? "active" : ""}`}
+                                                                                    onClick={() =>
+                                                                                        handleFilesViewModeChange("tree")}
+                                                                                    title="Tree View"
+                                                                                >
+                                                                                    <svg
+                                                                                        width="14"
+                                                                                        height="14"
+                                                                                        viewBox="0 0 16 16"
+                                                                                        fill="currentColor"
+                                                                                    >
+                                                                                        <path
+                                                                                            fillRule="evenodd"
+                                                                                            clipRule="evenodd"
+                                                                                            d="M1 2v3h1V2h12v12h-3v1h4V1H1v1zm12 12V5H5v9h8zm-1-1H6V6h6v7zM1 9h3V6H1v3zm1 4h3v-3H1v3z"
+                                                                                        />
+                                                                                    </svg>
+                                                                                </button>
+                                                                            </div>
+                                                                        </div>
+                                                                        <button
+                                                                            className="close-pane-btn"
+                                                                            onClick={() => setSelectedIndices(new Set())}
+                                                                        >
+                                                                            &#x2715;
+                                                                        </button>
                                                                     </div>
-                                                                    <div className="view-toggle">
-                                                                        <button
-                                                                            className={`toggle-btn ${filesViewMode === 'list' ? 'active' : ''}`}
-                                                                            onClick={() =>
-                                                                                handleFilesViewModeChange('list')
-                                                                            }
-                                                                            title="List View"
-                                                                        >
-                                                                            <svg
-                                                                                width="14"
-                                                                                height="14"
-                                                                                viewBox="0 0 16 16"
-                                                                                fill="currentColor"
-                                                                            >
-                                                                                <path
-                                                                                    fillRule="evenodd"
-                                                                                    clipRule="evenodd"
-                                                                                    d="M2 3h12v1H2V3zm0 4h12v1H2V7zm12 4H2v1h12v-1z"
-                                                                                />
-                                                                            </svg>
-                                                                        </button>
-                                                                        <button
-                                                                            className={`toggle-btn ${filesViewMode === 'tree' ? 'active' : ''}`}
-                                                                            onClick={() =>
-                                                                                handleFilesViewModeChange('tree')
-                                                                            }
-                                                                            title="Tree View"
-                                                                        >
-                                                                            <svg
-                                                                                width="14"
-                                                                                height="14"
-                                                                                viewBox="0 0 16 16"
-                                                                                fill="currentColor"
-                                                                            >
-                                                                                <path
-                                                                                    fillRule="evenodd"
-                                                                                    clipRule="evenodd"
-                                                                                    d="M1 2v3h1V2h12v12h-3v1h4V1H1v1zm12 12V5H5v9h8zm-1-1H6V6h6v7zM1 9h3V6H1v3zm1 4h3v-3H1v3z"
-                                                                                />
-                                                                            </svg>
-                                                                        </button>
+                                                                    <div className="inline-files-content">
+                                                                        {files
+                                                                            ? (
+                                                                                    files.length > 0
+                                                                                        ? (
+                                                                                                filesViewMode === "tree"
+                                                                                                    ? (
+                                                                                                            <FileTree
+                                                                                                                files={files}
+                                                                                                                onOpenDiff={path =>
+                                                                                                                    vscode.postMessage({
+                                                                                                                        command: "openDiff",
+                                                                                                                        commitHash: commit.hash,
+                                                                                                                        parentHash: commit.parents?.[0],
+                                                                                                                        filePath: path,
+                                                                                                                    })}
+                                                                                                                onOpenFile={path =>
+                                                                                                                    vscode.postMessage({
+                                                                                                                        command: "openFile",
+                                                                                                                        filePath: path,
+                                                                                                                    })}
+                                                                                                            />
+                                                                                                        )
+                                                                                                    : (
+                                                                                                            <FileList
+                                                                                                                files={files}
+                                                                                                                onOpenDiff={path =>
+                                                                                                                    vscode.postMessage({
+                                                                                                                        command: "openDiff",
+                                                                                                                        commitHash: commit.hash,
+                                                                                                                        parentHash: commit.parents?.[0],
+                                                                                                                        filePath: path,
+                                                                                                                    })}
+                                                                                                                onOpenFile={path =>
+                                                                                                                    vscode.postMessage({
+                                                                                                                        command: "openFile",
+                                                                                                                        filePath: path,
+                                                                                                                    })}
+                                                                                                            />
+                                                                                                        )
+                                                                                            )
+                                                                                        : (
+                                                                                                <div className="no-files">No files changed</div>
+                                                                                            )
+                                                                                )
+                                                                            : (
+                                                                                    <div className="loading-files">
+                                                                                        Loading files...
+                                                                                    </div>
+                                                                                )}
                                                                     </div>
                                                                 </div>
-                                                                <button
-                                                                    className="close-pane-btn"
-                                                                    onClick={() => setSelectedIndices(new Set())}
-                                                                >
-                                                                    &#x2715;
-                                                                </button>
-                                                            </div>
-                                                            <div className="inline-files-content">
-                                                                {files ? (
-                                                                    files.length > 0 ? (
-                                                                        filesViewMode === 'tree' ? (
-                                                                            <FileTree
-                                                                                files={files}
-                                                                                onOpenDiff={(path) =>
-                                                                                    vscode.postMessage({
-                                                                                        command: 'openDiff',
-                                                                                        commitHash: commit.hash,
-                                                                                        parentHash: commit.parents?.[0],
-                                                                                        filePath: path,
-                                                                                    })
-                                                                                }
-                                                                                onOpenFile={(path) =>
-                                                                                    vscode.postMessage({
-                                                                                        command: 'openFile',
-                                                                                        filePath: path,
-                                                                                    })
-                                                                                }
-                                                                            />
-                                                                        ) : (
-                                                                            <FileList
-                                                                                files={files}
-                                                                                onOpenDiff={(path) =>
-                                                                                    vscode.postMessage({
-                                                                                        command: 'openDiff',
-                                                                                        commitHash: commit.hash,
-                                                                                        parentHash: commit.parents?.[0],
-                                                                                        filePath: path,
-                                                                                    })
-                                                                                }
-                                                                                onOpenFile={(path) =>
-                                                                                    vscode.postMessage({
-                                                                                        command: 'openFile',
-                                                                                        filePath: path,
-                                                                                    })
-                                                                                }
-                                                                            />
-                                                                        )
-                                                                    ) : (
-                                                                        <div className="no-files">No files changed</div>
-                                                                    )
-                                                                ) : (
-                                                                    <div className="loading-files">
-                                                                        Loading files...
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                            )}
-                                        </React.Fragment>
-                                    );
-                                })}
-                            </tbody>
-                        </table>
-                        {(hasMore || isLoadingMore) && (
-                            <div className="load-more-container">
-                                <button className="load-more-btn" onClick={handleLoadMore} disabled={isLoadingMore}>
-                                    {isLoadingMore ? 'Loading...' : 'Load More'}
-                                </button>
+                                                            </td>
+                                                        </tr>
+                                                    )}
+                                                </React.Fragment>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                                {(hasMore || isLoadingMore) && (
+                                    <div className="load-more-container">
+                                        <button className="load-more-btn" onClick={handleLoadMore} disabled={isLoadingMore}>
+                                            {isLoadingMore ? "Loading..." : "Load More"}
+                                        </button>
+                                    </div>
+                                )}
                             </div>
                         )}
-                    </div>
-                )}
             </div>
 
             {singleMenu && (
@@ -1067,59 +1126,61 @@ export function GraphView({
                     <div
                         ref={ctxMenuRef}
                         className="context-menu"
-                        style={{ display: 'block', left: singleMenu.x, top: singleMenu.y }}
-                        onClick={(e) => e.stopPropagation()}
+                        style={{ display: "block", left: singleMenu.x, top: singleMenu.y }}
+                        onClick={e => e.stopPropagation()}
                     >
                         {headCommitAncestors.has(singleMenu.hash) && singleMenu.hash === headCommitHash && (
-                            <div className="context-menu-item" onClick={() => handleSingleAction('amendCommit')}>
+                            <div className="context-menu-item" onClick={() => handleSingleAction("amendCommit")}>
                                 Amend Commit
                             </div>
                         )}
                         {headCommitAncestors.has(singleMenu.hash) && (
-                            <div className="context-menu-item" onClick={() => handleSingleAction('editCommitMessage')}>
+                            <div className="context-menu-item" onClick={() => handleSingleAction("editCommitMessage")}>
                                 Edit Commit Message
                             </div>
                         )}
-                        <div className="context-menu-item" onClick={() => handleSingleAction('cherryPick')}>
+                        <div className="context-menu-item" onClick={() => handleSingleAction("cherryPick")}>
                             Cherry-pick to current branch
                         </div>
                         <div className="context-menu-separator" />
-                        <div className="context-menu-item" onClick={() => handleSingleAction('copyHash')}>
+                        <div className="context-menu-item" onClick={() => handleSingleAction("copyHash")}>
                             Copy Hash
                         </div>
                         <div className="context-menu-separator" />
                         {headCommitAncestors.has(singleMenu.hash) && (
-                            <div className="context-menu-item" onClick={() => handleSingleAction('revertCommit')}>
+                            <div className="context-menu-item" onClick={() => handleSingleAction("revertCommit")}>
                                 Revert Commit
                             </div>
                         )}
                         {singleMenu.hash !== headCommitHash && (
-                            <div className="context-menu-item" onClick={() => handleSingleAction('resetToCommit')}>
+                            <div className="context-menu-item" onClick={() => handleSingleAction("resetToCommit")}>
                                 Reset to Commit
                             </div>
                         )}
                         {headCommitAncestors.has(singleMenu.hash) && (
                             <div
                                 className="context-menu-item context-menu-item--danger"
-                                onClick={() => handleSingleAction('dropCommit')}
+                                onClick={() => handleSingleAction("dropCommit")}
                             >
                                 Drop Commit
                             </div>
                         )}
                         <div className="context-menu-separator" />
-                        <div className="context-menu-item" onClick={() => handleSingleAction('newTag')}>
+                        <div className="context-menu-item" onClick={() => handleSingleAction("newTag")}>
                             New Tag...
                         </div>
-                        {singleMenuCommitTags.map((tag) => (
+                        {singleMenuCommitTags.map(tag => (
                             <div
                                 key={tag}
                                 className="context-menu-item"
-                                onClick={() => handleSingleAction('pushTag', { tagName: tag })}
+                                onClick={() => handleSingleAction("pushTag", { tagName: tag })}
                             >
-                                Push Tag '{tag}'
+                                Push Tag '
+                                {tag}
+                                '
                             </div>
                         ))}
-                        <div className="context-menu-item" onClick={() => handleSingleAction('createBranch')}>
+                        <div className="context-menu-item" onClick={() => handleSingleAction("createBranch")}>
                             New Branch from here...
                         </div>
                     </div>
@@ -1131,31 +1192,31 @@ export function GraphView({
                     <div
                         ref={ctxMenuRef}
                         className="context-menu"
-                        style={{ display: 'block', left: rangeMenu.x, top: rangeMenu.y }}
-                        onClick={(e) => e.stopPropagation()}
+                        style={{ display: "block", left: rangeMenu.x, top: rangeMenu.y }}
+                        onClick={e => e.stopPropagation()}
                     >
-                        {rangeMenu.consecutive && rangeMenu.hashes.every((h) => headCommitAncestors.has(h)) && (
+                        {rangeMenu.consecutive && rangeMenu.hashes.every(h => headCommitAncestors.has(h)) && (
                             <>
-                                <div className="context-menu-item" onClick={() => handleRangeAction('squashCommits')}>
+                                <div className="context-menu-item" onClick={() => handleRangeAction("squashCommits")}>
                                     Squash Commits
                                 </div>
                                 <div className="context-menu-separator" />
                             </>
                         )}
-                        <div className="context-menu-item" onClick={() => handleRangeAction('cherryPickRange')}>
+                        <div className="context-menu-item" onClick={() => handleRangeAction("cherryPickRange")}>
                             Cherry-pick Commits
                         </div>
-                        {rangeMenu.hashes.every((h) => headCommitAncestors.has(h)) && (
-                            <div className="context-menu-item" onClick={() => handleRangeAction('revertCommits')}>
+                        {rangeMenu.hashes.every(h => headCommitAncestors.has(h)) && (
+                            <div className="context-menu-item" onClick={() => handleRangeAction("revertCommits")}>
                                 Revert Commits
                             </div>
                         )}
-                        {rangeMenu.consecutive && rangeMenu.hashes.every((h) => headCommitAncestors.has(h)) && (
+                        {rangeMenu.consecutive && rangeMenu.hashes.every(h => headCommitAncestors.has(h)) && (
                             <>
                                 <div className="context-menu-separator" />
                                 <div
                                     className="context-menu-item context-menu-item--danger"
-                                    onClick={() => handleRangeAction('dropCommits')}
+                                    onClick={() => handleRangeAction("dropCommits")}
                                 >
                                     Drop Commits
                                 </div>
@@ -1166,11 +1227,15 @@ export function GraphView({
             )}
 
             {showSettings && settingsData && (
-                <div className="settings-modal-overlay"
+                <div
+                    className="settings-modal-overlay"
                     onClick={() => setShowSettings(false)}
-                    onKeyDown={(e) => { if (e.key === 'Escape') setShowSettings(false); }}
+                    onKeyDown={(e) => {
+                        if (e.key === "Escape")
+                            setShowSettings(false);
+                    }}
                 >
-                    <div className="settings-modal-content" onClick={(e) => e.stopPropagation()}>
+                    <div className="settings-modal-content" onClick={e => e.stopPropagation()}>
                         <button
                             className="settings-modal-close"
                             onClick={() => setShowSettings(false)}

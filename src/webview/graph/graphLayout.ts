@@ -1,4 +1,4 @@
-import { GitCommit } from '../../gitParser';
+import type { GitCommit } from "../../gitParser";
 
 export interface GraphNode {
     commit: GitCommit;
@@ -22,15 +22,16 @@ export function computeGraphLayout(commits: GitCommit[]): GraphNode[] {
     let nextColor = 0;
 
     const findAvailableTrack = () => {
-        const idx = activeTracks.findIndex((t) => t === null);
-        if (idx !== -1) return idx;
+        const idx = activeTracks.findIndex(t => t === null);
+        if (idx !== -1)
+            return idx;
         activeTracks.push(null);
         return activeTracks.length - 1;
     };
 
     for (let i = 0; i < commits.length; i++) {
         const commit = commits[i];
-        
+
         // Find all tracks from previous row targeting this commit
         const cTopIndices: number[] = [];
         for (let t = 0; t < activeTracks.length; t++) {
@@ -45,19 +46,24 @@ export function computeGraphLayout(commits: GitCommit[]): GraphNode[] {
         if (cTopIndices.length === 0) {
             cIdx = findAvailableTrack();
             commitColor = nextColor++;
-        } else {
+        }
+        else {
             cIdx = Math.min(...cTopIndices);
             commitColor = activeTracks[cIdx]!.color;
         }
 
         // Write lines
-        const lines: GraphNode['lines'] = [];
+        const lines: GraphNode["lines"] = [];
 
         // Tracks passing through
         for (let t = 0; t < activeTracks.length; t++) {
             if (activeTracks[t] && !cTopIndices.includes(t)) {
                 lines.push({
-                    x1: t, y1: 0, x2: t, y2: 2, color: activeTracks[t]!.color
+                    x1: t,
+                    y1: 0,
+                    x2: t,
+                    y2: 2,
+                    color: activeTracks[t]!.color,
                 });
             }
         }
@@ -65,7 +71,11 @@ export function computeGraphLayout(commits: GitCommit[]): GraphNode[] {
         // Lines from top to center (merges or main line)
         for (const topIdx of cTopIndices) {
             lines.push({
-                x1: topIdx, y1: 0, x2: cIdx, y2: 1, color: activeTracks[topIdx]!.color
+                x1: topIdx,
+                y1: 0,
+                x2: cIdx,
+                y2: 1,
+                color: activeTracks[topIdx]!.color,
             });
             if (topIdx !== cIdx) {
                 activeTracks[topIdx] = null; // free merged tracks
@@ -76,7 +86,11 @@ export function computeGraphLayout(commits: GitCommit[]): GraphNode[] {
         if (commit.parents.length > 0) {
             activeTracks[cIdx] = { hash: commit.parents[0], color: commitColor };
             lines.push({
-                x1: cIdx, y1: 1, x2: cIdx, y2: 2, color: commitColor
+                x1: cIdx,
+                y1: 1,
+                x2: cIdx,
+                y2: 2,
+                color: commitColor,
             });
 
             for (let p = 1; p < commit.parents.length; p++) {
@@ -84,10 +98,15 @@ export function computeGraphLayout(commits: GitCommit[]): GraphNode[] {
                 const pColor = nextColor++;
                 activeTracks[pt] = { hash: commit.parents[p], color: pColor };
                 lines.push({
-                    x1: cIdx, y1: 1, x2: pt, y2: 2, color: pColor
+                    x1: cIdx,
+                    y1: 1,
+                    x2: pt,
+                    y2: 2,
+                    color: pColor,
                 });
             }
-        } else {
+        }
+        else {
             activeTracks[cIdx] = null;
         }
 
@@ -102,7 +121,7 @@ export function computeGraphLayout(commits: GitCommit[]): GraphNode[] {
             x: cIdx,
             color: commitColor,
             lines,
-            maxTrack
+            maxTrack,
         });
     }
 

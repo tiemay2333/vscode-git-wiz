@@ -1,5 +1,5 @@
-import * as vscode from 'vscode';
-import { GitCommit } from './gitOperations';
+import type { GitCommit } from "./gitOperations";
+import * as vscode from "vscode";
 
 export interface CommitDetailsData {
     fullHash: string;
@@ -13,12 +13,12 @@ export interface CommitDetailsData {
 }
 
 function safeJson(value: unknown): string {
-    return JSON.stringify(value).replace(/<\//g, '<\\/');
+    return JSON.stringify(value).replace(/<\//g, "<\\/");
 }
 
 function getNonce(): string {
-    let text = '';
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    let text = "";
+    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
     for (let i = 0; i < 32; i++) {
         text += chars.charAt(Math.floor(Math.random() * chars.length));
     }
@@ -33,13 +33,13 @@ export function getHtmlForWebview(
     filterBranch: string | null,
     currentBranch: string | null,
     extensionUri: vscode.Uri,
-    filesViewMode: 'list' | 'tree' = 'list',
+    filesViewMode: "list" | "tree" = "list",
     filterFile: string | null = null,
     highlightCurrentBranch: boolean = false,
     showTags: boolean = true,
     showRemoteBranches: boolean = true,
 ): string {
-    const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, 'out', 'webview', 'index.js'));
+    const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, "out", "webview", "index.js"));
     const nonce = getNonce();
 
     return `<!DOCTYPE html>
@@ -708,9 +708,9 @@ export function getCommitDetailsHtml(
     webview: vscode.Webview,
     data: CommitDetailsData,
     extensionUri: vscode.Uri,
-    viewMode: 'list' | 'tree' = 'list',
+    viewMode: "list" | "tree" = "list",
 ): string {
-    const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, 'out', 'webview', 'index.js'));
+    const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, "out", "webview", "index.js"));
     const nonce = getNonce();
 
     return `<!DOCTYPE html>
@@ -918,6 +918,3 @@ export function getCommitDetailsHtml(
 </body>
 </html>`;
 }
-
-
-

@@ -8,6 +8,9 @@ export default antfu({
         semi: true, // 使用分号
         quotes: "double", // or 'single'
     },
+    rules: {
+        "ts/explicit-function-return-type": "off", // 关闭函数必须显式返回类型的规则
+    },
     ignores: [
         "dist",
         "node_modules",

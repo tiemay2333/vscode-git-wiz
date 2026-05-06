@@ -1,15 +1,15 @@
-import React, { useRef, useEffect } from 'react';
-import { GraphNode } from './graphLayout';
+import type { GraphNode } from "./graphLayout";
+import React, { useEffect, useRef } from "react";
 
 const COLORS = [
-    '#3d9fd4', // blue
-    '#d43d3d', // red
-    '#3dd45c', // green
-    '#d4a13d', // orange
-    '#9d3dd4', // purple
-    '#3dd4be', // lime
-    '#d43d8a', // pink
-    '#d4d43d', // yellow
+    "#3d9fd4", // blue
+    "#d43d3d", // red
+    "#3dd45c", // green
+    "#d4a13d", // orange
+    "#9d3dd4", // purple
+    "#3dd4be", // lime
+    "#d43d8a", // pink
+    "#d4d43d", // yellow
 ];
 
 function getColor(index: number) {
@@ -41,42 +41,44 @@ function RefBadges({ refs, showTags, showRemoteBranches }: { refs: string[]; sho
     }
 
     const badges = refs.flatMap((ref, i) => {
-        if (ref.startsWith('HEAD -> ')) {
+        if (ref.startsWith("HEAD -> ")) {
             return [
                 <span key={i} className="ref-badge ref-head">
                     {ref.substring(8)}
                 </span>,
             ];
         }
-        if (ref === 'HEAD') {
+        if (ref === "HEAD") {
             return [
                 <span key={i} className="ref-badge ref-head">
                     HEAD
                 </span>,
             ];
         }
-        if (ref.startsWith('tag: ')) {
-            if (showTags === false) return [];
+        if (ref.startsWith("tag: ")) {
+            if (showTags === false)
+                return [];
             return [
                 <span key={i} className="ref-badge ref-tag">
                     {ref.substring(5)}
                 </span>,
             ];
         }
-        if (ref.includes('origin/HEAD') || ref.includes('upstream/HEAD')) {
+        if (ref.includes("origin/HEAD") || ref.includes("upstream/HEAD")) {
             return [];
         }
-        if (ref.includes('origin/') || ref.includes('upstream/')) {
-            if (showRemoteBranches === false) return [];
+        if (ref.includes("origin/") || ref.includes("upstream/")) {
+            if (showRemoteBranches === false)
+                return [];
             return [
                 <span key={i} className="ref-badge ref-remote">
-                    {ref.replace('refs/remotes/', '')}
+                    {ref.replace("refs/remotes/", "")}
                 </span>,
             ];
         }
         return [
             <span key={i} className="ref-badge ref-branch">
-                {ref.replace('refs/heads/', '')}
+                {ref.replace("refs/heads/", "")}
             </span>,
         ];
     });
@@ -93,15 +95,16 @@ function RefBadges({ refs, showTags, showRemoteBranches }: { refs: string[]; sho
         <div className="refs-container">
             {visible}
             {overflow > 0 && (
-                <span className="ref-badge ref-overflow" title={`+${overflow} more ref${overflow > 1 ? 's' : ''}`}>
-                    +{overflow}
+                <span className="ref-badge ref-overflow" title={`+${overflow} more ref${overflow > 1 ? "s" : ""}`}>
+                    +
+                    {overflow}
                 </span>
             )}
         </div>
     );
 }
 
-export const CommitRow = React.memo(function CommitRow({
+export const CommitRow = React.memo(({
     graphWidth,
     graphNode,
     headCommitHash,
@@ -116,7 +119,7 @@ export const CommitRow = React.memo(function CommitRow({
     onContextMenu,
     onEditConfirm,
     onEditCancel,
-}: Props) {
+}: Props) => {
     const commit = graphNode.commit;
     const inputRef = useRef<HTMLInputElement>(null);
     const isHead = commit.hash === headCommitHash;
@@ -129,52 +132,52 @@ export const CommitRow = React.memo(function CommitRow({
     }, [isEditing]);
 
     const rowClassName = [
-        isSelected ? 'row-selected' : '',
-        isMenuOpen ? 'row-menu-open' : '',
-        isDimmed ? 'row-dimmed' : ''
-    ].filter(Boolean).join(' ') || undefined;
+        isSelected ? "row-selected" : "",
+        isMenuOpen ? "row-menu-open" : "",
+        isDimmed ? "row-dimmed" : "",
+    ].filter(Boolean).join(" ") || undefined;
 
     return (
         <tr
             className={rowClassName}
             data-commit-hash={commit.hash}
-            onClick={(e) => onClick(e.shiftKey)}
+            onClick={e => onClick(e.shiftKey)}
             onContextMenu={onContextMenu}
         >
             <td className="graph-cell" style={{ width: graphWidth, minWidth: graphWidth, maxWidth: graphWidth }}>
-                <svg width={graphWidth} height="28" style={{ display: 'block' }}>
+                <svg width={graphWidth} height="28" style={{ display: "block" }}>
                     {[...graphNode.lines]
                         .sort((a, b) => Math.abs(b.x2 - b.x1) - Math.abs(a.x2 - a.x1))
                         .map((line, i) => {
-                        const x1 = 10 + line.x1 * 12;
-                        const x2 = 10 + line.x2 * 12;
-                        const y1 = line.y1 === 0 ? 0 : line.y1 === 1 ? 14 : 28;
-                        const y2 = line.y2 === 0 ? 0 : line.y2 === 1 ? 14 : 28;
-                        const color = getColor(line.color);
+                            const x1 = 10 + line.x1 * 12;
+                            const x2 = 10 + line.x2 * 12;
+                            const y1 = line.y1 === 0 ? 0 : line.y1 === 1 ? 14 : 28;
+                            const y2 = line.y2 === 0 ? 0 : line.y2 === 1 ? 14 : 28;
+                            const color = getColor(line.color);
 
-                        if (line.x1 !== line.x2) {
-                            const r = 6;
-                            const dir = x2 > x1 ? 1 : -1;
-                            const yMid = (y1 + y2) / 2;
-                            const d = `M ${x1} ${y1} L ${x1} ${yMid - r} A ${r} ${r} 0 0 ${dir === 1 ? 0 : 1} ${x1 + r * dir} ${yMid} L ${x2 - r * dir} ${yMid} A ${r} ${r} 0 0 ${dir === 1 ? 1 : 0} ${x2} ${yMid + r} L ${x2} ${y2}`;
-                            return (
-                                <path
-                                    key={i}
-                                    d={d}
-                                    fill="none"
-                                    stroke={color}
-                                    strokeWidth="1.5"
-                                />
-                            );
-                        }
+                            if (line.x1 !== line.x2) {
+                                const r = 6;
+                                const dir = x2 > x1 ? 1 : -1;
+                                const yMid = (y1 + y2) / 2;
+                                const d = `M ${x1} ${y1} L ${x1} ${yMid - r} A ${r} ${r} 0 0 ${dir === 1 ? 0 : 1} ${x1 + r * dir} ${yMid} L ${x2 - r * dir} ${yMid} A ${r} ${r} 0 0 ${dir === 1 ? 1 : 0} ${x2} ${yMid + r} L ${x2} ${y2}`;
+                                return (
+                                    <path
+                                        key={i}
+                                        d={d}
+                                        fill="none"
+                                        stroke={color}
+                                        strokeWidth="1.5"
+                                    />
+                                );
+                            }
 
-                        return <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke={color} strokeWidth="1.5" />;
-                    })}
+                            return <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke={color} strokeWidth="1.5" />;
+                        })}
                     <circle
                         cx={10 + graphNode.x * 12}
                         cy="14"
                         r="3.5"
-                        fill={isHead ? 'var(--vscode-editor-background)' : getColor(graphNode.color)}
+                        fill={isHead ? "var(--vscode-editor-background)" : getColor(graphNode.color)}
                         stroke={getColor(graphNode.color)}
                         strokeWidth="1.5"
                     />
@@ -183,30 +186,32 @@ export const CommitRow = React.memo(function CommitRow({
             </td>
             <td className="message-cell" title={commit.message}>
                 <RefBadges refs={commit.refs} showTags={showTags} showRemoteBranches={showRemoteBranches} />
-                {isEditing ? (
-                    <input
-                        ref={inputRef}
-                        className="message-edit-input"
-                        defaultValue={commit.message}
-                        onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                                e.preventDefault();
-                                onEditConfirm(e.currentTarget.value.trim());
-                            }
-                            if (e.key === 'Escape') {
-                                e.preventDefault();
-                                onEditCancel();
-                            }
-                        }}
-                        onBlur={onEditCancel}
-                        onClick={(e) => e.stopPropagation()}
-                    />
-                ) : (
-                    <>
-                        <span className="message-text">{commit.message}</span>
-                        {isLoading && <span className="row-loading-spinner" title="Loading files..."></span>}
-                    </>
-                )}
+                {isEditing
+                    ? (
+                            <input
+                                ref={inputRef}
+                                className="message-edit-input"
+                                defaultValue={commit.message}
+                                onKeyDown={(e) => {
+                                    if (e.key === "Enter") {
+                                        e.preventDefault();
+                                        onEditConfirm(e.currentTarget.value.trim());
+                                    }
+                                    if (e.key === "Escape") {
+                                        e.preventDefault();
+                                        onEditCancel();
+                                    }
+                                }}
+                                onBlur={onEditCancel}
+                                onClick={e => e.stopPropagation()}
+                            />
+                        )
+                    : (
+                            <>
+                                <span className="message-text">{commit.message}</span>
+                                {isLoading && <span className="row-loading-spinner" title="Loading files..."></span>}
+                            </>
+                        )}
             </td>
             <td className="hash-cell">{commit.shortHash}</td>
             <td className="author-cell">{commit.author}</td>

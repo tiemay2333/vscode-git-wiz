@@ -1,7 +1,8 @@
-import * as vscode from 'vscode';
-import * as cp from 'child_process';
-import { GitOperations, type GitCommit } from './gitOperations';
-import { getHtmlForWebview, getCommitDetailsHtml } from './webviewContent';
+import type { GitCommit } from "./gitOperations";
+import * as cp from "node:child_process";
+import * as vscode from "vscode";
+import { GitOperations } from "./gitOperations";
+import { getCommitDetailsHtml, getHtmlForWebview } from "./webviewContent";
 
 const PAGE_SIZE = 200;
 
@@ -16,16 +17,16 @@ interface WebviewMessage {
     branchName?: string;
     branchNames?: string[];
     tagName?: string;
-    mode?: 'list' | 'tree';
+    mode?: "list" | "tree";
     error?: string;
     key?: string;
     value?: unknown;
-    scope?: 'local' | 'global';
+    scope?: "local" | "global";
     remoteName?: string;
 }
 
 export class GitGraphViewProvider implements vscode.WebviewViewProvider {
-    public static readonly viewType = 'gitLeanGraphView';
+    public static readonly viewType = "gitLeanGraphView";
     private static currentPanel: vscode.WebviewPanel | undefined;
     private _view?: vscode.WebviewView;
     private _watcher?: vscode.FileSystemWatcher;
@@ -39,13 +40,13 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider {
     private _pendingRefresh = false;
     private _isFirstLoad = true;
     private _branchSignaturesCache: { branch: string; signatures: Set<string> } | null = null;
-    private _settingsScope: 'local' | 'global' = 'global';
+    private _settingsScope: "local" | "global" = "global";
 
     constructor(private readonly _extensionUri: vscode.Uri) {
         this._gitOps = new GitOperations(() => this.refresh());
         this.setupGitWatcher();
-        vscode.workspace.onDidChangeConfiguration(e => {
-            if (e.affectsConfiguration('git-wiz.highlightCurrentBranch') || e.affectsConfiguration('git-wiz.showTags') || e.affectsConfiguration('git-wiz.showRemoteBranches')) {
+        vscode.workspace.onDidChangeConfiguration((e) => {
+            if (e.affectsConfiguration("git-wiz.highlightCurrentBranch") || e.affectsConfiguration("git-wiz.showTags") || e.affectsConfiguration("git-wiz.showRemoteBranches")) {
                 this.refresh();
             }
         });
@@ -71,7 +72,7 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider {
 
         const panel = vscode.window.createWebviewPanel(
             GitGraphViewProvider.viewType,
-            'Tree',
+            "Tree",
             column || vscode.ViewColumn.One,
             {
                 enableScripts: true,
@@ -88,7 +89,7 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider {
             GitGraphViewProvider.currentPanel = undefined;
         });
 
-        panel.webview.onDidReceiveMessage((message) => provider.handleMessage(message, panel.webview));
+        panel.webview.onDidReceiveMessage(message => provider.handleMessage(message, panel.webview));
     }
 
     public resolveWebviewView(
@@ -108,7 +109,7 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider {
             localResourceRoots: [this._extensionUri],
         };
 
-        webviewView.webview.onDidReceiveMessage((message) => this.handleMessage(message, webviewView.webview));
+        webviewView.webview.onDidReceiveMessage(message => this.handleMessage(message, webviewView.webview));
 
         this.updateWebview(webviewView.webview);
         this._initialized = true;
@@ -120,151 +121,156 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider {
 
     private async handleMessage(message: WebviewMessage, webview: vscode.Webview) {
         switch (message.command) {
-            case 'search':
+            case "search":
                 this._searchFilters = message.filters;
                 this._initialized = true; // ensure refresh can run
                 this.refresh(true);
                 break;
-            case 'refresh':
+            case "refresh":
                 this.updateWebview(webview);
                 break;
-            case 'clearBranchFilter':
+            case "clearBranchFilter":
                 this._filterBranch = null;
                 this.refresh(true);
                 break;
-            case 'filterByFile':
+            case "filterByFile":
                 this._filterFile = message.filePath || null;
                 this.refresh(true);
                 break;
-            case 'clearFileFilter':
+            case "clearFileFilter":
                 this._filterFile = null;
                 this.refresh(true);
                 break;
-            case 'loadMoreCommits':
+            case "loadMoreCommits":
                 this.loadMoreCommits(webview);
                 break;
-            case 'editCommitMessage':
+            case "editCommitMessage":
                 this._gitOps.editCommitMessage(message.commitHash!, message.newMessage!);
                 break;
-            case 'amendCommit':
+            case "amendCommit":
                 this._gitOps.amendCommit();
                 break;
-            case 'cherryPick':
+            case "cherryPick":
                 this._gitOps.cherryPickCommit(message.commitHash!);
                 break;
-            case 'copyHash':
+            case "copyHash":
                 this._gitOps.copyCommitHash(message.commitHash!);
                 break;
-            case 'revertCommit':
+            case "revertCommit":
                 this._gitOps.revertCommit(message.commitHash!);
                 break;
-            case 'resetToCommit':
+            case "resetToCommit":
                 this._gitOps.resetToCommit(message.commitHash!);
                 break;
-            case 'dropCommit':
+            case "dropCommit":
                 this._gitOps.dropCommit(message.commitHash!);
                 break;
-            case 'squashCommits':
+            case "squashCommits":
                 this._gitOps.squashCommits(message.hashes!, message.parentHash!);
                 break;
-            case 'cherryPickRange':
+            case "cherryPickRange":
                 this._gitOps.cherryPickRange(message.hashes!);
                 break;
-            case 'revertCommits':
+            case "revertCommits":
                 this._gitOps.revertCommits(message.hashes!);
                 break;
-            case 'dropCommits':
+            case "dropCommits":
                 this._gitOps.dropCommits(message.hashes!, message.parentHash!);
                 break;
-            case 'newTag':
+            case "newTag":
                 this.createNewTag(message.commitHash!);
                 break;
-            case 'pushTag':
+            case "pushTag":
                 this._gitOps.pushTag(message.tagName!);
                 break;
-            case 'createBranch':
+            case "createBranch":
                 if (message.branchName) {
-                    vscode.commands.executeCommand('git-wiz.createBranch', { branchName: message.branchName });
-                } else {
+                    vscode.commands.executeCommand("git-wiz.createBranch", { branchName: message.branchName });
+                }
+                else {
                     this.createBranchFromCommit(message.commitHash!);
                 }
                 break;
-            case 'selectBranch':
+            case "selectBranch":
                 this.filterByBranch(message.branchName || null);
                 break;
-            case 'deleteMultipleBranches':
-                vscode.commands.executeCommand('git-wiz.deleteMultipleBranches', message.branchNames);
+            case "deleteMultipleBranches":
+                vscode.commands.executeCommand("git-wiz.deleteMultipleBranches", message.branchNames);
                 break;
-            case 'createBranchFromTag':
-            case 'deleteTag':
+            case "createBranchFromTag":
+            case "deleteTag":
                 vscode.commands.executeCommand(`git-wiz.${message.command}`, message.tagName);
                 break;
-            case 'checkoutBranch':
-            case 'deleteBranch':
-            case 'deleteRemoteBranch':
-            case 'rebaseBranch':
-            case 'mergeBranch':
+            case "checkoutBranch":
+            case "deleteBranch":
+            case "deleteRemoteBranch":
+            case "rebaseBranch":
+            case "mergeBranch":
                 vscode.commands.executeCommand(`git-wiz.${message.command}`, { branchName: message.branchName });
                 break;
-            case 'getCommitFiles':
+            case "getCommitFiles":
                 this.getCommitFiles(message.commitHash!, webview);
                 break;
-            case 'saveFilesViewMode':
+            case "saveFilesViewMode": {
                 const mode = message.mode;
                 vscode.workspace
-                    .getConfiguration('git-wiz')
-                    .update('filesViewMode', mode, vscode.ConfigurationTarget.Global);
+                    .getConfiguration("git-wiz")
+                    .update("filesViewMode", mode, vscode.ConfigurationTarget.Global);
                 break;
-            case 'saveCommitDetailsViewMode':
+            }
+            case "saveCommitDetailsViewMode": {
                 const detailsMode = message.mode;
                 vscode.workspace
-                    .getConfiguration('git-wiz')
-                    .update('commitDetailsViewMode', detailsMode, vscode.ConfigurationTarget.Global);
+                    .getConfiguration("git-wiz")
+                    .update("commitDetailsViewMode", detailsMode, vscode.ConfigurationTarget.Global);
                 break;
-            case 'openDiff':
+            }
+            case "openDiff":
                 this.openDiff(message.commitHash!, message.filePath!, message.parentHash);
                 break;
-            case 'openFile':
+            case "openFile":
                 this.openFile(message.filePath!);
                 break;
-            case 'showErrorMessage':
-                vscode.window.showErrorMessage(message.error || 'Unknown error');
+            case "showErrorMessage":
+                vscode.window.showErrorMessage(message.error || "Unknown error");
                 break;
-            case 'settingsUpdateSetting': {
-                const config = vscode.workspace.getConfiguration('git-wiz');
+            case "settingsUpdateSetting": {
+                const config = vscode.workspace.getConfiguration("git-wiz");
                 await config.update(message.key!, message.value, vscode.ConfigurationTarget.Global);
-                if (message.key === 'showTags') {
-                    webview.postMessage({ command: 'updateShowTags', value: message.value });
+                if (message.key === "showTags") {
+                    webview.postMessage({ command: "updateShowTags", value: message.value });
                 }
-                if (message.key === 'showRemoteBranches') {
-                    webview.postMessage({ command: 'updateShowRemoteBranches', value: message.value });
+                if (message.key === "showRemoteBranches") {
+                    webview.postMessage({ command: "updateShowRemoteBranches", value: message.value });
                 }
                 break;
             }
-            case 'settingsSetGitConfig':
+            case "settingsSetGitConfig":
                 await this._gitOps.setGitConfig(message.key!, message.value as string, message.scope!);
                 break;
-            case 'settingsGetGitConfig': {
+            case "settingsGetGitConfig": {
                 this._settingsScope = message.scope!;
-                const userName = await this._gitOps.getGitConfig('user.name', this._settingsScope) || '';
-                const userEmail = await this._gitOps.getGitConfig('user.email', this._settingsScope) || '';
-                webview.postMessage({ command: 'settingsUpdateForm', userName, userEmail });
+                const userName = await this._gitOps.getGitConfig("user.name", this._settingsScope) || "";
+                const userEmail = await this._gitOps.getGitConfig("user.email", this._settingsScope) || "";
+                webview.postMessage({ command: "settingsUpdateForm", userName, userEmail });
                 break;
             }
-            case 'settingsAddRemote': {
-                const name = await vscode.window.showInputBox({ prompt: 'Remote name', placeHolder: 'origin' });
-                if (!name) break;
-                const url = await vscode.window.showInputBox({ prompt: `Remote URL for "${name}"`, placeHolder: 'https://github.com/user/repo.git' });
-                if (!url) break;
+            case "settingsAddRemote": {
+                const name = await vscode.window.showInputBox({ prompt: "Remote name", placeHolder: "origin" });
+                if (!name)
+                    break;
+                const url = await vscode.window.showInputBox({ prompt: `Remote URL for "${name}"`, placeHolder: "https://github.com/user/repo.git" });
+                if (!url)
+                    break;
                 await this._gitOps.addRemote(name, url);
-                vscode.commands.executeCommand('git-wiz.refreshBranches');
-                webview.postMessage({ command: 'settingsUpdateForm', remotes: await this._gitOps.getUniqueRemotes() });
+                vscode.commands.executeCommand("git-wiz.refreshBranches");
+                webview.postMessage({ command: "settingsUpdateForm", remotes: await this._gitOps.getUniqueRemotes() });
                 break;
             }
-            case 'settingsRemoveRemote':
+            case "settingsRemoveRemote":
                 await this._gitOps.removeRemote(message.remoteName!);
-                vscode.commands.executeCommand('git-wiz.refreshBranches');
-                webview.postMessage({ command: 'settingsUpdateForm', remotes: await this._gitOps.getUniqueRemotes() });
+                vscode.commands.executeCommand("git-wiz.refreshBranches");
+                webview.postMessage({ command: "settingsUpdateForm", remotes: await this._gitOps.getUniqueRemotes() });
                 break;
         }
     }
@@ -276,7 +282,7 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider {
         }
 
         this._watcher = vscode.workspace.createFileSystemWatcher(
-            new vscode.RelativePattern(workspaceFolders[0], '.git/**'),
+            new vscode.RelativePattern(workspaceFolders[0], ".git/**"),
         );
 
         this._watcher.onDidChange(() => this.debouncedRefresh());
@@ -293,16 +299,18 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider {
 
     private updateViewTitle(_currentBranch: string | null) {
         if (GitGraphViewProvider.currentPanel) {
-            let title = 'Tree';
+            let title = "Tree";
             if (this._filterFile) {
                 title += ` - ${this._filterFile}`;
-            } else if (this._filterBranch) {
+            }
+            else if (this._filterBranch) {
                 title += ` - ${this._filterBranch}`;
                 if (_currentBranch && this._filterBranch !== _currentBranch) {
                     title += ` (HEAD on ${_currentBranch})`;
                 }
-            } else {
-                title += ' - All Branches';
+            }
+            else {
+                title += " - All Branches";
                 if (_currentBranch) {
                     title += ` (HEAD on ${_currentBranch})`;
                 }
@@ -322,14 +330,14 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider {
         const currentBranch = await this._gitOps.getCurrentBranch();
         const branches = await this._gitOps.getBranches();
         const highlightCurrentBranch = vscode.workspace
-            .getConfiguration('git-wiz')
-            .get<boolean>('highlightCurrentBranch', false);
+            .getConfiguration("git-wiz")
+            .get<boolean>("highlightCurrentBranch", false);
         const showTags = vscode.workspace
-            .getConfiguration('git-wiz')
-            .get<boolean>('showTags', true);
+            .getConfiguration("git-wiz")
+            .get<boolean>("showTags", true);
         const showRemoteBranches = vscode.workspace
-            .getConfiguration('git-wiz')
-            .get<boolean>('showRemoteBranches', true);
+            .getConfiguration("git-wiz")
+            .get<boolean>("showRemoteBranches", true);
 
         if (highlightCurrentBranch && currentBranch) {
             await this.applyHighlight(commits, currentBranch);
@@ -340,7 +348,7 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider {
         this._loadedCount = commits.length;
         const hasMore = commits.length >= countToLoad; // Keep hasMore if we hit the limit
         const msg = {
-            command: 'replaceCommits',
+            command: "replaceCommits",
             commits,
             hasMore,
             filterBranch: this._filterBranch,
@@ -352,7 +360,7 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider {
             showRemoteBranches,
         };
         const branchMsg = {
-            command: 'replaceBranches',
+            command: "replaceBranches",
             branches,
         };
         this._view?.webview.postMessage(msg);
@@ -388,8 +396,8 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider {
 
     public async createNewTag(commitHash: string) {
         const tagName = await vscode.window.showInputBox({
-            prompt: 'Enter new tag name',
-            placeHolder: 'e.g. v1.0.0',
+            prompt: "Enter new tag name",
+            placeHolder: "e.g. v1.0.0",
         });
         if (tagName) {
             await this._gitOps.createTag(tagName, commitHash);
@@ -403,30 +411,31 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider {
 
     public async createBranchFromCommit(commitHash: string, providedBranchName?: string) {
         const branchName = providedBranchName || await vscode.window.showInputBox({
-            prompt: 'Enter new branch name',
-            placeHolder: 'e.g. feature/new-branch',
+            prompt: "Enter new branch name",
+            placeHolder: "e.g. feature/new-branch",
         });
         if (branchName) {
             await this._gitOps.createBranch(branchName, commitHash);
             this.refresh();
-            vscode.commands.executeCommand('git-wiz.refreshBranches');
+            vscode.commands.executeCommand("git-wiz.refreshBranches");
         }
     }
 
     public async showSettings() {
         const webview = this._view?.webview || GitGraphViewProvider.currentPanel?.webview;
-        if (!webview) return;
+        if (!webview)
+            return;
 
-        const config = vscode.workspace.getConfiguration('git-wiz');
-        const userName = await this._gitOps.getGitConfig('user.name', this._settingsScope) || '';
-        const userEmail = await this._gitOps.getGitConfig('user.email', this._settingsScope) || '';
+        const config = vscode.workspace.getConfiguration("git-wiz");
+        const userName = await this._gitOps.getGitConfig("user.name", this._settingsScope) || "";
+        const userEmail = await this._gitOps.getGitConfig("user.email", this._settingsScope) || "";
 
         webview.postMessage({
-            command: 'showSettingsModal',
+            command: "showSettingsModal",
             data: {
-                highlightCurrentBranch: config.get<boolean>('highlightCurrentBranch', false),
-                showTags: config.get<boolean>('showTags', true),
-                showRemoteBranches: config.get<boolean>('showRemoteBranches', true),
+                highlightCurrentBranch: config.get<boolean>("highlightCurrentBranch", false),
+                showTags: config.get<boolean>("showTags", true),
+                showRemoteBranches: config.get<boolean>("showRemoteBranches", true),
                 userName,
                 userEmail,
                 scope: this._settingsScope,
@@ -443,17 +452,17 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider {
         const currentBranch = await this._gitOps.getCurrentBranch();
         const branches = await this._gitOps.getBranches();
         const filesViewMode = vscode.workspace
-            .getConfiguration('git-wiz')
-            .get<'tree' | 'list'>('filesViewMode', 'list');
+            .getConfiguration("git-wiz")
+            .get<"tree" | "list">("filesViewMode", "list");
         const highlightCurrentBranch = vscode.workspace
-            .getConfiguration('git-wiz')
-            .get<boolean>('highlightCurrentBranch', false);
+            .getConfiguration("git-wiz")
+            .get<boolean>("highlightCurrentBranch", false);
         const showTags = vscode.workspace
-            .getConfiguration('git-wiz')
-            .get<boolean>('showTags', true);
+            .getConfiguration("git-wiz")
+            .get<boolean>("showTags", true);
         const showRemoteBranches = vscode.workspace
-            .getConfiguration('git-wiz')
-            .get<boolean>('showRemoteBranches', true);
+            .getConfiguration("git-wiz")
+            .get<boolean>("showRemoteBranches", true);
 
         if (highlightCurrentBranch && currentBranch) {
             await this.applyHighlight(commits, currentBranch);
@@ -494,14 +503,14 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider {
         );
         const currentBranch = await this._gitOps.getCurrentBranch();
         const highlightCurrentBranch = vscode.workspace
-            .getConfiguration('git-wiz')
-            .get<boolean>('highlightCurrentBranch', false);
+            .getConfiguration("git-wiz")
+            .get<boolean>("highlightCurrentBranch", false);
         const showTags = vscode.workspace
-            .getConfiguration('git-wiz')
-            .get<boolean>('showTags', true);
+            .getConfiguration("git-wiz")
+            .get<boolean>("showTags", true);
         const showRemoteBranches = vscode.workspace
-            .getConfiguration('git-wiz')
-            .get<boolean>('showRemoteBranches', true);
+            .getConfiguration("git-wiz")
+            .get<boolean>("showRemoteBranches", true);
 
         if (highlightCurrentBranch && currentBranch) {
             await this.applyHighlight(commits, currentBranch);
@@ -509,7 +518,7 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider {
 
         this._loadedCount += commits.length;
         const hasMore = commits.length === PAGE_SIZE;
-        webview.postMessage({ command: 'appendCommits', commits, hasMore, showTags, showRemoteBranches });
+        webview.postMessage({ command: "appendCommits", commits, hasMore, showTags, showRemoteBranches });
     }
 
     private async applyHighlight(commits: GitCommit[], currentBranch: string): Promise<void> {
@@ -519,11 +528,13 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider {
         for (const c of commits) {
             if (branchHashes.has(c.hash)) {
                 c.isCurrentBranch = true;
-            } else {
+            }
+            else {
                 remaining.push(c);
             }
         }
-        if (remaining.length === 0) return;
+        if (remaining.length === 0)
+            return;
 
         // Tier 2: signature match (cherry-picks)
         // Cherry-pick preserves author email, author timestamp, and subject line.
@@ -532,7 +543,7 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider {
             this._branchSignaturesCache = { branch: currentBranch, signatures };
         }
         for (const c of remaining) {
-            const sig = `${c.email}|${c.authorTimestamp}|${c.message.split('\n')[0]}`;
+            const sig = `${c.email}|${c.authorTimestamp}|${c.message.split("\n")[0]}`;
             if (this._branchSignaturesCache.signatures.has(sig)) {
                 c.isCurrentBranch = true;
             }
@@ -545,10 +556,11 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider {
             const commit = files[0];
             const patch = await new Promise<string>((resolve) => {
                 const cwd = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
-                if (!cwd) return resolve('');
+                if (!cwd)
+                    return resolve("");
                 // Get the patch for the commit
                 cp.exec(`git show ${commitHash} --patch`, { cwd }, (err: cp.ExecException | null, stdout: string) => {
-                    resolve(err ? '' : stdout);
+                    resolve(err ? "" : stdout);
                 });
             });
 
@@ -559,13 +571,13 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider {
                 authorDate: commit.date, // Note: parsed string
                 commitDate: commit.date, // Simplified for now
                 subject: commit.message,
-                body: '', // git log output parsing might need refinement for body
-                patch: patch,
+                body: "", // git log output parsing might need refinement for body
+                patch,
             };
 
             const detailsMode = vscode.workspace
-                .getConfiguration('git-wiz')
-                .get<'tree' | 'list'>('commitDetailsViewMode', 'list');
+                .getConfiguration("git-wiz")
+                .get<"tree" | "list">("commitDetailsViewMode", "list");
 
             if (GitGraphViewProvider.currentPanel) {
                 const panelWebview = GitGraphViewProvider.currentPanel.webview;
@@ -575,22 +587,23 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider {
 
         try {
             const filesData = await this._gitOps.getCommitFiles(commitHash);
-            webview.postMessage({ command: 'commitFilesData', commitHash, files: filesData });
-        } catch (e: any) {
+            webview.postMessage({ command: "commitFilesData", commitHash, files: filesData });
+        }
+        catch (e: any) {
             webview.postMessage({
-                command: 'commitFilesData',
+                command: "commitFilesData",
                 commitHash,
-                error: e.message || 'Failed to load commit files',
+                error: e.message || "Failed to load commit files",
             });
         }
     }
 
     private openDiff(commitHash: string, filePath: string, parentHash?: string) {
         const shortCommit = commitHash.substring(0, 7);
-        const diffParent = parentHash ? parentHash : `${commitHash}~1`;
+        const diffParent = parentHash || `${commitHash}~1`;
         const shortParent = parentHash ? parentHash.substring(0, 7) : `${shortCommit}~1`;
 
-        const fileName = filePath.split('/').pop() || filePath;
+        const fileName = filePath.split("/").pop() || filePath;
 
         // By changing the path to /hash/filename, VS Code will use hash/filename as the side labels
         // and we pass the actual file path in the 'file' query parameter so the provider can read it.
@@ -599,7 +612,7 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider {
 
         // Provide a clearer title for the diff
         const title = `${fileName} (${shortParent} ↔ ${shortCommit})`;
-        vscode.commands.executeCommand('vscode.diff', uri1, uri2, title);
+        vscode.commands.executeCommand("vscode.diff", uri1, uri2, title);
     }
 
     private openFile(filePath: string) {
@@ -608,7 +621,7 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider {
             return;
         }
         vscode.commands.executeCommand(
-            'vscode.open',
+            "vscode.open",
             vscode.Uri.file(vscode.Uri.joinPath(vscode.Uri.file(cwd), filePath).fsPath),
         );
     }
