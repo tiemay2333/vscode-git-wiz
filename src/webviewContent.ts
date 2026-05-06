@@ -36,6 +36,8 @@ export function getHtmlForWebview(
     filesViewMode: 'list' | 'tree' = 'list',
     filterFile: string | null = null,
     highlightCurrentBranch: boolean = false,
+    showTags: boolean = true,
+    showRemoteBranches: boolean = true,
 ): string {
     const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, 'out', 'webview', 'index.js'));
     const nonce = getNonce();
@@ -652,11 +654,51 @@ export function getHtmlForWebview(
             outline: 1px solid var(--vscode-focusBorder);
             outline-offset: -1px;
         }
+
+        /* Settings Modal Overlay */
+        .settings-modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+        }
+        .settings-modal-content {
+            background: var(--vscode-editor-background);
+            border: 1px solid var(--vscode-panel-border);
+            border-radius: 4px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+            max-width: 560px;
+            width: 90vw;
+            max-height: 85vh;
+            overflow-y: auto;
+            position: relative;
+        }
+        .settings-modal-close {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: none;
+            border: none;
+            color: var(--vscode-descriptionForeground);
+            font-size: 20px;
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 4px;
+            line-height: 1;
+            z-index: 1;
+        }
+        .settings-modal-close:hover {
+            color: var(--vscode-foreground);
+            background: var(--vscode-toolbar-hoverBackground);
+        }
     </style>
 </head>
 <body>
     <div id="root"></div>
-    <script nonce="${nonce}">window.__VIEW__ = 'graph'; window.__COMMITS__ = ${safeJson(commits)}; window.__BRANCHES__ = ${safeJson(branches)}; window.__HAS_MORE__ = ${hasMore}; window.__FILTER_BRANCH__ = ${safeJson(filterBranch)}; window.__CURRENT_BRANCH__ = ${safeJson(currentBranch)}; window.__FILES_VIEW_MODE__ = ${safeJson(filesViewMode)}; window.__FILTER_FILE__ = ${safeJson(filterFile)}; window.__HIGHLIGHT_CURRENT_BRANCH__ = ${highlightCurrentBranch};</script>
+    <script nonce="${nonce}">window.__VIEW__ = 'graph'; window.__COMMITS__ = ${safeJson(commits)}; window.__BRANCHES__ = ${safeJson(branches)}; window.__HAS_MORE__ = ${hasMore}; window.__FILTER_BRANCH__ = ${safeJson(filterBranch)}; window.__CURRENT_BRANCH__ = ${safeJson(currentBranch)}; window.__FILES_VIEW_MODE__ = ${safeJson(filesViewMode)}; window.__FILTER_FILE__ = ${safeJson(filterFile)}; window.__HIGHLIGHT_CURRENT_BRANCH__ = ${highlightCurrentBranch}; window.__SHOW_TAGS__ = ${showTags}; window.__SHOW_REMOTE_BRANCHES__ = ${showRemoteBranches};</script>
     <script nonce="${nonce}" src="${scriptUri}"></script>
 </body>
 </html>`;
@@ -876,3 +918,6 @@ export function getCommitDetailsHtml(
 </body>
 </html>`;
 }
+
+
+

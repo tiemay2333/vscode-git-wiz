@@ -27,13 +27,15 @@ interface Props {
     isFirst: boolean;
     isLast: boolean;
     isDimmed?: boolean;
+    showTags?: boolean;
+    showRemoteBranches?: boolean;
     onClick: (shiftKey: boolean) => void;
     onContextMenu: (e: React.MouseEvent) => void;
     onEditConfirm: (newMessage: string) => void;
     onEditCancel: () => void;
 }
 
-function RefBadges({ refs }: { refs: string[] }) {
+function RefBadges({ refs, showTags, showRemoteBranches }: { refs: string[]; showTags?: boolean; showRemoteBranches?: boolean }) {
     if (!refs.length) {
         return null;
     }
@@ -54,6 +56,7 @@ function RefBadges({ refs }: { refs: string[] }) {
             ];
         }
         if (ref.startsWith('tag: ')) {
+            if (showTags === false) return [];
             return [
                 <span key={i} className="ref-badge ref-tag">
                     {ref.substring(5)}
@@ -64,6 +67,7 @@ function RefBadges({ refs }: { refs: string[] }) {
             return [];
         }
         if (ref.includes('origin/') || ref.includes('upstream/')) {
+            if (showRemoteBranches === false) return [];
             return [
                 <span key={i} className="ref-badge ref-remote">
                     {ref.replace('refs/remotes/', '')}
@@ -106,6 +110,8 @@ export const CommitRow = React.memo(function CommitRow({
     isEditing,
     isLoading,
     isDimmed,
+    showTags,
+    showRemoteBranches,
     onClick,
     onContextMenu,
     onEditConfirm,
@@ -176,7 +182,7 @@ export const CommitRow = React.memo(function CommitRow({
                 </svg>
             </td>
             <td className="message-cell" title={commit.message}>
-                <RefBadges refs={commit.refs} />
+                <RefBadges refs={commit.refs} showTags={showTags} showRemoteBranches={showRemoteBranches} />
                 {isEditing ? (
                     <input
                         ref={inputRef}

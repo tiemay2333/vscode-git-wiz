@@ -58,6 +58,16 @@
                     "type": "boolean",
                     "default": false,
                     "description": "Highlight commits belonging to the current branch when viewing other branches."
+                },
+                "git-wiz.showTags": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Show tag badges on commits in the graph view."
+                },
+                "git-wiz.showRemoteBranches": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Show remote branch names (origin/..., upstream/...) on commits in the graph view."
                 }
             }
         },

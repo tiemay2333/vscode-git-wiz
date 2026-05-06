@@ -902,4 +902,71 @@ fs.writeFileSync(process.argv[2], ${JSON.stringify(newMessage + '\n')});
             });
         });
     }
+
+    async getGitConfig(key: string, scope: 'local' | 'global'): Promise<string> {
+        return new Promise((resolve) => {
+            const cwd = this.getCwd();
+            if (!cwd) return resolve('');
+            const scopeArg = scope === 'global' ? '--global' : '--local';
+            cp.exec(`git config ${scopeArg} "${key}"`, { cwd }, (err, stdout) => {
+                resolve(err ? '' : stdout.trim());
+            });
+        });
+    }
+
+    async setGitConfig(key: string, value: string, scope: 'local' | 'global'): Promise<void> {
+        return new Promise((resolve) => {
+            const cwd = this.getCwd();
+            if (!cwd) return resolve();
+            const scopeArg = scope === 'global' ? '--global' : '--local';
+            cp.exec(`git config ${scopeArg} "${key}" "${value}"`, { cwd }, () => resolve());
+        });
+    }
+
+    async getRemotes(): Promise<{ name: string; url: string; type: 'fetch' | 'push' }[]> {
+        return new Promise((resolve) => {
+            const cwd = this.getCwd();
+            if (!cwd) return resolve([]);
+            cp.exec('git remote -v', { cwd }, (err, stdout) => {
+                if (err) return resolve([]);
+                const remotes: { name: string; url: string; type: 'fetch' | 'push' }[] = [];
+                for (const line of stdout.split('\n').filter(Boolean)) {
+                    const parts = line.split(/\s+/);
+                    if (parts.length >= 3) {
+                        const type = parts[2] === '(push)' ? 'push' as const : 'fetch' as const;
+                        remotes.push({ name: parts[0], url: parts[1], type });
+                    }
+                }
+                resolve(remotes);
+            });
+        });
+    }
+
+    async getUniqueRemotes(): Promise<{ name: string; url: string }[]> {
+        const remotes = await this.getRemotes();
+        const seen = new Set<string>();
+        return remotes
+            .filter((r) => {
+                if (seen.has(r.name)) return false;
+                seen.add(r.name);
+                return true;
+            })
+            .map(({ name, url }) => ({ name, url }));
+    }
+
+    async addRemote(name: string, url: string): Promise<void> {
+        return new Promise((resolve) => {
+            const cwd = this.getCwd();
+            if (!cwd) return resolve();
+            cp.exec(`git remote add "${name}" "${url}"`, { cwd }, () => resolve());
+        });
+    }
+
+    async removeRemote(name: string): Promise<void> {
+        return new Promise((resolve) => {
+            const cwd = this.getCwd();
+            if (!cwd) return resolve();
+            cp.exec(`git remote remove "${name}"`, { cwd }, () => resolve());
+        });
+    }
 }

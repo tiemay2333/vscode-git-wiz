@@ -1,8 +1,9 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { GitCommit } from '../types';
+import { GitCommit } from '../../gitParser';
 import { vscode } from '../vscodeApi';
 import { CommitRow } from './CommitRow';
 import { computeGraphLayout } from './graphLayout';
+import { SettingsForm, SettingsData } from '../settings/SettingsForm';
 
 function areCommitsConsecutive(commits: GitCommit[], sortedIndices: number[]): boolean {
     for (let i = 0; i < sortedIndices.length - 1; i++) {
@@ -284,6 +285,12 @@ export function GraphView({
     const [highlightCurrent, setHighlightCurrent] = useState<boolean>(
         (window as unknown as { __HIGHLIGHT_CURRENT_BRANCH__?: boolean }).__HIGHLIGHT_CURRENT_BRANCH__ || false
     );
+    const [showTags, setShowTags] = useState<boolean>(
+        (window as unknown as { __SHOW_TAGS__?: boolean }).__SHOW_TAGS__ ?? true
+    );
+    const [showRemoteBranches, setShowRemoteBranches] = useState<boolean>(
+        (window as unknown as { __SHOW_REMOTE_BRANCHES__?: boolean }).__SHOW_REMOTE_BRANCHES__ ?? true
+    );
 
     const [selectedIndices, setSelectedIndices] = useState(new Set<number>());
     const [rangeStartIndex, setRangeStartIndex] = useState<number | null>(null);
@@ -291,6 +298,8 @@ export function GraphView({
     const [singleMenu, setSingleMenu] = useState<SingleMenu | null>(null);
     const [rangeMenu, setRangeMenu] = useState<RangeMenu | null>(null);
     const [editingHash, setEditingHash] = useState<string | null>(null);
+    const [showSettings, setShowSettings] = useState(false);
+    const [settingsData, setSettingsData] = useState<SettingsData | null>(null);
 
     const containerRef = useRef<HTMLDivElement>(null);
     const ctxMenuRef = useRef<HTMLDivElement>(null);
@@ -376,6 +385,12 @@ export function GraphView({
                 if (msg.highlightCurrentBranch !== undefined) {
                     setHighlightCurrent(msg.highlightCurrentBranch);
                 }
+                if (msg.showTags !== undefined) {
+                    setShowTags(msg.showTags);
+                }
+                if (msg.showRemoteBranches !== undefined) {
+                    setShowRemoteBranches(msg.showRemoteBranches);
+                }
                 setIsLoadingMore(false);
                 setSelectedIndices(newIndices);
                 setRangeStartIndex(null);
@@ -389,22 +404,34 @@ export function GraphView({
                     setCommitFiles((prev) => ({ ...prev, [msg.commitHash]: msg.files }));
                     setLoadingHash((prev) => (prev === msg.commitHash ? msg.commitHash : prev));
                 }
+            } else if (msg.command === 'showSettingsModal') {
+                setSettingsData(msg.data);
+                setShowSettings(true);
+            } else if (msg.command === 'updateShowTags') {
+                setShowTags(msg.value as boolean);
+            } else if (msg.command === 'updateShowRemoteBranches') {
+                setShowRemoteBranches(msg.value as boolean);
             }
         };
         window.addEventListener('message', handler);
 
         const clickOutside = (e: MouseEvent) => {
-            if (ctxMenuRef.current?.contains(e.target as Node) || (e.target as Element).closest('.settings-container')) {
+            if (ctxMenuRef.current?.contains(e.target as Node) || (e.target as Element).closest('.settings-modal-content')) {
                 return;
             }
-            setShowSettings(false);
             closeMenus();
         };
         window.addEventListener('click', clickOutside);
 
+        const escHandler = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') setShowSettings(false);
+        };
+        window.addEventListener('keydown', escHandler);
+
         return () => {
             window.removeEventListener('message', handler);
             window.removeEventListener('click', clickOutside);
+            window.removeEventListener('keydown', escHandler);
         };
     }, [closeMenus]);
 
@@ -873,6 +900,8 @@ export function GraphView({
                                                 isFirst={index === 0}
                                                 isLast={index === filteredCommits.length - 1}
                                                 isDimmed={highlightCurrent && !commit.isCurrentBranch}
+                                                showTags={showTags}
+                                                showRemoteBranches={showRemoteBranches}
                                                 onClick={(shiftKey) => handleRowClick(index, shiftKey)}
                                                 onContextMenu={(e) => handleContextMenu(e, index)}
                                                 onEditConfirm={(msg) => handleEditConfirm(commit.hash, msg)}
@@ -1134,6 +1163,23 @@ export function GraphView({
                         )}
                     </div>
                 </>
+            )}
+
+            {showSettings && settingsData && (
+                <div className="settings-modal-overlay"
+                    onClick={() => setShowSettings(false)}
+                    onKeyDown={(e) => { if (e.key === 'Escape') setShowSettings(false); }}
+                >
+                    <div className="settings-modal-content" onClick={(e) => e.stopPropagation()}>
+                        <button
+                            className="settings-modal-close"
+                            onClick={() => setShowSettings(false)}
+                        >
+                            ×
+                        </button>
+                        <SettingsForm data={settingsData} />
+                    </div>
+                </div>
             )}
         </div>
     );

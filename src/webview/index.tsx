@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { GraphView } from './graph/GraphView';
 import { CommitDetailsView, CommitDetailsData } from './commitDetails/CommitDetailsView';
 import { BranchPanel, Branch } from './branches/BranchPanel';
-import { GitCommit } from './types';
+import { GitCommit } from '../gitParser';
 import { vscode } from './vscodeApi';
 
 declare global {
@@ -18,6 +18,7 @@ declare global {
         __BRANCHES__: Branch[];
         __FILES_VIEW_MODE__?: 'list' | 'tree';
         __COMMIT_DETAILS_VIEW_MODE__?: 'list' | 'tree';
+        __SHOW_TAGS__?: boolean;
     }
 }
 

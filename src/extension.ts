@@ -370,31 +370,7 @@ export function activate(context: vscode.ExtensionContext) {
 
     context.subscriptions.push(
         vscode.commands.registerCommand('git-wiz.toggleSetting', async () => {
-            const config = vscode.workspace.getConfiguration('git-wiz');
-            const isHighlighted = config.get<boolean>('highlightCurrentBranch', false);
-
-            const quickPick = vscode.window.createQuickPick();
-            quickPick.title = 'Git Wiz Settings';
-            quickPick.canSelectMany = true;
-
-            const highlightItem: vscode.QuickPickItem = {
-                label: 'Highlight Current Branch',
-                description: 'Highlight commits belonging to the current branch when viewing all branches'
-            };
-
-            quickPick.items = [highlightItem];
-            if (isHighlighted) {
-                quickPick.selectedItems = [highlightItem];
-            }
-
-            quickPick.onDidAccept(() => {
-                const isSelected = quickPick.selectedItems.includes(highlightItem);
-                config.update('highlightCurrentBranch', isSelected, vscode.ConfigurationTarget.Global);
-                quickPick.hide();
-            });
-
-            quickPick.onDidHide(() => quickPick.dispose());
-            quickPick.show();
+            graphProvider.showSettings();
         })
     );
 

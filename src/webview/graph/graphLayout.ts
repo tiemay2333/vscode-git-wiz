@@ -1,4 +1,4 @@
-import { GitCommit } from '../types';
+import { GitCommit } from '../../gitParser';
 
 export interface GraphNode {
     commit: GitCommit;
