@@ -33,4 +33,6 @@ Thumbs.db
 
 # AI stuff
 .claude/**
+*.sh
 
+!commitlint.config.js
