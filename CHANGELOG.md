@@ -2,6 +2,10 @@
 
 All notable changes to Git Wiz are documented here.
 
+## [1.2.2] - 2026-05-06
+- New configuration items
+- Improvement of project stability
+
 ## [1.2.1] - 2026-04-30
 - Enhanced functions
 - Experience optimization
