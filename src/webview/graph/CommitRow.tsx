@@ -26,6 +26,7 @@ interface Props {
     isLoading?: boolean;
     isFirst: boolean;
     isLast: boolean;
+    isDimmed?: boolean;
     onClick: (shiftKey: boolean) => void;
     onContextMenu: (e: React.MouseEvent) => void;
     onEditConfirm: (newMessage: string) => void;
@@ -104,6 +105,7 @@ export const CommitRow = React.memo(function CommitRow({
     isMenuOpen,
     isEditing,
     isLoading,
+    isDimmed,
     onClick,
     onContextMenu,
     onEditConfirm,
@@ -120,9 +122,15 @@ export const CommitRow = React.memo(function CommitRow({
         }
     }, [isEditing]);
 
+    const rowClassName = [
+        isSelected ? 'row-selected' : '',
+        isMenuOpen ? 'row-menu-open' : '',
+        isDimmed ? 'row-dimmed' : ''
+    ].filter(Boolean).join(' ') || undefined;
+
     return (
         <tr
-            className={isSelected ? 'row-selected' : isMenuOpen ? 'row-menu-open' : undefined}
+            className={rowClassName}
             data-commit-hash={commit.hash}
             onClick={(e) => onClick(e.shiftKey)}
             onContextMenu={onContextMenu}

@@ -53,6 +53,11 @@
                     "enum": ["list", "tree"],
                     "default": "list",
                     "description": "The default view mode for changed files in the commit details view (list or tree)."
+                },
+                "git-wiz.highlightCurrentBranch": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Highlight commits belonging to the current branch when viewing other branches."
                 }
             }
         },
@@ -114,6 +119,11 @@
                     "command": "git-wiz.refreshBranches",
                     "when": "view == gitLeanGraphView",
                     "group": "navigation@4"
+                },
+                {
+                    "command": "git-wiz.toggleSetting",
+                    "when": "view == gitLeanGraphView",
+                    "group": "navigation@5"
                 }
             ]
         },
@@ -189,6 +199,11 @@
                 "command": "git-wiz.refreshBranches",
                 "title": "Refresh Branches",
                 "icon": "$(refresh)"
+            },
+            {
+                "command": "git-wiz.toggleSetting",
+                "title": "Settings",
+                "icon": "$(settings-gear)"
             },
             {
                 "command": "git-wiz.createBranch",

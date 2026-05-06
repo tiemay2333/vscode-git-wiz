@@ -76,6 +76,34 @@ export class GitOperations {
         });
     }
 
+    async getBranchCommits(branchName: string): Promise<Set<string>> {
+        return new Promise((resolve) => {
+            const cwd = this.getCwd();
+            if (!cwd || !branchName) return resolve(new Set());
+            cp.exec(`git rev-list "${branchName}"`, { cwd, maxBuffer: 50 * 1024 * 1024 }, (err, stdout) => {
+                if (err) return resolve(new Set());
+                const hashes = new Set(stdout.split('\n').filter(Boolean));
+                resolve(hashes);
+            });
+        });
+    }
+
+    async getBranchCommitSignatures(branchName: string): Promise<Set<string>> {
+        return new Promise((resolve) => {
+            const cwd = this.getCwd();
+            if (!cwd || !branchName) return resolve(new Set());
+            cp.exec(
+                `git log --format="%ae|%at|%s" "${branchName}"`,
+                { cwd, maxBuffer: 50 * 1024 * 1024 },
+                (err, stdout) => {
+                    if (err) return resolve(new Set());
+                    const signatures = new Set(stdout.split('\n').filter(Boolean));
+                    resolve(signatures);
+                },
+            );
+        });
+    }
+
     async getGitLog(
         filterBranch: string | null,
         skip = 0,
@@ -113,7 +141,7 @@ export class GitOperations {
             }
 
             const fileArg = filePath ? ` -- "${filePath}"` : '';
-            const gitCommand = `git log${branchArg}${skipArg} --max-count=${limit}${filterArgs} --pretty=format:"%H|%h|%P|%an|%ae|%ai|%D|%ct|%s" --date-order${fileArg}`;
+            const gitCommand = `git log${branchArg}${skipArg} --max-count=${limit}${filterArgs} --pretty=format:"%H|%h|%P|%an|%ae|%ai|%D|%ct|%at|%s" --date-order${fileArg}`;
 
             const runCommand = (cmd: string): Promise<string> => {
                 return new Promise((res) => {
@@ -128,7 +156,7 @@ export class GitOperations {
             if (filters?.query && /^[a-fA-F0-9]{4,40}$/.test(filters.query) && skip === 0) {
                 // If query looks like a hash and we are on the first page, try fetching it directly
                 // in case it's a commit hash. By using git log -1 it will silently fail if not found.
-                const hashCommand = `git log -1 ${filters.query} --pretty=format:"%H|%h|%P|%an|%ae|%ai|%D|%ct|%s"`;
+                const hashCommand = `git log -1 ${filters.query} --pretty=format:"%H|%h|%P|%an|%ae|%ai|%D|%ct|%at|%s"`;
                 promises.push(runCommand(hashCommand));
             }
 

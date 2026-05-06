@@ -35,6 +35,7 @@ export function getHtmlForWebview(
     extensionUri: vscode.Uri,
     filesViewMode: 'list' | 'tree' = 'list',
     filterFile: string | null = null,
+    highlightCurrentBranch: boolean = false,
 ): string {
     const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, 'out', 'webview', 'index.js'));
     const nonce = getNonce();
@@ -225,6 +226,8 @@ export function getHtmlForWebview(
         tr.row-menu-open {
             background-color: var(--vscode-list-hoverBackground);
         }
+        tr.row-dimmed td:not(.graph-cell) { opacity: 0.35; }
+        tr.row-dimmed:hover td:not(.graph-cell) { opacity: 0.8; }
 
         /* Graph Layout */
         
@@ -653,7 +656,7 @@ export function getHtmlForWebview(
 </head>
 <body>
     <div id="root"></div>
-    <script nonce="${nonce}">window.__VIEW__ = 'graph'; window.__COMMITS__ = ${safeJson(commits)}; window.__BRANCHES__ = ${safeJson(branches)}; window.__HAS_MORE__ = ${hasMore}; window.__FILTER_BRANCH__ = ${safeJson(filterBranch)}; window.__CURRENT_BRANCH__ = ${safeJson(currentBranch)}; window.__FILES_VIEW_MODE__ = ${safeJson(filesViewMode)}; window.__FILTER_FILE__ = ${safeJson(filterFile)};</script>
+    <script nonce="${nonce}">window.__VIEW__ = 'graph'; window.__COMMITS__ = ${safeJson(commits)}; window.__BRANCHES__ = ${safeJson(branches)}; window.__HAS_MORE__ = ${hasMore}; window.__FILTER_BRANCH__ = ${safeJson(filterBranch)}; window.__CURRENT_BRANCH__ = ${safeJson(currentBranch)}; window.__FILES_VIEW_MODE__ = ${safeJson(filesViewMode)}; window.__FILTER_FILE__ = ${safeJson(filterFile)}; window.__HIGHLIGHT_CURRENT_BRANCH__ = ${highlightCurrentBranch};</script>
     <script nonce="${nonce}" src="${scriptUri}"></script>
 </body>
 </html>`;

@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import * as cp from 'child_process';
-import { GitOperations } from './gitOperations';
+import { GitOperations, type GitCommit } from './gitOperations';
 import { getHtmlForWebview, getCommitDetailsHtml } from './webviewContent';
 
 const PAGE_SIZE = 200;
@@ -34,10 +34,16 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider {
     private _initialized = false;
     private _pendingRefresh = false;
     private _isFirstLoad = true;
+    private _branchSignaturesCache: { branch: string; signatures: Set<string> } | null = null;
 
     constructor(private readonly _extensionUri: vscode.Uri) {
         this._gitOps = new GitOperations(() => this.refresh());
         this.setupGitWatcher();
+        vscode.workspace.onDidChangeConfiguration(e => {
+            if (e.affectsConfiguration('git-wiz.highlightCurrentBranch')) {
+                this.refresh();
+            }
+        });
     }
 
     public filterByBranch(branch: string | null) {
@@ -274,6 +280,13 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider {
         const commits = await this._gitOps.getGitLog(this._filterBranch, 0, countToLoad, this._searchFilters, this._filterFile);
         const currentBranch = await this._gitOps.getCurrentBranch();
         const branches = await this._gitOps.getBranches();
+        const highlightCurrentBranch = vscode.workspace
+            .getConfiguration('git-wiz')
+            .get<boolean>('highlightCurrentBranch', false);
+
+        if (highlightCurrentBranch && currentBranch) {
+            await this.applyHighlight(commits, currentBranch);
+        }
 
         this.updateViewTitle(currentBranch);
 
@@ -287,6 +300,7 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider {
             filterFile: this._filterFile,
             currentBranch,
             resetScroll,
+            highlightCurrentBranch
         };
         const branchMsg = {
             command: 'replaceBranches',
@@ -360,6 +374,13 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider {
         const filesViewMode = vscode.workspace
             .getConfiguration('git-wiz')
             .get<'tree' | 'list'>('filesViewMode', 'list');
+        const highlightCurrentBranch = vscode.workspace
+            .getConfiguration('git-wiz')
+            .get<boolean>('highlightCurrentBranch', false);
+
+        if (highlightCurrentBranch && currentBranch) {
+            await this.applyHighlight(commits, currentBranch);
+        }
 
         this.updateViewTitle(currentBranch);
 
@@ -375,6 +396,7 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider {
             this._extensionUri,
             filesViewMode,
             this._filterFile,
+            highlightCurrentBranch
         );
         this._initialized = true;
         if (this._pendingRefresh) {
@@ -391,9 +413,45 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider {
             this._searchFilters,
             this._filterFile,
         );
+        const currentBranch = await this._gitOps.getCurrentBranch();
+        const highlightCurrentBranch = vscode.workspace
+            .getConfiguration('git-wiz')
+            .get<boolean>('highlightCurrentBranch', false);
+
+        if (highlightCurrentBranch && currentBranch) {
+            await this.applyHighlight(commits, currentBranch);
+        }
+
         this._loadedCount += commits.length;
         const hasMore = commits.length === PAGE_SIZE;
         webview.postMessage({ command: 'appendCommits', commits, hasMore });
+    }
+
+    private async applyHighlight(commits: GitCommit[], currentBranch: string): Promise<void> {
+        // Tier 1: hash match (fast, exact)
+        const branchHashes = await this._gitOps.getBranchCommits(currentBranch);
+        const remaining: GitCommit[] = [];
+        for (const c of commits) {
+            if (branchHashes.has(c.hash)) {
+                c.isCurrentBranch = true;
+            } else {
+                remaining.push(c);
+            }
+        }
+        if (remaining.length === 0) return;
+
+        // Tier 2: signature match (cherry-picks)
+        // Cherry-pick preserves author email, author timestamp, and subject line.
+        if (!this._branchSignaturesCache || this._branchSignaturesCache.branch !== currentBranch) {
+            const signatures = await this._gitOps.getBranchCommitSignatures(currentBranch);
+            this._branchSignaturesCache = { branch: currentBranch, signatures };
+        }
+        for (const c of remaining) {
+            const sig = `${c.email}|${c.authorTimestamp}|${c.message.split('\n')[0]}`;
+            if (this._branchSignaturesCache.signatures.has(sig)) {
+                c.isCurrentBranch = true;
+            }
+        }
     }
 
     private async getCommitFiles(commitHash: string, webview: vscode.Webview) {

@@ -281,6 +281,10 @@ export function GraphView({
     const [dateTo, setDateTo] = useState('');
     const [activeSearch, setActiveSearch] = useState({ query: '', author: '', from: '', to: '' });
 
+    const [highlightCurrent, setHighlightCurrent] = useState<boolean>(
+        (window as unknown as { __HIGHLIGHT_CURRENT_BRANCH__?: boolean }).__HIGHLIGHT_CURRENT_BRANCH__ || false
+    );
+
     const [selectedIndices, setSelectedIndices] = useState(new Set<number>());
     const [rangeStartIndex, setRangeStartIndex] = useState<number | null>(null);
     const [loadingHash, setLoadingHash] = useState<string | null>(null);
@@ -369,6 +373,9 @@ export function GraphView({
                 if (msg.filterFile !== undefined) {
                     setFilterFile(msg.filterFile);
                 }
+                if (msg.highlightCurrentBranch !== undefined) {
+                    setHighlightCurrent(msg.highlightCurrentBranch);
+                }
                 setIsLoadingMore(false);
                 setSelectedIndices(newIndices);
                 setRangeStartIndex(null);
@@ -387,9 +394,10 @@ export function GraphView({
         window.addEventListener('message', handler);
 
         const clickOutside = (e: MouseEvent) => {
-            if (ctxMenuRef.current?.contains(e.target as Node)) {
+            if (ctxMenuRef.current?.contains(e.target as Node) || (e.target as Element).closest('.settings-container')) {
                 return;
             }
+            setShowSettings(false);
             closeMenus();
         };
         window.addEventListener('click', clickOutside);
@@ -487,10 +495,9 @@ export function GraphView({
             }
         }
         return result;
-    }, [commits, headCommitHash]);
+        }, [commits, headCommitHash]);
 
-    const handleLoadMore = () => {
-        if (!hasMore || isLoadingMore) return;
+        const handleLoadMore = () => {        if (!hasMore || isLoadingMore) return;
         setIsLoadingMore(true);
         vscode.postMessage({ command: 'loadMoreCommits' });
     };
@@ -815,7 +822,9 @@ export function GraphView({
                 </div>
 
                 <div className="branch-info-bar">
-                    <span>{branchLabel}</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <span>{branchLabel}</span>
+                    </div>
                     {(filterBranch || filterFile) && (
                         <button
                             className="branch-info-close-btn"
@@ -863,6 +872,7 @@ export function GraphView({
                                                 isLoading={loadingHash === commit.hash}
                                                 isFirst={index === 0}
                                                 isLast={index === filteredCommits.length - 1}
+                                                isDimmed={highlightCurrent && !commit.isCurrentBranch}
                                                 onClick={(shiftKey) => handleRowClick(index, shiftKey)}
                                                 onContextMenu={(e) => handleContextMenu(e, index)}
                                                 onEditConfirm={(msg) => handleEditConfirm(commit.hash, msg)}

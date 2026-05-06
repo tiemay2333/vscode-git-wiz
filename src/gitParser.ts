@@ -4,10 +4,12 @@ export interface GitCommit {
     message: string;
     date: string;
     timestamp: number;
+    authorTimestamp: number;
     author: string;
     email: string;
     parents: string[];
     refs: string[];
+    isCurrentBranch?: boolean;
 }
 
 export function parseGitLogOutput(stdout: string): GitCommit[] {
@@ -15,7 +17,7 @@ export function parseGitLogOutput(stdout: string): GitCommit[] {
         .split('\n')
         .filter((line) => line.trim())
         .map((line) => {
-            const [fullHash, shortHash, parents, author, email, date, refs, ct, ...messageParts] = line.split('|');
+            const [fullHash, shortHash, parents, author, email, date, refs, ct, at, ...messageParts] = line.split('|');
             const refList = refs
                 .trim()
                 .split(',')
@@ -27,6 +29,7 @@ export function parseGitLogOutput(stdout: string): GitCommit[] {
                 message: messageParts.join('|').trim(),
                 date: new Date(date).toLocaleString(),
                 timestamp: parseInt(ct, 10),
+                authorTimestamp: parseInt(at, 10),
                 author: author.trim(),
                 email: email.trim(),
                 parents: parents
