@@ -5,6 +5,7 @@ export interface SettingsData {
     highlightCurrentBranch: boolean;
     showTags: boolean;
     showRemoteBranches: boolean;
+    showGraph: boolean;
     userName: string;
     userEmail: string;
     scope: "local" | "global";
@@ -15,6 +16,7 @@ export function SettingsForm({ data }: { data: SettingsData }) {
     const [highlight, setHighlight] = useState(data.highlightCurrentBranch);
     const [showTags, setShowTags] = useState(data.showTags);
     const [showRemoteBranches, setShowRemoteBranches] = useState(data.showRemoteBranches);
+    const [showGraph, setShowGraph] = useState(data.showGraph);
     const [userName, setUserName] = useState(data.userName);
     const [userEmail, setUserEmail] = useState(data.userEmail);
     const [scope, setScope] = useState(data.scope);
@@ -39,6 +41,12 @@ export function SettingsForm({ data }: { data: SettingsData }) {
         setShowRemoteBranches(newVal);
         vscode.postMessage({ command: "settingsUpdateSetting", key: "showRemoteBranches", value: newVal });
     }, [showRemoteBranches]);
+
+    const toggleShowGraph = useCallback(() => {
+        const newVal = !showGraph;
+        setShowGraph(newVal);
+        vscode.postMessage({ command: "settingsUpdateSetting", key: "showGraph", value: newVal });
+    }, [showGraph]);
 
     const applyUserName = useCallback(() => {
         if (!nameChanged)
@@ -124,7 +132,7 @@ export function SettingsForm({ data }: { data: SettingsData }) {
             </label>
 
             {/* Show Remote Branches toggle */}
-            <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", marginBottom: 20 }}>
+            <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", marginBottom: 14 }}>
                 <input
                     type="checkbox"
                     checked={showRemoteBranches}
@@ -135,6 +143,22 @@ export function SettingsForm({ data }: { data: SettingsData }) {
                     <div style={{ fontWeight: 600 }}>Show Remote Branches</div>
                     <div style={{ fontSize: "12px", color: "var(--vscode-descriptionForeground)", marginTop: 2 }}>
                         Display remote branch names (origin/..., upstream/...) on commits
+                    </div>
+                </div>
+            </label>
+
+            {/* Show Graph toggle */}
+            <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", marginBottom: 20 }}>
+                <input
+                    type="checkbox"
+                    checked={showGraph}
+                    onChange={toggleShowGraph}
+                    style={{ accentColor: "var(--vscode-focusBorder)", width: 16, height: 16, cursor: "pointer" }}
+                />
+                <div>
+                    <div style={{ fontWeight: 600 }}>Show Branch Graph</div>
+                    <div style={{ fontSize: "12px", color: "var(--vscode-descriptionForeground)", marginTop: 2 }}>
+                        Display the branch path tracking graph on the left side of the commit list
                     </div>
                 </div>
             </label>

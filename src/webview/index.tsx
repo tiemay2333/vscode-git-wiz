@@ -21,6 +21,7 @@ declare global {
         __FILES_VIEW_MODE__?: "list" | "tree";
         __COMMIT_DETAILS_VIEW_MODE__?: "list" | "tree";
         __SHOW_TAGS__?: boolean;
+        __SHOW_GRAPH__?: boolean;
     }
 }
 
@@ -103,6 +104,7 @@ function GraphLayout() {
                     filterBranch={window.__FILTER_BRANCH__}
                     filterFile={window.__FILTER_FILE__}
                     currentBranch={window.__CURRENT_BRANCH__}
+                    showGraph={window.__SHOW_GRAPH__}
                 />
             </div>
         </div>

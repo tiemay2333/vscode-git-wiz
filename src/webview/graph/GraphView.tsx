@@ -280,6 +280,7 @@ interface Props {
     filterBranch?: string | null;
     filterFile?: string | null;
     currentBranch?: string | null;
+    showGraph?: boolean;
 }
 
 export function GraphView({
@@ -288,6 +289,7 @@ export function GraphView({
     currentBranch: initialCurrentBranch,
     filterBranch: initialFilterBranch,
     filterFile: initialFilterFile,
+    showGraph: initialShowGraph,
 }: Props) {
     const [commitFiles, setCommitFiles] = useState<
         Record<string, { status: string; path: string; insertions?: number; deletions?: number }[]>
@@ -317,6 +319,7 @@ export function GraphView({
     const [showRemoteBranches, setShowRemoteBranches] = useState<boolean>(
         (window as unknown as { __SHOW_REMOTE_BRANCHES__?: boolean }).__SHOW_REMOTE_BRANCHES__ ?? true,
     );
+    const [showGraph, setShowGraph] = useState<boolean>(initialShowGraph ?? true);
 
     const [selectedIndices, setSelectedIndices] = useState(new Set<number>());
     const [rangeStartIndex, setRangeStartIndex] = useState<number | null>(null);
@@ -363,7 +366,7 @@ export function GraphView({
         () => graphNodes.reduce((max, node) => Math.max(max, node.maxTrack), 0),
         [graphNodes],
     );
-    const graphWidth = isFiltering ? 24 : Math.max(60, globalMaxTrack * 12 + 20);
+    const graphWidth = !showGraph ? 0 : isFiltering ? 24 : Math.max(60, globalMaxTrack * 12 + 20);
 
     const closeMenus = useCallback(() => {
         setSingleMenu(null);
@@ -419,6 +422,9 @@ export function GraphView({
                 if (msg.showRemoteBranches !== undefined) {
                     setShowRemoteBranches(msg.showRemoteBranches);
                 }
+                if (msg.showGraph !== undefined) {
+                    setShowGraph(msg.showGraph);
+                }
                 setIsLoadingMore(false);
                 setSelectedIndices(newIndices);
                 setRangeStartIndex(null);
@@ -444,6 +450,9 @@ export function GraphView({
             }
             else if (msg.command === "updateShowRemoteBranches") {
                 setShowRemoteBranches(msg.value as boolean);
+            }
+            else if (msg.command === "updateShowGraph") {
+                setShowGraph(msg.value as boolean);
             }
         };
         window.addEventListener("message", handler);
@@ -952,6 +961,7 @@ export function GraphView({
                                                         isDimmed={highlightCurrent && !commit.isCurrentBranch}
                                                         showTags={showTags}
                                                         showRemoteBranches={showRemoteBranches}
+                                                        showGraph={showGraph}
                                                         onClick={shiftKey => handleRowClick(index, shiftKey)}
                                                         onContextMenu={e => handleContextMenu(e, index)}
                                                         onEditConfirm={msg => handleEditConfirm(commit.hash, msg)}
@@ -959,7 +969,7 @@ export function GraphView({
                                                     />
                                                     {singleSelected && (
                                                         <tr className="inline-files-row" onClick={e => e.stopPropagation()}>
-                                                            <td colSpan={5}>
+                                                            <td colSpan={showGraph ? 5 : 4}>
                                                                 <div className="inline-files-container">
                                                                     <div className="inline-files-header">
                                                                         <div

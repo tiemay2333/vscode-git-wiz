@@ -75,6 +75,11 @@
                     "type": "boolean",
                     "default": true,
                     "description": "Show remote branch names (origin/..., upstream/...) on commits in the graph view."
+                },
+                "git-wiz.showGraph": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Show the branch path tracking graph on the left side of the commit list."
                 }
             }
         },
