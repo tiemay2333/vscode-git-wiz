@@ -152,17 +152,15 @@ export const CommitRow = React.memo(({
                         {[...graphNode.lines]
                             .sort((a, b) => Math.abs(b.x2 - b.x1) - Math.abs(a.x2 - a.x1))
                             .map((line, i) => {
-                                const x1 = 10 + line.x1 * 12;
-                                const x2 = 10 + line.x2 * 12;
+                                const x1 = 10 + line.x1 * 14;
+                                const x2 = 10 + line.x2 * 14;
                                 const y1 = line.y1 === 0 ? 0 : line.y1 === 1 ? 14 : 28;
                                 const y2 = line.y2 === 0 ? 0 : line.y2 === 1 ? 14 : 28;
                                 const color = getColor(line.color);
 
                                 if (line.x1 !== line.x2) {
-                                    const r = 6;
-                                    const dir = x2 > x1 ? 1 : -1;
                                     const yMid = (y1 + y2) / 2;
-                                    const d = `M ${x1} ${y1} L ${x1} ${yMid - r} A ${r} ${r} 0 0 ${dir === 1 ? 0 : 1} ${x1 + r * dir} ${yMid} L ${x2 - r * dir} ${yMid} A ${r} ${r} 0 0 ${dir === 1 ? 1 : 0} ${x2} ${yMid + r} L ${x2} ${y2}`;
+                                    const d = `M ${x1} ${y1} C ${x1} ${yMid}, ${x2} ${yMid}, ${x2} ${y2}`;
                                     return (
                                         <path
                                             key={i}
@@ -177,14 +175,14 @@ export const CommitRow = React.memo(({
                                 return <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke={color} strokeWidth="1.5" />;
                             })}
                         <circle
-                            cx={10 + graphNode.x * 12}
+                            cx={10 + graphNode.x * 14}
                             cy="14"
                             r="3.5"
                             fill={isHead ? "var(--vscode-editor-background)" : getColor(graphNode.color)}
                             stroke={getColor(graphNode.color)}
                             strokeWidth="1.5"
                         />
-                        {isHead && <circle cx={10 + graphNode.x * 12} cy="14" r="1.5" fill={getColor(graphNode.color)} />}
+                        {isHead && <circle cx={10 + graphNode.x * 14} cy="14" r="1.5" fill={getColor(graphNode.color)} />}
                     </svg>
                 </td>
             )}

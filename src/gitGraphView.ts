@@ -327,6 +327,9 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider {
             this._pendingRefresh = true;
             return;
         }
+        // Branch state may have changed (cherry-pick, rebase, etc.)
+        // so invalidate signature cache to ensure fresh highlight matching
+        this._branchSignaturesCache = null;
         // Use the current loaded count to ensure we don't shrink the list on refresh
         const countToLoad = Math.max(PAGE_SIZE, this._loadedCount);
         const commits = await this._gitOps.getGitLog(this._filterBranch, 0, countToLoad, this._searchFilters, this._filterFile);
