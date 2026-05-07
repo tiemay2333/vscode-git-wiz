@@ -38,7 +38,6 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider {
     private _refreshTimer?: ReturnType<typeof setTimeout>;
     private _initialized = false;
     private _pendingRefresh = false;
-    private _isFirstLoad = true;
     private _branchSignaturesCache: { branch: string; signatures: Set<string> } | null = null;
     private _settingsScope: "local" | "global" = "global";
 

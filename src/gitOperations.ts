@@ -36,7 +36,7 @@ export class GitOperations {
                     resolve([]);
                     return;
                 }
-                const branches: Branch[] = stdout
+                const branches = stdout
                     .split("\n")
                     .filter(line => line.trim())
                     .map((line) => {
@@ -48,7 +48,7 @@ export class GitOperations {
                         const isRemote = refname.startsWith("refs/remotes/");
                         const isTag = refname.startsWith("refs/tags/");
                         if (isRemote && refname.endsWith("/HEAD")) {
-                            return null as any;
+                            return null;
                         }
 
                         const name = isTag ? fullName.substring(fullName.indexOf("/") + 1) : (isRemote ? fullName.substring(fullName.indexOf("/") + 1) : fullName);
@@ -61,7 +61,7 @@ export class GitOperations {
                             isTag,
                         };
                     })
-                    .filter(b => b !== null);
+                    .filter((b): b is Branch => b !== null);
                 resolve(branches);
             });
         });

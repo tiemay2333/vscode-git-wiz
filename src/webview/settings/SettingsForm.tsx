@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { vscode } from "../vscodeApi";
 
 export interface SettingsData {
@@ -88,10 +88,10 @@ export function SettingsForm({ data }: { data: SettingsData }) {
         }
     }, []);
 
-    useState(() => {
+    useEffect(() => {
         window.addEventListener("message", handleMessage);
         return () => window.removeEventListener("message", handleMessage);
-    });
+    }, [handleMessage]);
 
     return (
         <div style={{ padding: "20px 24px", maxWidth: 520, fontFamily: "var(--vscode-font-family)", fontSize: "13px", color: "var(--vscode-foreground)" }}>

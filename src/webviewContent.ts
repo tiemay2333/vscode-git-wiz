@@ -1,4 +1,4 @@
-import type { GitCommit } from "./gitOperations";
+import type { GitCommit } from "./gitParser";
 import * as vscode from "vscode";
 
 export interface CommitDetailsData {

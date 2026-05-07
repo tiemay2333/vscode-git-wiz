@@ -211,9 +211,9 @@ function IconBranch() {
 }
 
 function getBranchIcon(branch: Branch) {
-    if (branch.isHead)
+    if (branch.isTag)
         return <IconTag />;
-    if (branch.name === "main" || branch.name === "master")
+    if (branch.isHead || branch.name === "main" || branch.name === "master")
         return <IconStar />;
     return <IconBranch />;
 }
