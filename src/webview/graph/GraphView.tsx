@@ -2,6 +2,7 @@ import type { GitCommit } from "../../gitParser";
 import type { SettingsData } from "../settings/SettingsForm";
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { SettingsForm } from "../settings/SettingsForm";
+import { FileTree } from "../shared/FileTree";
 import { vscode } from "../vscodeApi";
 import { CommitRow } from "./CommitRow";
 import { computeGraphLayout } from "./graphLayout";
@@ -15,196 +16,6 @@ function areCommitsConsecutive(commits: GitCommit[], sortedIndices: number[]): b
         }
     }
     return true;
-}
-
-interface FileNode {
-    name: string;
-    path: string;
-    status?: string;
-    insertions?: number;
-    deletions?: number;
-    isDirectory: boolean;
-    children?: { [key: string]: FileNode };
-}
-
-function buildFileTree(files: { status: string; path: string; insertions?: number; deletions?: number }[]) {
-    const root: { [key: string]: FileNode } = {};
-    for (const file of files) {
-        const parts = file.path.split("/");
-        let currentLevel = root;
-        for (let i = 0; i < parts.length; i++) {
-            const part = parts[i];
-            const isLast = i === parts.length - 1;
-            if (!currentLevel[part]) {
-                currentLevel[part] = {
-                    name: part,
-                    path: isLast ? file.path : parts.slice(0, i + 1).join("/"),
-                    isDirectory: !isLast,
-                    status: isLast ? file.status : undefined,
-                    insertions: isLast ? file.insertions : undefined,
-                    deletions: isLast ? file.deletions : undefined,
-                    children: isLast ? undefined : {},
-                };
-            }
-            if (!isLast) {
-                currentLevel = currentLevel[part].children!;
-            }
-        }
-    }
-    return root;
-}
-
-function FileTreeNode({
-    node,
-    level,
-    onOpenDiff,
-    onOpenFile,
-}: {
-    node: FileNode;
-    level: number;
-    onOpenDiff: (path: string) => void;
-    onOpenFile: (path: string) => void;
-}) {
-    const [expanded, setExpanded] = useState(true);
-
-    return (
-        <div className="file-tree-node-wrapper">
-            <div
-                className="file-tree-node"
-                style={{ "--tree-level": level } as React.CSSProperties}
-                onClick={(e) => {
-                    e.stopPropagation();
-                    if (node.isDirectory) {
-                        setExpanded(!expanded);
-                    }
-                    else {
-                        onOpenDiff(node.path);
-                    }
-                }}
-            >
-                {node.isDirectory
-                    ? (
-                            <span className="file-tree-folder">
-                                <span className="file-tree-folder-icon">
-                                    <svg
-                                        width="16"
-                                        height="16"
-                                        viewBox="0 0 16 16"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        strokeWidth="1.5"
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        style={{
-                                            transition: "transform 0.15s ease",
-                                            transform: expanded ? "rotate(90deg)" : "rotate(0deg)",
-                                        }}
-                                    >
-                                        <path d="M6 4L10 8L6 12" />
-                                    </svg>
-                                </span>
-                                <svg
-                                    width="14"
-                                    height="14"
-                                    viewBox="0 0 16 16"
-                                    fill="currentColor"
-                                    style={{ marginRight: "6px", opacity: 0.8, flexShrink: 0 }}
-                                >
-                                    <path
-                                        fillRule="evenodd"
-                                        clipRule="evenodd"
-                                        d="M7.71 4H14.5L15 4.5v9l-.5.5H1.5l-.5-.5v-10l.5-.5h5.5l1.21 1z"
-                                    />
-                                </svg>
-                                {node.name}
-                            </span>
-                        )
-                    : (
-                            <div className="file-tree-file">
-                                <span className={`file-status file-status-${node.status?.toLowerCase()}`}>{node.status}</span>
-                                <span className={`file-name file-name-${node.status?.toLowerCase()}`}>{node.name}</span>
-                                {(node.insertions! > 0 || node.deletions! > 0) && (
-                                    <span className="file-stats">
-                                        {node.insertions! > 0 && (
-                                            <span className="stat-added">
-                                                +
-                                                {node.insertions}
-                                            </span>
-                                        )}
-                                        {node.deletions! > 0 && (
-                                            <span className="stat-removed">
-                                                -
-                                                {node.deletions}
-                                            </span>
-                                        )}
-                                    </span>
-                                )}
-                                <span
-                                    className="open-file-btn"
-                                    title="Open locally"
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        onOpenFile(node.path);
-                                    }}
-                                >
-                                    ↗
-                                </span>
-                            </div>
-                        )}
-            </div>
-            {node.isDirectory && expanded && node.children && (
-                <div className="file-tree-children">
-                    {Object.values(node.children)
-                        .sort((a, b) => {
-                            if (a.isDirectory === b.isDirectory)
-                                return a.name.localeCompare(b.name);
-                            return a.isDirectory ? -1 : 1;
-                        })
-                        .map(child => (
-                            <FileTreeNode
-                                key={child.name}
-                                node={child}
-                                level={level + 1}
-                                onOpenDiff={onOpenDiff}
-                                onOpenFile={onOpenFile}
-                            />
-                        ))}
-                </div>
-            )}
-        </div>
-    );
-}
-
-function FileTree({
-    files,
-    onOpenDiff,
-    onOpenFile,
-}: {
-    files: { status: string; path: string; insertions?: number; deletions?: number }[];
-    onOpenDiff: (path: string) => void;
-    onOpenFile: (path: string) => void;
-}) {
-    const tree = useMemo(() => buildFileTree(files), [files]);
-
-    return (
-        <div className="file-tree">
-            {Object.values(tree)
-                .sort((a, b) => {
-                    if (a.isDirectory === b.isDirectory)
-                        return a.name.localeCompare(b.name);
-                    return a.isDirectory ? -1 : 1;
-                })
-                .map(node => (
-                    <FileTreeNode
-                        key={node.name}
-                        node={node}
-                        level={0}
-                        onOpenDiff={onOpenDiff}
-                        onOpenFile={onOpenFile}
-                    />
-                ))}
-        </div>
-    );
 }
 
 function FileList({
@@ -1068,19 +879,48 @@ export function GraphView({
                                                                                                 filesViewMode === "tree"
                                                                                                     ? (
                                                                                                             <FileTree
-                                                                                                                files={files}
-                                                                                                                onOpenDiff={path =>
-                                                                                                                    vscode.postMessage({
-                                                                                                                        command: "openDiff",
-                                                                                                                        commitHash: commit.hash,
-                                                                                                                        parentHash: commit.parents?.[0],
-                                                                                                                        filePath: path,
-                                                                                                                    })}
-                                                                                                                onOpenFile={path =>
-                                                                                                                    vscode.postMessage({
-                                                                                                                        command: "openFile",
-                                                                                                                        filePath: path,
-                                                                                                                    })}
+                                                                                                                items={files}
+                                                                                                                renderLeaf={(path, name, item) => (
+                                                                                                                    <div
+                                                                                                                        className="file-tree-file"
+                                                                                                                        onClick={() =>
+                                                                                                                            vscode.postMessage({
+                                                                                                                                command: "openDiff",
+                                                                                                                                commitHash: commit.hash,
+                                                                                                                                parentHash: commit.parents?.[0],
+                                                                                                                                filePath: path,
+                                                                                                                            })}
+                                                                                                                    >
+                                                                                                                        <span className={`file-status file-status-${item.status?.toLowerCase()}`}>{item.status}</span>
+                                                                                                                        <span className={`file-name file-name-${item.status?.toLowerCase()}`}>{name}</span>
+                                                                                                                        {(item.insertions! > 0 || item.deletions! > 0) && (
+                                                                                                                            <span className="file-stats">
+                                                                                                                                {item.insertions! > 0 && (
+                                                                                                                                    <span className="stat-added">
+                                                                                                                                        +
+                                                                                                                                        {item.insertions}
+                                                                                                                                    </span>
+                                                                                                                                )}
+                                                                                                                                {item.deletions! > 0 && (
+                                                                                                                                    <span className="stat-removed">
+                                                                                                                                        -
+                                                                                                                                        {item.deletions}
+                                                                                                                                    </span>
+                                                                                                                                )}
+                                                                                                                            </span>
+                                                                                                                        )}
+                                                                                                                        <span
+                                                                                                                            className="open-file-btn"
+                                                                                                                            title="Open locally"
+                                                                                                                            onClick={(e) => {
+                                                                                                                                e.stopPropagation();
+                                                                                                                                vscode.postMessage({ command: "openFile", filePath: path });
+                                                                                                                            }}
+                                                                                                                        >
+                                                                                                                            ↗
+                                                                                                                        </span>
+                                                                                                                    </div>
+                                                                                                                )}
                                                                                                             />
                                                                                                         )
                                                                                                     : (

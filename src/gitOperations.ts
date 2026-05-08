@@ -1,10 +1,10 @@
+import type { GitRunner } from "./git/GitRunner";
 import type { GitCommit } from "./gitParser";
 import * as cp from "node:child_process";
-import * as fs from "node:fs";
-import * as os from "node:os";
-import * as path from "node:path";
-import process from "node:process";
 import * as vscode from "vscode";
+import { ChildProcessGitRunner } from "./git/GitRunner";
+import { makeMsgEditorScript, makeSeqEditorScript } from "./git/rebaseScripts";
+import { runRebaseWithScripts } from "./git/scriptedEditor";
 import { parseGitLogOutput } from "./gitParser";
 
 export type { GitCommit } from "./gitParser";
@@ -18,7 +18,20 @@ export interface Branch {
 }
 
 export class GitOperations {
-    constructor(private readonly onRefresh: () => void) {}
+    private readonly runner: GitRunner;
+
+    constructor(
+        private readonly onRefresh: () => void,
+        runner?: GitRunner,
+    ) {
+        this.runner = runner ?? new ChildProcessGitRunner(
+            vscode.workspace.workspaceFolders?.[0]?.uri.fsPath,
+        );
+    }
+
+    getRunner(): GitRunner {
+        return this.runner;
+    }
 
     private getCwd(): string | null {
         return vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? null;
@@ -222,57 +235,19 @@ export class GitOperations {
             );
         }
         else {
-            const seqEditorScript = `
-const fs = require('fs');
-const file = process.argv[2];
-const targetHash = ${JSON.stringify(commitHash)};
-const lines = fs.readFileSync(file, 'utf8').split('\\n');
-const result = lines.map(line => {
-    const parts = line.trim().split(/\\s+/);
-    if ((parts[0] === 'pick' || parts[0] === 'p') && parts[1] && targetHash.startsWith(parts[1])) {
-        return 'reword ' + parts.slice(1).join(' ');
-    }
-    return line;
-});
-fs.writeFileSync(file, result.join('\\n'));
-`;
-            const msgEditorScript = `
-const fs = require('fs');
-fs.writeFileSync(process.argv[2], ${JSON.stringify(`${newMessage}\n`)});
-`;
+            const base = commitHash.includes("~") ? commitHash : `${commitHash}~1`;
+            const editResult = await runRebaseWithScripts(cwd, base, {
+                seqScript: makeSeqEditorScript([{ hash: commitHash, action: "reword" }]),
+                msgScript: makeMsgEditorScript(`${newMessage}\n`),
+            });
 
-            const tmpDir = os.tmpdir();
-            const seqEditorPath = path.join(tmpDir, "git-wiz-seq-editor.js");
-            const msgEditorPath = path.join(tmpDir, "git-wiz-msg-editor.js");
-            fs.writeFileSync(seqEditorPath, seqEditorScript);
-            fs.writeFileSync(msgEditorPath, msgEditorScript);
-
-            const env = {
-                ...process.env,
-                GIT_SEQUENCE_EDITOR: `node "${seqEditorPath}"`,
-                GIT_EDITOR: `node "${msgEditorPath}"`,
-            };
-
-            await vscode.window.withProgress(
-                { location: vscode.ProgressLocation.Window, title: "Editing commit message..." },
-                async () => {
-                    return new Promise<void>((resolve) => {
-                        cp.exec(`git rebase -i ${commitHash}~1`, { cwd, env }, (error, _stdout, stderr) => {
-                            fs.rmSync(seqEditorPath, { force: true });
-                            fs.rmSync(msgEditorPath, { force: true });
-                            if (error) {
-                                cp.exec("git rebase --abort", { cwd }, () => {});
-                                vscode.window.showErrorMessage(`Failed to edit commit message: ${error.message}\n${stderr}`);
-                            }
-                            else {
-                                vscode.window.showInformationMessage("Commit message updated successfully");
-                                this.onRefresh();
-                            }
-                            resolve();
-                        });
-                    });
-                },
-            );
+            if (editResult.success) {
+                vscode.window.showInformationMessage("Commit message updated successfully");
+                this.onRefresh();
+            }
+            else {
+                vscode.window.showErrorMessage(`Failed to edit commit message: ${editResult.error}`);
+            }
         }
     }
 
@@ -519,59 +494,18 @@ fs.writeFileSync(process.argv[2], ${JSON.stringify(`${newMessage}\n`)});
             // all others become 'squash'.
             const squashableHashes = hashes.slice(0, -1);
 
-            const seqEditorScript = `
-const fs = require('fs');
-const file = process.argv[2];
-const squashHashes = ${JSON.stringify(squashableHashes)};
-const lines = fs.readFileSync(file, 'utf8').split('\\n');
-const result = lines.map(line => {
-    const parts = line.trim().split(/\\s+/);
-    if ((parts[0] === 'pick' || parts[0] === 'p') && parts[1]) {
-        if (squashHashes.some(h => h.startsWith(parts[1]))) {
-            return 'squash ' + parts.slice(1).join(' ');
-        }
-    }
-    return line;
-});
-fs.writeFileSync(file, result.join('\\n'));
-`;
-            const msgEditorScript = `
-const fs = require('fs');
-fs.writeFileSync(process.argv[2], ${JSON.stringify(`${newMessage}\n`)});
-`;
+            const squashInProgress = await runRebaseWithScripts(cwd, parentHash, {
+                seqScript: makeSeqEditorScript(squashableHashes.map(h => ({ hash: h, action: "squash" }))),
+                msgScript: makeMsgEditorScript(`${newMessage}\n`),
+            });
 
-            const tmpDir = os.tmpdir();
-            const seqEditorPath = path.join(tmpDir, "git-wiz-seq-editor.js");
-            const msgEditorPath = path.join(tmpDir, "git-wiz-msg-editor.js");
-            fs.writeFileSync(seqEditorPath, seqEditorScript);
-            fs.writeFileSync(msgEditorPath, msgEditorScript);
-
-            const env = {
-                ...process.env,
-                GIT_SEQUENCE_EDITOR: `node "${seqEditorPath}"`,
-                GIT_EDITOR: `node "${msgEditorPath}"`,
-            };
-
-            await vscode.window.withProgress(
-                { location: vscode.ProgressLocation.Window, title: `Squashing ${hashes.length} commits...` },
-                async () => {
-                    return new Promise<void>((resolve) => {
-                        cp.exec(`git rebase -i ${parentHash}`, { cwd, env }, (error, _stdout, stderr) => {
-                            fs.rmSync(seqEditorPath, { force: true });
-                            fs.rmSync(msgEditorPath, { force: true });
-                            if (error) {
-                                cp.exec("git rebase --abort", { cwd }, () => {});
-                                vscode.window.showErrorMessage(`Failed to squash: ${error.message}\n${stderr}`);
-                            }
-                            else {
-                                vscode.window.showInformationMessage(`Squashed ${hashes.length} commits successfully`);
-                                this.onRefresh();
-                            }
-                            resolve();
-                        });
-                    });
-                },
-            );
+            if (squashInProgress.success) {
+                vscode.window.showInformationMessage(`Squashed ${hashes.length} commits successfully`);
+                this.onRefresh();
+            }
+            else {
+                vscode.window.showErrorMessage(`Failed to squash: ${squashInProgress.error}`);
+            }
         }
     }
 

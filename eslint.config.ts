@@ -12,7 +12,7 @@ export default antfu({
         "ts/explicit-function-return-type": "off", // 关闭函数必须显式返回类型的规则
     },
     ignores: [
-        "dist",
+        "out",
         "node_modules",
         "**/*.d.ts",
         ".vscode",

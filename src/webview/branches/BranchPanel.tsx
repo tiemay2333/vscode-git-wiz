@@ -170,7 +170,7 @@ function IconFolder() {
     );
 }
 
-function IconTag(){
+function IconTag() {
     return (
         <svg
             className="icon-tag"

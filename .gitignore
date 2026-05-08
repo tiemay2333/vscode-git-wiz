@@ -32,7 +32,15 @@ Thumbs.db
 *.tsbuildinfo
 
 # AI stuff
-.claude/**
+.claude/
+.claude.json
+.cursor/
+.codex/
 *.sh
 
+# Trellis
+.trellis/workspace/
+
+# Configuration files that should be committed
 !commitlint.config.js
+!stylelint.config.js
