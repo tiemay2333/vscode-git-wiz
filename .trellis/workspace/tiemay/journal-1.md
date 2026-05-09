@@ -38,3 +38,36 @@ Reorganized context menu item grouping with separators; removed Edit Commit Mess
 ### Next Steps
 
 - None - task complete
+
+
+## Session 2: Settings i18n with Chinese/English support
+
+**Date**: 2026-05-09
+**Task**: Settings i18n with Chinese/English support
+**Branch**: `main`
+
+### Summary
+
+Created i18n.ts with zh/en translation dictionary; added locale field to SettingsData; replaced all hardcoded SettingsForm text with t(locale, key) calls; backend passes vscode.env.language to webview; zh-prefixed locales display Chinese, all others fall back to English
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `6766521` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
