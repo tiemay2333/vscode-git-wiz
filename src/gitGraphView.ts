@@ -102,6 +102,8 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider {
         webviewView.onDidDispose(() => {
             this._view = undefined;
             this._initialized = false;
+            this._filterBranch = null;
+            this._filterFile = null;
         });
 
         webviewView.webview.options = {
