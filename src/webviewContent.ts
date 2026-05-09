@@ -56,6 +56,7 @@ export function getHtmlForWebview(
     showTags: boolean = true,
     showRemoteBranches: boolean = true,
     showGraph: boolean = true,
+    searchDefaultMode: string = "single",
 ): string {
     const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, "out", "webview", "index.js"));
     const nonce = getNonce();
@@ -71,7 +72,7 @@ export function getHtmlForWebview(
 </head>
 <body>
     <div id="root"></div>
-    <script nonce="${nonce}">window.__VIEW__ = 'graph'; window.__COMMITS__ = ${safeJson(commits)}; window.__BRANCHES__ = ${safeJson(branches)}; window.__HAS_MORE__ = ${hasMore}; window.__FILTER_BRANCH__ = ${safeJson(filterBranch)}; window.__CURRENT_BRANCH__ = ${safeJson(currentBranch)}; window.__FILES_VIEW_MODE__ = ${safeJson(filesViewMode)}; window.__FILTER_FILE__ = ${safeJson(filterFile)}; window.__HIGHLIGHT_CURRENT_BRANCH__ = ${highlightCurrentBranch}; window.__SHOW_TAGS__ = ${showTags}; window.__SHOW_REMOTE_BRANCHES__ = ${showRemoteBranches}; window.__SHOW_GRAPH__ = ${showGraph};</script>
+    <script nonce="${nonce}">window.__VIEW__ = 'graph'; window.__COMMITS__ = ${safeJson(commits)}; window.__BRANCHES__ = ${safeJson(branches)}; window.__HAS_MORE__ = ${hasMore}; window.__FILTER_BRANCH__ = ${safeJson(filterBranch)}; window.__CURRENT_BRANCH__ = ${safeJson(currentBranch)}; window.__FILES_VIEW_MODE__ = ${safeJson(filesViewMode)}; window.__FILTER_FILE__ = ${safeJson(filterFile)}; window.__HIGHLIGHT_CURRENT_BRANCH__ = ${highlightCurrentBranch}; window.__SHOW_TAGS__ = ${showTags}; window.__SHOW_REMOTE_BRANCHES__ = ${showRemoteBranches}; window.__SHOW_GRAPH__ = ${showGraph}; window.__SEARCH_DEFAULT_MODE__ = ${safeJson(searchDefaultMode)};</script>
     <script nonce="${nonce}" src="${scriptUri}"></script>
 </body>
 </html>`;

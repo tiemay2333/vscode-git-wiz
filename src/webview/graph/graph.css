@@ -676,3 +676,66 @@ tr.row-search-match-author .author-cell {
     color: var(--vscode-foreground);
     background: var(--vscode-toolbar-hoverBackground);
 }
+
+/* Settings Toggle Switch */
+.settings-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 16px;
+}
+.settings-row-label {
+    flex: 1;
+    min-width: 0;
+}
+.settings-row-title {
+    font-weight: 600;
+}
+.settings-row-desc {
+    font-size: 12px;
+    color: var(--vscode-descriptionForeground);
+    margin-top: 2px;
+    line-height: 1.4;
+}
+.toggle-switch {
+    position: relative;
+    width: 40px;
+    height: 22px;
+    flex-shrink: 0;
+    cursor: pointer;
+}
+.toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+    position: absolute;
+}
+.toggle-slider {
+    position: absolute;
+    inset: 0;
+    background-color: var(--vscode-input-placeholderForeground, rgba(128,128,128,0.35));
+    border-radius: 11px;
+    transition: background-color 0.2s ease;
+}
+.toggle-slider::before {
+    content: "";
+    position: absolute;
+    height: 18px;
+    width: 18px;
+    left: 2px;
+    bottom: 2px;
+    background-color: #f0f0f0;
+    border-radius: 50%;
+    transition: transform 0.2s ease;
+}
+.toggle-switch input:checked + .toggle-slider {
+    background-color: var(--vscode-textLink-foreground, #2ea043);
+}
+.toggle-switch input:checked + .toggle-slider::before {
+    transform: translateX(18px);
+}
+.toggle-switch input:focus-visible + .toggle-slider {
+    outline: 2px solid var(--vscode-focusBorder);
+    outline-offset: 2px;
+}

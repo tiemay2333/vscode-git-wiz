@@ -92,6 +92,7 @@ interface Props {
     filterFile?: string | null;
     currentBranch?: string | null;
     showGraph?: boolean;
+    searchDefaultMode?: "single" | "graph";
 }
 
 export function GraphView({
@@ -101,6 +102,7 @@ export function GraphView({
     filterBranch: initialFilterBranch,
     filterFile: initialFilterFile,
     showGraph: initialShowGraph,
+    searchDefaultMode = "single",
 }: Props) {
     const [commitFiles, setCommitFiles] = useState<
         Record<string, { status: string; path: string; insertions?: number; deletions?: number }[]>
@@ -120,7 +122,8 @@ export function GraphView({
     const [dateFrom, setDateFrom] = useState("");
     const [dateTo, setDateTo] = useState("");
     const [activeSearch, setActiveSearch] = useState({ query: "", author: "", from: "", to: "" });
-    const [searchGraphMode, setSearchGraphMode] = useState<"single" | "graph">("single");
+    const [searchGraphMode, setSearchGraphMode] = useState<"single" | "graph">(searchDefaultMode);
+    const [searchDefaultModeVal, setSearchDefaultModeVal] = useState(searchDefaultMode);
     const [matchInfo, setMatchInfo] = useState<Record<string, { q: boolean; h: boolean; a: boolean }>>({});
     const [toggleLoading, setToggleLoading] = useState(false);
     const [searchLoading, setSearchLoading] = useState(false);
@@ -215,6 +218,17 @@ export function GraphView({
         searchGraphModeRef.current = searchGraphMode;
         activeSearchRef.current = activeSearch;
     });
+
+    // Reset search mode to default when search is exited
+    useEffect(() => {
+        if (!activeSearch.query && !activeSearch.author && !activeSearch.from && !activeSearch.to) {
+            if (searchGraphMode !== searchDefaultModeVal) {
+                setSearchGraphMode(searchDefaultModeVal);
+                searchGraphModeRef.current = searchDefaultModeVal;
+                setMatchInfo({});
+            }
+        }
+    }, [activeSearch, searchDefaultModeVal]);
 
     useEffect(() => {
         const handler = (event: MessageEvent) => {
@@ -365,6 +379,9 @@ export function GraphView({
             }
             else if (msg.command === "updateShowGraph") {
                 setShowGraph(msg.value as boolean);
+            }
+            else if (msg.command === "updateSearchDefaultMode") {
+                setSearchDefaultModeVal(msg.value as "single" | "graph");
             }
         };
         window.addEventListener("message", handler);

@@ -118,6 +118,7 @@
 | `git-wiz.showTags` | `true` | 在图中显示标签徽章 |
 | `git-wiz.showRemoteBranches` | `true` | 显示远程分支名称 |
 | `git-wiz.showGraph` | `true` | 显示分支路径图 |
+| `git-wiz.searchDefaultMode` | `"single"` | 默认搜索模式：`single`（单轨）或 `graph`（图） |
 
 以上选项也可通过提交图标题栏的**设置**按钮（齿轮图标）切换。
 

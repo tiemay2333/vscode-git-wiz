@@ -7,6 +7,7 @@ export interface SettingsData {
     showTags: boolean;
     showRemoteBranches: boolean;
     showGraph: boolean;
+    searchDefaultMode: "single" | "graph";
     userName: string;
     userEmail: string;
     scope: "local" | "global";
@@ -19,6 +20,7 @@ export function SettingsForm({ data }: { data: SettingsData }) {
     const [showTags, setShowTags] = useState(data.showTags);
     const [showRemoteBranches, setShowRemoteBranches] = useState(data.showRemoteBranches);
     const [showGraph, setShowGraph] = useState(data.showGraph);
+    const [searchDefaultMode, setSearchDefaultMode] = useState(data.searchDefaultMode);
     const [userName, setUserName] = useState(data.userName);
     const [userEmail, setUserEmail] = useState(data.userEmail);
     const [scope, setScope] = useState(data.scope);
@@ -50,6 +52,11 @@ export function SettingsForm({ data }: { data: SettingsData }) {
         setShowGraph(newVal);
         vscode.postMessage({ command: "settingsUpdateSetting", key: "showGraph", value: newVal });
     }, [showGraph]);
+
+    const changeSearchDefaultMode = useCallback((mode: "single" | "graph") => {
+        setSearchDefaultMode(mode);
+        vscode.postMessage({ command: "settingsUpdateSetting", key: "searchDefaultMode", value: mode });
+    }, []);
 
     const applyUserName = useCallback(() => {
         if (!nameChanged)
@@ -98,81 +105,120 @@ export function SettingsForm({ data }: { data: SettingsData }) {
 
     return (
         <div style={{ padding: "20px 24px", maxWidth: 520, fontFamily: "var(--vscode-font-family)", fontSize: "13px", color: "var(--vscode-foreground)" }}>
-            <div style={{ fontSize: "12px", fontWeight: 600, color: "var(--vscode-descriptionForeground)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 12 }}>
+            <div style={{ fontSize: "12px", fontWeight: 600, color: "var(--vscode-descriptionForeground)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 14 }}>
                 {t(locale, "regularItems")}
             </div>
 
-            {/* Highlight toggle */}
-            <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", marginBottom: 14 }}>
-                <input
-                    type="checkbox"
-                    checked={highlight}
-                    onChange={toggleHighlight}
-                    style={{ accentColor: "var(--vscode-focusBorder)", width: 16, height: 16, cursor: "pointer" }}
-                />
-                <div>
-                    <div style={{ fontWeight: 600 }}>{t(locale, "highlightCurrentBranch")}</div>
-                    <div style={{ fontSize: "12px", color: "var(--vscode-descriptionForeground)", marginTop: 2 }}>
-                        {t(locale, "highlightDesc")}
-                    </div>
+            {/* Highlight toggle — switch on right */}
+            <div className="settings-row">
+                <div className="settings-row-label">
+                    <div className="settings-row-title">{t(locale, "highlightCurrentBranch")}</div>
+                    <div className="settings-row-desc">{t(locale, "highlightDesc")}</div>
                 </div>
-            </label>
-
-            {/* Show Tags toggle */}
-            <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", marginBottom: 20 }}>
-                <input
-                    type="checkbox"
-                    checked={showTags}
-                    onChange={toggleShowTags}
-                    style={{ accentColor: "var(--vscode-focusBorder)", width: 16, height: 16, cursor: "pointer" }}
-                />
-                <div>
-                    <div style={{ fontWeight: 600 }}>{t(locale, "showTags")}</div>
-                    <div style={{ fontSize: "12px", color: "var(--vscode-descriptionForeground)", marginTop: 2 }}>
-                        {t(locale, "showTagsDesc")}
-                    </div>
-                </div>
-            </label>
-
-            {/* Show Remote Branches toggle */}
-            <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", marginBottom: 14 }}>
-                <input
-                    type="checkbox"
-                    checked={showRemoteBranches}
-                    onChange={toggleShowRemoteBranches}
-                    style={{ accentColor: "var(--vscode-focusBorder)", width: 16, height: 16, cursor: "pointer" }}
-                />
-                <div>
-                    <div style={{ fontWeight: 600 }}>{t(locale, "showRemoteBranches")}</div>
-                    <div style={{ fontSize: "12px", color: "var(--vscode-descriptionForeground)", marginTop: 2 }}>
-                        {t(locale, "showRemoteBranchesDesc")}
-                    </div>
-                </div>
-            </label>
-
-            {/* Show Graph toggle */}
-            <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", marginBottom: 20 }}>
-                <input
-                    type="checkbox"
-                    checked={showGraph}
-                    onChange={toggleShowGraph}
-                    style={{ accentColor: "var(--vscode-focusBorder)", width: 16, height: 16, cursor: "pointer" }}
-                />
-                <div>
-                    <div style={{ fontWeight: 600 }}>{t(locale, "showGraph")}</div>
-                    <div style={{ fontSize: "12px", color: "var(--vscode-descriptionForeground)", marginTop: 2 }}>
-                        {t(locale, "showGraphDesc")}
-                    </div>
-                </div>
-            </label>
-
-            <div style={{ borderTop: "1px solid var(--vscode-panel-border)", margin: "16px 0" }} />
-
-            {/* Git Author */}
-            <div style={{ fontSize: "12px", fontWeight: 600, color: "var(--vscode-descriptionForeground)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 12 }}>
-                {t(locale, "gitAuthor")}
+                <label className="toggle-switch">
+                    <input type="checkbox" checked={highlight} onChange={toggleHighlight} />
+                    <span className="toggle-slider" />
+                </label>
             </div>
 
+            {/* Show Tags toggle — switch on right */}
+            <div className="settings-row">
+                <div className="settings-row-label">
+                    <div className="settings-row-title">{t(locale, "showTags")}</div>
+                    <div className="settings-row-desc">{t(locale, "showTagsDesc")}</div>
+                </div>
+                <label className="toggle-switch">
+                    <input type="checkbox" checked={showTags} onChange={toggleShowTags} />
+                    <span className="toggle-slider" />
+                </label>
+            </div>
+
+            {/* Show Remote Branches toggle — switch on right */}
+            <div className="settings-row">
+                <div className="settings-row-label">
+                    <div className="settings-row-title">{t(locale, "showRemoteBranches")}</div>
+                    <div className="settings-row-desc">{t(locale, "showRemoteBranchesDesc")}</div>
+                </div>
+                <label className="toggle-switch">
+                    <input type="checkbox" checked={showRemoteBranches} onChange={toggleShowRemoteBranches} />
+                    <span className="toggle-slider" />
+                </label>
+            </div>
+
+            {/* Show Graph toggle — switch on right */}
+            <div className="settings-row">
+                <div className="settings-row-label">
+                    <div className="settings-row-title">{t(locale, "showGraph")}</div>
+                    <div className="settings-row-desc">{t(locale, "showGraphDesc")}</div>
+                </div>
+                <label className="toggle-switch">
+                    <input type="checkbox" checked={showGraph} onChange={toggleShowGraph} />
+                    <span className="toggle-slider" />
+                </label>
+            </div>
+
+            {/* Default Search Mode — radio on right */}
+            <div className="settings-row" style={{ marginBottom: 20 }}>
+                <div className="settings-row-label">
+                    <div className="settings-row-title">{t(locale, "searchDefaultMode")}</div>
+                    <div className="settings-row-desc">{t(locale, "searchDefaultModeDesc")}</div>
+                </div>
+                <div style={{ display: "flex", gap: 12, flexShrink: 0, alignItems: "center" }}>
+                    <label style={{ display: "flex", alignItems: "center", gap: 5, cursor: "pointer", fontSize: "12.5px" }}>
+                        <input
+                            type="radio"
+                            name="searchDefaultMode"
+                            checked={searchDefaultMode === "single"}
+                            onChange={() => changeSearchDefaultMode("single")}
+                            style={{ accentColor: "var(--vscode-focusBorder)", cursor: "pointer", margin: 0, outline: "none" }}
+                        />
+                        {t(locale, "searchModeSingle")}
+                    </label>
+                    <label style={{ display: "flex", alignItems: "center", gap: 5, cursor: "pointer", fontSize: "12.5px" }}>
+                        <input
+                            type="radio"
+                            name="searchDefaultMode"
+                            checked={searchDefaultMode === "graph"}
+                            onChange={() => changeSearchDefaultMode("graph")}
+                            style={{ accentColor: "var(--vscode-focusBorder)", cursor: "pointer", margin: 0, outline: "none" }}
+                        />
+                        {t(locale, "searchModeGraph")}
+                    </label>
+                </div>
+            </div>
+
+            <div style={{ borderTop: "1px solid var(--vscode-panel-border)", margin: "12px 0 16px" }} />
+
+            {/* Git Author — scope placed on the right of the header */}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+                <div style={{ fontSize: "12px", fontWeight: 600, color: "var(--vscode-descriptionForeground)", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                    {t(locale, "gitAuthor")}
+                </div>
+                <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
+                    <label style={{ display: "flex", alignItems: "center", gap: 5, cursor: "pointer", fontSize: "12px", color: "var(--vscode-descriptionForeground)" }}>
+                        <input
+                            type="radio"
+                            name="scope"
+                            checked={scope === "global"}
+                            onChange={() => changeScope("global")}
+                            style={{ accentColor: "var(--vscode-focusBorder)", cursor: "pointer", margin: 0, width: 13, height: 13, outline: "none" }}
+                        />
+                        {t(locale, "global")}
+                    </label>
+                    <label style={{ display: "flex", alignItems: "center", gap: 5, cursor: "pointer", fontSize: "12px", color: "var(--vscode-descriptionForeground)" }}>
+                        <input
+                            type="radio"
+                            name="scope"
+                            checked={scope === "local"}
+                            onChange={() => changeScope("local")}
+                            style={{ accentColor: "var(--vscode-focusBorder)", cursor: "pointer", margin: 0, width: 13, height: 13, outline: "none" }}
+                        />
+                        {t(locale, "local")}
+                    </label>
+                </div>
+            </div>
+
+            {/* User Name */}
             <div style={{ marginBottom: 14 }}>
                 <label style={{ display: "block", marginBottom: 4, fontWeight: 500 }}>{t(locale, "userName")}</label>
                 <input
@@ -203,6 +249,7 @@ export function SettingsForm({ data }: { data: SettingsData }) {
                 />
             </div>
 
+            {/* User Email */}
             <div style={{ marginBottom: 14 }}>
                 <label style={{ display: "block", marginBottom: 4, fontWeight: 500 }}>{t(locale, "userEmail")}</label>
                 <input
@@ -233,17 +280,6 @@ export function SettingsForm({ data }: { data: SettingsData }) {
                 />
             </div>
 
-            <div style={{ marginBottom: 20, display: "flex", gap: 24 }}>
-                <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}>
-                    <input type="radio" name="scope" checked={scope === "global"} onChange={() => changeScope("global")} style={{ accentColor: "var(--vscode-focusBorder)" }} />
-                    <span>{t(locale, "global")}</span>
-                </label>
-                <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}>
-                    <input type="radio" name="scope" checked={scope === "local"} onChange={() => changeScope("local")} style={{ accentColor: "var(--vscode-focusBorder)" }} />
-                    <span>{t(locale, "local")}</span>
-                </label>
-            </div>
-
             <div style={{ borderTop: "1px solid var(--vscode-panel-border)", margin: "16px 0" }} />
 
             {/* Remotes */}
@@ -258,13 +294,7 @@ export function SettingsForm({ data }: { data: SettingsData }) {
             {remotes.map(r => (
                 <div
                     key={r.name}
-                    style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 8,
-                        padding: "4px 0",
-                        borderBottom: "1px solid var(--vscode-panel-border)",
-                    }}
+                    style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 0", borderBottom: "1px solid var(--vscode-panel-border)" }}
                 >
                     <span style={{ fontWeight: 600, fontSize: "12.5px", minWidth: 80 }}>{r.name}</span>
                     <span style={{ flex: 1, fontSize: "12px", color: "var(--vscode-descriptionForeground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>

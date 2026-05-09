@@ -120,6 +120,7 @@ Settings available in VS Code settings (`Ctrl+,`), search for `git-wiz`:
 | `git-wiz.showTags` | `true` | Show tag badges in graph |
 | `git-wiz.showRemoteBranches` | `true` | Show remote branch names |
 | `git-wiz.showGraph` | `true` | Show branch path graph |
+| `git-wiz.searchDefaultMode` | `"single"` | Default search mode: `single` or `graph` |
 
 The same options can also be toggled from the **Settings** button (gear icon) in the graph view title bar.
 

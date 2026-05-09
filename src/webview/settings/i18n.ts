@@ -2,6 +2,10 @@ export type Locale = "zh" | "en";
 
 const zh: Record<string, string> = {
     regularItems: "常规设置",
+    searchDefaultMode: "默认搜索模式",
+    searchDefaultModeDesc: "搜索时的默认模式",
+    searchModeSingle: "单轨",
+    searchModeGraph: "图",
     highlightCurrentBranch: "高亮显示当前分支",
     highlightDesc: "当浏览其他分支时，高亮显示属于当前分支的提交",
     showTags: "显示标签",
@@ -25,6 +29,10 @@ const zh: Record<string, string> = {
 
 const en: Record<string, string> = {
     regularItems: "REGULAR ITEMS",
+    searchDefaultMode: "Default Search Mode",
+    searchDefaultModeDesc: "Default mode when performing a search",
+    searchModeSingle: "Single Track",
+    searchModeGraph: "Graph",
     highlightCurrentBranch: "Highlight Current Branch",
     highlightDesc: "Highlight commits belonging to the current branch when viewing other branches",
     showTags: "Show Tags",

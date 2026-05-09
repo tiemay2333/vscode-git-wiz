@@ -22,6 +22,7 @@ declare global {
         __COMMIT_DETAILS_VIEW_MODE__?: "list" | "tree";
         __SHOW_TAGS__?: boolean;
         __SHOW_GRAPH__?: boolean;
+        __SEARCH_DEFAULT_MODE__?: "single" | "graph";
     }
 }
 
@@ -105,6 +106,7 @@ function GraphLayout() {
                     filterFile={window.__FILTER_FILE__}
                     currentBranch={window.__CURRENT_BRANCH__}
                     showGraph={window.__SHOW_GRAPH__}
+                    searchDefaultMode={window.__SEARCH_DEFAULT_MODE__ ?? "single"}
                 />
             </div>
         </div>

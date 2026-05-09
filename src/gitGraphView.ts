@@ -48,7 +48,7 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider {
         this._gitOps = new GitOperations(() => this.refresh());
         this.setupGitWatcher();
         vscode.workspace.onDidChangeConfiguration((e) => {
-            if (e.affectsConfiguration("git-wiz.highlightCurrentBranch") || e.affectsConfiguration("git-wiz.showTags") || e.affectsConfiguration("git-wiz.showRemoteBranches") || e.affectsConfiguration("git-wiz.showGraph")) {
+            if (e.affectsConfiguration("git-wiz.highlightCurrentBranch") || e.affectsConfiguration("git-wiz.showTags") || e.affectsConfiguration("git-wiz.showRemoteBranches") || e.affectsConfiguration("git-wiz.showGraph") || e.affectsConfiguration("git-wiz.searchDefaultMode")) {
                 this.refresh();
             }
         });
@@ -254,6 +254,9 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider {
                 }
                 if (msg.key === "showGraph") {
                     webview.postMessage({ command: "updateShowGraph", value: msg.value });
+                }
+                if (msg.key === "searchDefaultMode") {
+                    webview.postMessage({ command: "updateSearchDefaultMode", value: msg.value });
                 }
                 break;
             }
@@ -525,6 +528,7 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider {
                 showTags: this.getConfig("showTags", true),
                 showRemoteBranches: this.getConfig("showRemoteBranches", true),
                 showGraph: this.getConfig("showGraph", true),
+                searchDefaultMode: this.getConfig("searchDefaultMode", "single"),
                 userName,
                 userEmail,
                 scope: this._settingsScope,
@@ -546,6 +550,7 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider {
         const showTags = this.getConfig("showTags", true);
         const showRemoteBranches = this.getConfig("showRemoteBranches", true);
         const showGraph = this.getConfig("showGraph", true);
+        const searchDefaultMode = this.getConfig("searchDefaultMode", "single");
 
         if (highlightCurrentBranch && currentBranch) {
             await this.applyHighlight(commits, currentBranch);
@@ -569,6 +574,7 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider {
             showTags,
             showRemoteBranches,
             showGraph,
+            searchDefaultMode,
         );
         this._initialized = true;
         if (this._pendingRefresh) {

@@ -80,6 +80,15 @@
                     "type": "boolean",
                     "default": true,
                     "description": "Show the branch path tracking graph on the left side of the commit list."
+                },
+                "git-wiz.searchDefaultMode": {
+                    "type": "string",
+                    "enum": [
+                        "single",
+                        "graph"
+                    ],
+                    "default": "single",
+                    "description": "Default search mode when performing a new search."
                 }
             }
         },
