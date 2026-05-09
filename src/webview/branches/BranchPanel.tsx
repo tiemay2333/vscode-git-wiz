@@ -699,7 +699,10 @@ export function BranchPanel({ branches: initialBranches }: Props) {
                                                 <>
                                                     <div
                                                         className="ctx-item"
-                                                        onClick={() => handleAction("checkoutBranch", ctxMenu.branch.fullName)}
+                                                        onClick={() => {
+                                                            setCtxMenu(null);
+                                                            vscode.postMessage({ command: "checkoutBranch", branchName: ctxMenu.branch.fullName, isRemote: true });
+                                                        }}
                                                     >
                                                         Checkout
                                                     </div>
@@ -716,7 +719,10 @@ export function BranchPanel({ branches: initialBranches }: Props) {
                                                 <>
                                                     <div
                                                         className="ctx-item"
-                                                        onClick={() => handleAction("checkoutBranch", ctxMenu.branch.fullName)}
+                                                        onClick={() => {
+                                                            setCtxMenu(null);
+                                                            vscode.postMessage({ command: "checkoutBranch", branchName: ctxMenu.branch.fullName, isRemote: false });
+                                                        }}
                                                     >
                                                         Checkout
                                                     </div>

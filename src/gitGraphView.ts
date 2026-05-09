@@ -18,6 +18,7 @@ interface WebviewMessage {
     branchName?: string;
     branchNames?: string[];
     tagName?: string;
+    isRemote?: boolean;
     mode?: "list" | "tree";
     error?: string;
     key?: string;
@@ -221,6 +222,8 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider {
                 vscode.commands.executeCommand(`git-wiz.${cmd}`, msg.tagName);
                 break;
             case "checkoutBranch":
+                vscode.commands.executeCommand("git-wiz.checkoutBranch", { branchName: msg.branchName, isRemote: msg.isRemote });
+                break;
             case "deleteBranch":
             case "deleteRemoteBranch":
             case "rebaseBranch":

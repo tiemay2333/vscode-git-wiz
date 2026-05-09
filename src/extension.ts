@@ -111,12 +111,12 @@ export function activate(context: vscode.ExtensionContext) {
     );
 
     context.subscriptions.push(
-        vscode.commands.registerCommand("git-wiz.checkoutBranch", async (item: string | { branchName: string }) => {
+        vscode.commands.registerCommand("git-wiz.checkoutBranch", async (item: string | { branchName: string; isRemote?: boolean }) => {
             const branchName = typeof item === "string" ? item : item.branchName;
+            const isRemote = typeof item === "object" ? item.isRemote : branchName.includes("/");
             if (!branchName)
                 return;
 
-            const isRemote = branchName.includes("/");
             const args = isRemote ? ["checkout", "--track", branchName] : ["checkout", branchName];
 
             const result = await gitOps.getRunner().exec(args);
