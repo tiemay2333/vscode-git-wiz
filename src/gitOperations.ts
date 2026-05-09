@@ -200,57 +200,6 @@ export class GitOperations {
         });
     }
 
-    async editCommitMessage(commitHash: string, newMessage?: string) {
-        if (!newMessage) {
-            return;
-        }
-        const cwd = this.getCwd();
-        if (!cwd) {
-            return;
-        }
-
-        const headHash = await new Promise<string>((resolve) => {
-            cp.exec("git rev-parse HEAD", { cwd }, (err, stdout) => resolve(err ? "" : stdout.trim()));
-        });
-
-        const escaped = newMessage.replace(/"/g, "\\\"");
-
-        if (commitHash === headHash) {
-            await vscode.window.withProgress(
-                { location: vscode.ProgressLocation.Window, title: "Editing commit message..." },
-                async () => {
-                    return new Promise<void>((resolve) => {
-                        cp.exec(`git commit --amend -m "${escaped}"`, { cwd }, (error) => {
-                            if (error) {
-                                vscode.window.showErrorMessage(`Failed to edit commit message: ${error.message}`);
-                            }
-                            else {
-                                vscode.window.showInformationMessage("Commit message updated successfully");
-                                this.onRefresh();
-                            }
-                            resolve();
-                        });
-                    });
-                },
-            );
-        }
-        else {
-            const base = commitHash.includes("~") ? commitHash : `${commitHash}~1`;
-            const editResult = await runRebaseWithScripts(cwd, base, {
-                seqScript: makeSeqEditorScript([{ hash: commitHash, action: "reword" }]),
-                msgScript: makeMsgEditorScript(`${newMessage}\n`),
-            });
-
-            if (editResult.success) {
-                vscode.window.showInformationMessage("Commit message updated successfully");
-                this.onRefresh();
-            }
-            else {
-                vscode.window.showErrorMessage(`Failed to edit commit message: ${editResult.error}`);
-            }
-        }
-    }
-
     async amendCommit() {
         const cwd = this.getCwd();
         if (!cwd) {
@@ -313,6 +262,11 @@ export class GitOperations {
     async copyCommitHash(commitHash: string) {
         await vscode.env.clipboard.writeText(commitHash);
         vscode.window.showInformationMessage("Commit hash copied to clipboard");
+    }
+
+    async copyCommitMessage(commitHash: string, commitMessage: string) {
+        await vscode.env.clipboard.writeText(commitMessage);
+        vscode.window.showInformationMessage("Commit message copied to clipboard");
     }
 
     async revertCommit(commitHash: string) {

@@ -10,6 +10,7 @@ const PAGE_SIZE = 200;
 interface WebviewMessage {
     command: string;
     commitHash?: string;
+    commitMessage?: string;
     newMessage?: string;
     hashes?: string[];
     parentHash?: string;
@@ -125,8 +126,9 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider {
     private async handleMessage(message: WebviewMessage, webview: vscode.Webview) {
         const cmd = message.command;
         // git operations — direct delegation to _gitOps
-        if (cmd === "editCommitMessage" || cmd === "amendCommit" || cmd === "cherryPick"
-            || cmd === "copyHash" || cmd === "revertCommit" || cmd === "resetToCommit"
+        if (cmd === "amendCommit" || cmd === "cherryPick"
+            || cmd === "copyHash" || cmd === "copyCommitMessage"
+            || cmd === "revertCommit" || cmd === "resetToCommit"
             || cmd === "dropCommit" || cmd === "squashCommits" || cmd === "cherryPickRange"
             || cmd === "revertCommits" || cmd === "dropCommits" || cmd === "pushTag") {
             await this.execGitOperation(cmd, message);
@@ -159,9 +161,6 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider {
 
     private async execGitOperation(cmd: string, msg: WebviewMessage): Promise<void> {
         switch (cmd) {
-            case "editCommitMessage":
-                this._gitOps.editCommitMessage(msg.commitHash!, msg.newMessage!);
-                break;
             case "amendCommit":
                 this._gitOps.amendCommit();
                 break;
@@ -170,6 +169,9 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider {
                 break;
             case "copyHash":
                 this._gitOps.copyCommitHash(msg.commitHash!);
+                break;
+            case "copyCommitMessage":
+                this._gitOps.copyCommitMessage(msg.commitHash!, msg.commitMessage!);
                 break;
             case "revertCommit":
                 this._gitOps.revertCommit(msg.commitHash!);
@@ -431,16 +433,16 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider {
     }
 
     // Delegated public methods so extension.ts commands can still call them on the provider
-    public async editCommitMessage(commitHash: string, newMessage?: string) {
-        return this._gitOps.editCommitMessage(commitHash, newMessage);
-    }
-
     public async cherryPickCommit(commitHash: string) {
         return this._gitOps.cherryPickCommit(commitHash);
     }
 
     public async copyCommitHash(commitHash: string) {
         return this._gitOps.copyCommitHash(commitHash);
+    }
+
+    public async copyCommitMessage(commitHash: string, commitMessage: string) {
+        return this._gitOps.copyCommitMessage(commitHash, commitMessage);
     }
 
     public async revertCommit(commitHash: string) {

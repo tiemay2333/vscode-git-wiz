@@ -1,5 +1,5 @@
 import type { GraphNode } from "./graphLayout";
-import React, { useEffect, useRef } from "react";
+import React from "react";
 
 const COLORS = [
     "#3d9fd4", // blue
@@ -22,7 +22,6 @@ interface Props {
     headCommitHash: string | undefined;
     isSelected: boolean;
     isMenuOpen?: boolean;
-    isEditing: boolean;
     isLoading?: boolean;
     isFirst: boolean;
     isLast: boolean;
@@ -32,8 +31,6 @@ interface Props {
     showGraph?: boolean;
     onClick: (shiftKey: boolean) => void;
     onContextMenu: (e: React.MouseEvent) => void;
-    onEditConfirm: (newMessage: string) => void;
-    onEditCancel: () => void;
 }
 
 function RefBadges({ refs, showTags, showRemoteBranches }: { refs: string[]; showTags?: boolean; showRemoteBranches?: boolean }) {
@@ -111,7 +108,6 @@ export const CommitRow = React.memo(({
     headCommitHash,
     isSelected,
     isMenuOpen,
-    isEditing,
     isLoading,
     isDimmed,
     showTags,
@@ -119,19 +115,9 @@ export const CommitRow = React.memo(({
     showGraph,
     onClick,
     onContextMenu,
-    onEditConfirm,
-    onEditCancel,
 }: Props) => {
     const commit = graphNode.commit;
-    const inputRef = useRef<HTMLInputElement>(null);
     const isHead = commit.hash === headCommitHash;
-
-    useEffect(() => {
-        if (isEditing) {
-            inputRef.current?.focus();
-            inputRef.current?.select();
-        }
-    }, [isEditing]);
 
     const rowClassName = [
         isSelected ? "row-selected" : "",
@@ -188,32 +174,8 @@ export const CommitRow = React.memo(({
             )}
             <td className="message-cell" title={commit.message}>
                 <RefBadges refs={commit.refs} showTags={showTags} showRemoteBranches={showRemoteBranches} />
-                {isEditing
-                    ? (
-                            <input
-                                ref={inputRef}
-                                className="message-edit-input"
-                                defaultValue={commit.message}
-                                onKeyDown={(e) => {
-                                    if (e.key === "Enter") {
-                                        e.preventDefault();
-                                        onEditConfirm(e.currentTarget.value.trim());
-                                    }
-                                    if (e.key === "Escape") {
-                                        e.preventDefault();
-                                        onEditCancel();
-                                    }
-                                }}
-                                onBlur={onEditCancel}
-                                onClick={e => e.stopPropagation()}
-                            />
-                        )
-                    : (
-                            <>
-                                <span className="message-text">{commit.message}</span>
-                                {isLoading && <span className="row-loading-spinner" title="Loading files..."></span>}
-                            </>
-                        )}
+                <span className="message-text">{commit.message}</span>
+                {isLoading && <span className="row-loading-spinner" title="Loading files..."></span>}
             </td>
             <td className="hash-cell">{commit.shortHash}</td>
             <td className="author-cell">{commit.author}</td>

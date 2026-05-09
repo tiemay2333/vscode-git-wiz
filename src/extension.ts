@@ -81,12 +81,6 @@ export function activate(context: vscode.ExtensionContext) {
     );
 
     context.subscriptions.push(
-        vscode.commands.registerCommand("git-wiz.editCommitMessage", (commitHash: string) => {
-            graphProvider.editCommitMessage(commitHash);
-        }),
-    );
-
-    context.subscriptions.push(
         vscode.commands.registerCommand("git-wiz.cherryPick", (commitHash: string) => {
             graphProvider.cherryPickCommit(commitHash);
         }),

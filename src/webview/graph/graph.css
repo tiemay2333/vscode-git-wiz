@@ -13,7 +13,7 @@ body {
 table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 12px; }
 td { padding: 3px 6px; vertical-align: middle; }
 tbody tr:hover { background-color: var(--vscode-list-hoverBackground); }
-tbody tr { cursor: pointer; }
+tbody tr { cursor: pointer; user-select: none; }
 .graph-cell { padding: 0; vertical-align: middle; /* dynamic width from react */ }
 .graph-canvas { display: block; }
 .hash-cell {
@@ -153,18 +153,6 @@ tbody tr { cursor: pointer; }
     color: var(--vscode-errorForeground);
 }
 .context-menu-separator { height: 1px; background-color: var(--vscode-panel-border); margin: 3px 6px; }
-.message-edit-input {
-    flex: 1;
-    min-width: 0;
-    background: transparent;
-    border: none;
-    border-bottom: 1.5px solid var(--vscode-focusBorder);
-    color: inherit;
-    font: inherit;
-    font-size: 12px;
-    outline: none;
-    padding: 0;
-}
 tr.row-selected {
     background-color: var(--vscode-list-activeSelectionBackground);
     box-shadow: inset 4px 0 0 var(--vscode-focusBorder);

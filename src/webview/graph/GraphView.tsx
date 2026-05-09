@@ -137,7 +137,6 @@ export function GraphView({
     const [loadingHash, setLoadingHash] = useState<string | null>(null);
     const [singleMenu, setSingleMenu] = useState<SingleMenu | null>(null);
     const [rangeMenu, setRangeMenu] = useState<RangeMenu | null>(null);
-    const [editingHash, setEditingHash] = useState<string | null>(null);
     const [showSettings, setShowSettings] = useState(false);
     const [settingsData, setSettingsData] = useState<SettingsData | null>(null);
 
@@ -479,10 +478,6 @@ export function GraphView({
             }
             closeMenus();
 
-            if (action === "editCommitMessage") {
-                setEditingHash(singleMenu.hash);
-                return;
-            }
             vscode.postMessage({ command: action, commitHash: singleMenu.hash, ...extraArgs });
         },
         [singleMenu, closeMenus],
@@ -506,16 +501,6 @@ export function GraphView({
         setFilesViewMode(mode);
         vscode.postMessage({ command: "saveFilesViewMode", mode });
     };
-
-    const handleEditConfirm = useCallback(
-        (hash: string, newMessage: string) => {
-            setEditingHash(null);
-            if (newMessage && newMessage !== commits.find(c => c.hash === hash)?.message) {
-                vscode.postMessage({ command: "editCommitMessage", commitHash: hash, newMessage });
-            }
-        },
-        [commits],
-    );
 
     const singleMenuCommitTags = useMemo(() => {
         if (!singleMenu)
@@ -765,7 +750,6 @@ export function GraphView({
                                                         headCommitHash={headCommitHash}
                                                         isSelected={isSelected}
                                                         isMenuOpen={isMenuOpen}
-                                                        isEditing={editingHash === commit.hash}
                                                         isLoading={loadingHash === commit.hash}
                                                         isFirst={index === 0}
                                                         isLast={index === filteredCommits.length - 1}
@@ -775,8 +759,6 @@ export function GraphView({
                                                         showGraph={showGraph}
                                                         onClick={shiftKey => handleRowClick(index, shiftKey)}
                                                         onContextMenu={e => handleContextMenu(e, index)}
-                                                        onEditConfirm={msg => handleEditConfirm(commit.hash, msg)}
-                                                        onEditCancel={() => setEditingHash(null)}
                                                     />
                                                     {singleSelected && (
                                                         <tr className="inline-files-row" onClick={e => e.stopPropagation()}>
@@ -987,17 +969,21 @@ export function GraphView({
                                 Amend Commit
                             </div>
                         )}
-                        {headCommitAncestors.has(singleMenu.hash) && (
-                            <div className="context-menu-item" onClick={() => handleSingleAction("editCommitMessage")}>
-                                Edit Commit Message
-                            </div>
-                        )}
                         <div className="context-menu-item" onClick={() => handleSingleAction("cherryPick")}>
                             Cherry-pick to current branch
                         </div>
                         <div className="context-menu-separator" />
                         <div className="context-menu-item" onClick={() => handleSingleAction("copyHash")}>
                             Copy Hash
+                        </div>
+                        <div
+                            className="context-menu-item"
+                            onClick={() => {
+                                closeMenus();
+                                vscode.postMessage({ command: "copyCommitMessage", commitHash: singleMenu.hash, commitMessage: filteredCommits[singleMenu.index].message });
+                            }}
+                        >
+                            Copy Commit Message
                         </div>
                         <div className="context-menu-separator" />
                         {headCommitAncestors.has(singleMenu.hash) && (
