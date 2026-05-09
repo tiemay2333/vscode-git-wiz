@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { vscode } from "../vscodeApi";
+import { t } from "./i18n";
 
 export interface SettingsData {
     highlightCurrentBranch: boolean;
@@ -10,6 +11,7 @@ export interface SettingsData {
     userEmail: string;
     scope: "local" | "global";
     remotes: { name: string; url: string }[];
+    locale: string;
 }
 
 export function SettingsForm({ data }: { data: SettingsData }) {
@@ -21,6 +23,7 @@ export function SettingsForm({ data }: { data: SettingsData }) {
     const [userEmail, setUserEmail] = useState(data.userEmail);
     const [scope, setScope] = useState(data.scope);
     const [remotes, setRemotes] = useState(data.remotes);
+    const locale = data.locale;
     const [nameChanged, setNameChanged] = useState(false);
     const [emailChanged, setEmailChanged] = useState(false);
 
@@ -96,7 +99,7 @@ export function SettingsForm({ data }: { data: SettingsData }) {
     return (
         <div style={{ padding: "20px 24px", maxWidth: 520, fontFamily: "var(--vscode-font-family)", fontSize: "13px", color: "var(--vscode-foreground)" }}>
             <div style={{ fontSize: "12px", fontWeight: 600, color: "var(--vscode-descriptionForeground)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 12 }}>
-                REGULAR ITEMS
+                {t(locale, "regularItems")}
             </div>
 
             {/* Highlight toggle */}
@@ -108,9 +111,9 @@ export function SettingsForm({ data }: { data: SettingsData }) {
                     style={{ accentColor: "var(--vscode-focusBorder)", width: 16, height: 16, cursor: "pointer" }}
                 />
                 <div>
-                    <div style={{ fontWeight: 600 }}>Highlight Current Branch</div>
+                    <div style={{ fontWeight: 600 }}>{t(locale, "highlightCurrentBranch")}</div>
                     <div style={{ fontSize: "12px", color: "var(--vscode-descriptionForeground)", marginTop: 2 }}>
-                        Highlight commits belonging to the current branch when viewing other branches
+                        {t(locale, "highlightDesc")}
                     </div>
                 </div>
             </label>
@@ -124,9 +127,9 @@ export function SettingsForm({ data }: { data: SettingsData }) {
                     style={{ accentColor: "var(--vscode-focusBorder)", width: 16, height: 16, cursor: "pointer" }}
                 />
                 <div>
-                    <div style={{ fontWeight: 600 }}>Show Tags</div>
+                    <div style={{ fontWeight: 600 }}>{t(locale, "showTags")}</div>
                     <div style={{ fontSize: "12px", color: "var(--vscode-descriptionForeground)", marginTop: 2 }}>
-                        Display tag badges on commits in the graph view
+                        {t(locale, "showTagsDesc")}
                     </div>
                 </div>
             </label>
@@ -140,9 +143,9 @@ export function SettingsForm({ data }: { data: SettingsData }) {
                     style={{ accentColor: "var(--vscode-focusBorder)", width: 16, height: 16, cursor: "pointer" }}
                 />
                 <div>
-                    <div style={{ fontWeight: 600 }}>Show Remote Branches</div>
+                    <div style={{ fontWeight: 600 }}>{t(locale, "showRemoteBranches")}</div>
                     <div style={{ fontSize: "12px", color: "var(--vscode-descriptionForeground)", marginTop: 2 }}>
-                        Display remote branch names (origin/..., upstream/...) on commits
+                        {t(locale, "showRemoteBranchesDesc")}
                     </div>
                 </div>
             </label>
@@ -156,9 +159,9 @@ export function SettingsForm({ data }: { data: SettingsData }) {
                     style={{ accentColor: "var(--vscode-focusBorder)", width: 16, height: 16, cursor: "pointer" }}
                 />
                 <div>
-                    <div style={{ fontWeight: 600 }}>Show Branch Graph</div>
+                    <div style={{ fontWeight: 600 }}>{t(locale, "showGraph")}</div>
                     <div style={{ fontSize: "12px", color: "var(--vscode-descriptionForeground)", marginTop: 2 }}>
-                        Display the branch path tracking graph on the left side of the commit list
+                        {t(locale, "showGraphDesc")}
                     </div>
                 </div>
             </label>
@@ -167,11 +170,11 @@ export function SettingsForm({ data }: { data: SettingsData }) {
 
             {/* Git Author */}
             <div style={{ fontSize: "12px", fontWeight: 600, color: "var(--vscode-descriptionForeground)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 12 }}>
-                Git Author
+                {t(locale, "gitAuthor")}
             </div>
 
             <div style={{ marginBottom: 14 }}>
-                <label style={{ display: "block", marginBottom: 4, fontWeight: 500 }}>User Name</label>
+                <label style={{ display: "block", marginBottom: 4, fontWeight: 500 }}>{t(locale, "userName")}</label>
                 <input
                     type="text"
                     value={userName}
@@ -184,7 +187,7 @@ export function SettingsForm({ data }: { data: SettingsData }) {
                         if (e.key === "Enter")
                             applyUserName();
                     }}
-                    placeholder="Your Name"
+                    placeholder={t(locale, "userNamePlaceholder")}
                     style={{
                         width: "100%",
                         padding: "6px 8px",
@@ -201,7 +204,7 @@ export function SettingsForm({ data }: { data: SettingsData }) {
             </div>
 
             <div style={{ marginBottom: 14 }}>
-                <label style={{ display: "block", marginBottom: 4, fontWeight: 500 }}>User Email</label>
+                <label style={{ display: "block", marginBottom: 4, fontWeight: 500 }}>{t(locale, "userEmail")}</label>
                 <input
                     type="email"
                     value={userEmail}
@@ -233,11 +236,11 @@ export function SettingsForm({ data }: { data: SettingsData }) {
             <div style={{ marginBottom: 20, display: "flex", gap: 24 }}>
                 <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}>
                     <input type="radio" name="scope" checked={scope === "global"} onChange={() => changeScope("global")} style={{ accentColor: "var(--vscode-focusBorder)" }} />
-                    <span>Global</span>
+                    <span>{t(locale, "global")}</span>
                 </label>
                 <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}>
                     <input type="radio" name="scope" checked={scope === "local"} onChange={() => changeScope("local")} style={{ accentColor: "var(--vscode-focusBorder)" }} />
-                    <span>Local</span>
+                    <span>{t(locale, "local")}</span>
                 </label>
             </div>
 
@@ -245,11 +248,11 @@ export function SettingsForm({ data }: { data: SettingsData }) {
 
             {/* Remotes */}
             <div style={{ fontSize: "12px", fontWeight: 600, color: "var(--vscode-descriptionForeground)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 12 }}>
-                Remotes
+                {t(locale, "remotes")}
             </div>
 
             {remotes.length === 0 && (
-                <div style={{ color: "var(--vscode-descriptionForeground)", fontSize: "12px", marginBottom: 12 }}>No remotes configured</div>
+                <div style={{ color: "var(--vscode-descriptionForeground)", fontSize: "12px", marginBottom: 12 }}>{t(locale, "noRemotes")}</div>
             )}
 
             {remotes.map(r => (
@@ -268,7 +271,7 @@ export function SettingsForm({ data }: { data: SettingsData }) {
                         {r.url}
                     </span>
                     <button
-                        title={`Remove ${r.name}`}
+                        title={`${t(locale, "removeRemote")} ${r.name}`}
                         onClick={() => removeRemote(r.name)}
                         style={{
                             background: "none",
@@ -310,7 +313,7 @@ export function SettingsForm({ data }: { data: SettingsData }) {
                 onMouseEnter={(e) => { e.currentTarget.style.background = "var(--vscode-button-secondaryHoverBackground)"; }}
                 onMouseLeave={(e) => { e.currentTarget.style.background = "var(--vscode-button-secondaryBackground)"; }}
             >
-                + Add Remote
+                {t(locale, "addRemote")}
             </button>
         </div>
     );

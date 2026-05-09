@@ -499,6 +499,7 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider {
                 userEmail,
                 scope: this._settingsScope,
                 remotes: await this._gitOps.getUniqueRemotes(),
+                locale: vscode.env.language,
             },
         });
     }
