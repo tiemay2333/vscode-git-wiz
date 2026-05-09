@@ -165,7 +165,7 @@ function IconStar() {
 function IconFolder() {
     return (
         <svg className="icon-folder" width="13" height="13" viewBox="0 0 24 24" fill="currentColor" strokeWidth="0">
-            <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z" />
+            <path d="M4 20q-.825 0-1.412-.587T2 18V6q0-.825.588-1.412T4 4h6l2 2h8q.825 0 1.413.588T22 8v10q0 .825-.587 1.413T20 20z" />
         </svg>
     );
 }
@@ -213,7 +213,7 @@ function IconBranch() {
 function getBranchIcon(branch: Branch) {
     if (branch.isTag)
         return <IconTag />;
-    if (branch.isHead || branch.name === "main" || branch.name === "master")
+    if (branch.name === "main" || branch.name === "master")
         return <IconStar />;
     return <IconBranch />;
 }

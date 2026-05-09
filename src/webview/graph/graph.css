@@ -385,19 +385,19 @@ tr.row-dimmed:hover td:not(.graph-cell) { opacity: 0.8; }
     letter-spacing: 0.05em;
     width: 26px; /* fixed width for alignment */
 }
-.file-status.status-a { 
+.file-status.status-a {
     color: var(--vscode-gitDecoration-addedResourceForeground);
     background-color: color-mix(in srgb, var(--vscode-gitDecoration-addedResourceForeground) 15%, transparent);
 }
-.file-status.status-m { 
+.file-status.status-m {
     color: var(--vscode-gitDecoration-modifiedResourceForeground);
     background-color: color-mix(in srgb, var(--vscode-gitDecoration-modifiedResourceForeground) 15%, transparent);
 }
-.file-status.status-d { 
+.file-status.status-d {
     color: var(--vscode-gitDecoration-deletedResourceForeground);
     background-color: color-mix(in srgb, var(--vscode-gitDecoration-deletedResourceForeground) 15%, transparent);
 }
-.file-status.status-r { 
+.file-status.status-r {
     color: var(--vscode-gitDecoration-renamedResourceForeground);
     background-color: color-mix(in srgb, var(--vscode-gitDecoration-renamedResourceForeground) 15%, transparent);
 }
@@ -523,6 +523,7 @@ tr.row-dimmed:hover td:not(.graph-cell) { opacity: 0.8; }
     opacity: 0.45;
 }
 .branch-row {
+    position: relative;
     display: flex;
     align-items: center;
     gap: 6px;
@@ -540,12 +541,15 @@ tr.row-dimmed:hover td:not(.graph-cell) { opacity: 0.8; }
     color: var(--vscode-list-activeSelectionForeground);
 }
 .group-row:hover, .group-row.context-open { background: var(--vscode-list-hoverBackground); }
-.branch-row.is-head {
-    border-left: 2px solid var(--vscode-gitDecoration-modifiedResourceForeground);
-}
-.branch-row.is-head .row-label {
-    color: var(--vscode-gitDecoration-modifiedResourceForeground);
-    font-weight: 600;
+.branch-row.is-head::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 2px;
+    bottom: 2px;
+    width: 3px;
+    border-radius: 1px;
+    background: var(--vscode-gitDecoration-modifiedResourceForeground);
 }
 .branch-row.is-head.selected .row-label { color: inherit; }
 .row-label {
@@ -593,9 +597,9 @@ tr.row-dimmed:hover td:not(.graph-cell) { opacity: 0.8; }
 }
 .ctx-sep { height: 1px; background-color: var(--vscode-panel-border); margin: 3px 6px; }
 .ctx-item-danger { color: var(--vscode-errorForeground); }
-.ctx-item-danger:hover { 
+.ctx-item-danger:hover {
     background-color: var(--vscode-list-hoverBackground);
-    color: var(--vscode-errorForeground); 
+    color: var(--vscode-errorForeground);
 }
 .branch-row.multi-selected {
     background: var(--vscode-list-inactiveSelectionBackground);
@@ -642,4 +646,3 @@ tr.row-dimmed:hover td:not(.graph-cell) { opacity: 0.8; }
     color: var(--vscode-foreground);
     background: var(--vscode-toolbar-hoverBackground);
 }
-    
