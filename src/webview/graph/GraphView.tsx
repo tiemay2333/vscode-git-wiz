@@ -177,7 +177,7 @@ export function GraphView({
         () => graphNodes.reduce((max, node) => Math.max(max, node.maxTrack), 0),
         [graphNodes],
     );
-    const graphWidth = !showGraph ? 0 : isFiltering ? 24 : Math.max(60, globalMaxTrack * 14 + 24);
+    const graphWidth = !showGraph ? 0 : isFiltering ? 24 : Math.max(60, globalMaxTrack * 12 + 24);
 
     const closeMenus = useCallback(() => {
         setSingleMenu(null);

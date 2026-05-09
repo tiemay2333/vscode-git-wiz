@@ -152,8 +152,8 @@ export const CommitRow = React.memo(({
                         {[...graphNode.lines]
                             .sort((a, b) => Math.abs(b.x2 - b.x1) - Math.abs(a.x2 - a.x1))
                             .map((line, i) => {
-                                const x1 = 10 + line.x1 * 14;
-                                const x2 = 10 + line.x2 * 14;
+                                const x1 = 10 + line.x1 * 12;
+                                const x2 = 10 + line.x2 * 12;
                                 const y1 = line.y1 === 0 ? 0 : line.y1 === 1 ? 14 : 28;
                                 const y2 = line.y2 === 0 ? 0 : line.y2 === 1 ? 14 : 28;
                                 const color = getColor(line.color);
@@ -175,14 +175,14 @@ export const CommitRow = React.memo(({
                                 return <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke={color} strokeWidth="1.5" />;
                             })}
                         <circle
-                            cx={10 + graphNode.x * 14}
+                            cx={10 + graphNode.x * 12}
                             cy="14"
                             r="3.5"
                             fill={isHead ? "var(--vscode-editor-background)" : getColor(graphNode.color)}
                             stroke={getColor(graphNode.color)}
                             strokeWidth="1.5"
                         />
-                        {isHead && <circle cx={10 + graphNode.x * 14} cy="14" r="1.5" fill={getColor(graphNode.color)} />}
+                        {isHead && <circle cx={10 + graphNode.x * 12} cy="14" r="1.5" fill={getColor(graphNode.color)} />}
                     </svg>
                 </td>
             )}
