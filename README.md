@@ -16,6 +16,9 @@ A minimalist Git extension for VS Code with a canvas-rendered commit graph and v
 - **Branch path graph** — visual tracking of branch/merge topology (toggle on/off)
 - **Highlight current branch** — dim commits not on the current branch
 - **File diff view** — click a commit to see changed files with insertions/deletions inline
+- **Search** — search commits by message, author, hash, or date range
+  - **Single Track mode** — filter the graph to only matching commits
+  - **Graph mode** — keep the full graph visible while highlighting matches with theme color; date range still filters the displayed commits
 
 ### Branch Management
 - **Tree-organized branch list** — branches with `/` (e.g. `feature/login`) are grouped into folders

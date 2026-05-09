@@ -166,6 +166,15 @@ tr.row-menu-open {
 }
 tr.row-dimmed td:not(.graph-cell) { opacity: 0.35; }
 tr.row-dimmed:hover td:not(.graph-cell) { opacity: 0.8; }
+tr.row-search-match-query .message-text {
+    color: var(--vscode-textLink-foreground);
+}
+tr.row-search-match-hash .hash-cell {
+    color: var(--vscode-textLink-foreground);
+}
+tr.row-search-match-author .author-cell {
+    color: var(--vscode-textLink-foreground);
+}
 
 /* Graph Layout */
 
@@ -228,6 +237,39 @@ tr.row-dimmed:hover td:not(.graph-cell) { opacity: 0.8; }
 }
 .branch-info-close-btn:hover {
     background: color-mix(in srgb, var(--vscode-editor-foreground) 10%, transparent);
+}
+.search-graph-toggle-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: none;
+    border: 1px solid var(--vscode-panel-border);
+    color: var(--vscode-descriptionForeground);
+    font-size: 10px;
+    font-weight: 500;
+    cursor: pointer;
+    padding: 2px 8px;
+    border-radius: 3px;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+}
+.search-graph-toggle-btn:hover {
+    border-color: var(--vscode-focusBorder);
+    color: var(--vscode-foreground);
+    background: var(--vscode-list-hoverBackground);
+}
+.search-graph-toggle-label {
+    font-size: 10px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+.search-graph-toggle-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--vscode-textLink-foreground);
+    display: inline-block;
 }
 
 /* Inline Files View */

@@ -329,6 +329,9 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider {
             case "showErrorMessage":
                 vscode.window.showErrorMessage(msg.error || "Unknown error");
                 break;
+            case "requestUnfilteredCommits":
+                this.requestUnfilteredCommits(webview);
+                break;
         }
     }
 
@@ -349,6 +352,33 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider {
 
     private getConfig<T>(key: string, defaultValue: T): T {
         return vscode.workspace.getConfiguration("git-wiz").get<T>(key, defaultValue);
+    }
+
+    private async requestUnfilteredCommits(webview: vscode.Webview) {
+        const commits = await this._gitOps.getUnfilteredLog(this._filterBranch, 0, Math.max(PAGE_SIZE, this._loadedCount));
+        const currentBranch = await this._gitOps.getCurrentBranch();
+        const highlightCurrentBranch = this.getConfig("highlightCurrentBranch", false);
+
+        if (highlightCurrentBranch && currentBranch) {
+            await this.applyHighlight(commits, currentBranch);
+        }
+
+        this._loadedCount = commits.length;
+        // Clear search filters so subsequent loadMoreCommits uses unfiltered log
+        this._searchFilters = undefined;
+        webview.postMessage({
+            command: "replaceCommits",
+            commits,
+            hasMore: commits.length >= Math.max(PAGE_SIZE, this._loadedCount),
+            filterBranch: this._filterBranch,
+            filterFile: this._filterFile,
+            currentBranch,
+            resetScroll: true,
+            highlightCurrentBranch,
+            showTags: this.getConfig("showTags", true),
+            showRemoteBranches: this.getConfig("showRemoteBranches", true),
+            showGraph: this.getConfig("showGraph", true),
+        });
     }
 
     private postToWebview(msg: any): void {

@@ -26,6 +26,10 @@ interface Props {
     isFirst: boolean;
     isLast: boolean;
     isDimmed?: boolean;
+    isSearchMatch?: boolean;
+    isMatchQuery?: boolean;
+    isMatchHash?: boolean;
+    isMatchAuthor?: boolean;
     showTags?: boolean;
     showRemoteBranches?: boolean;
     showGraph?: boolean;
@@ -113,6 +117,9 @@ export const CommitRow = React.memo(({
     showTags,
     showRemoteBranches,
     showGraph,
+    isMatchQuery,
+    isMatchHash,
+    isMatchAuthor,
     onClick,
     onContextMenu,
 }: Props) => {
@@ -123,6 +130,9 @@ export const CommitRow = React.memo(({
         isSelected ? "row-selected" : "",
         isMenuOpen ? "row-menu-open" : "",
         isDimmed ? "row-dimmed" : "",
+        isMatchQuery ? "row-search-match-query" : "",
+        isMatchHash ? "row-search-match-hash" : "",
+        isMatchAuthor ? "row-search-match-author" : "",
     ].filter(Boolean).join(" ") || undefined;
 
     return (

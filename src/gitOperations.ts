@@ -125,6 +125,32 @@ export class GitOperations {
         });
     }
 
+    async getUnfilteredLog(
+        filterBranch: string | null,
+        skip = 0,
+        limit = 200,
+    ): Promise<GitCommit[]> {
+        return new Promise((resolve) => {
+            const cwd = this.getCwd();
+            if (!cwd) {
+                resolve([]);
+                return;
+            }
+
+            const branchArg = filterBranch ? ` ${filterBranch}` : " --all";
+            const skipArg = skip > 0 ? ` --skip=${skip}` : "";
+            const gitCommand = `git log${branchArg}${skipArg} --max-count=${limit} --pretty=format:"%H|%h|%P|%an|%ae|%ai|%D|%ct|%at|%s" --date-order`;
+
+            cp.exec(gitCommand, { cwd, maxBuffer: 100 * 1024 * 1024 }, (error, stdout) => {
+                if (error) {
+                    resolve([]);
+                    return;
+                }
+                resolve(parseGitLogOutput(stdout.trim()));
+            });
+        });
+    }
+
     async getGitLog(
         filterBranch: string | null,
         skip = 0,
@@ -155,10 +181,10 @@ export class GitOperations {
                 filterArgs += ` --author="${filters.author.replace(/"/g, "\\\"")}" -i`;
             }
             if (filters?.from) {
-                filterArgs += ` --since="${filters.from}"`;
+                filterArgs += ` --since="${filters.from.replace(/\//g, "-")} 00:00:00"`;
             }
             if (filters?.to) {
-                filterArgs += ` --until="${filters.to} 23:59:59"`;
+                filterArgs += ` --until="${filters.to.replace(/\//g, "-")} 23:59:59"`;
             }
 
             const fileArg = filePath ? ` -- "${filePath}"` : "";
