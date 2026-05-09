@@ -833,14 +833,17 @@ export function GraphView({
                                                                                     <svg
                                                                                         width="14"
                                                                                         height="14"
-                                                                                        viewBox="0 0 16 16"
+                                                                                        viewBox="0 0 36 36"
                                                                                         fill="currentColor"
                                                                                     >
-                                                                                        <path
-                                                                                            fillRule="evenodd"
-                                                                                            clipRule="evenodd"
-                                                                                            d="M2 3h12v1H2V3zm0 4h12v1H2V7zm12 4H2v1h12v-1z"
-                                                                                        />
+                                                                                        <path d="M2 8h2v2H2z" />
+                                                                                        <path d="M7 10h24a1 1 0 0 0 0-2H7a1 1 0 0 0 0 2" />
+                                                                                        <path d="M2 14h2v2H2z" />
+                                                                                        <path d="M31 14H7a1 1 0 0 0 0 2h24a1 1 0 0 0 0-2" />
+                                                                                        <path d="M2 20h2v2H2z" />
+                                                                                        <path d="M31 20H7a1 1 0 0 0 0 2h24a1 1 0 0 0 0-2" />
+                                                                                        <path d="M2 26h2v2H2z" />
+                                                                                        <path d="M31 26H7a1 1 0 0 0 0 2h24a1 1 0 0 0 0-2" />
                                                                                     </svg>
                                                                                 </button>
                                                                                 <button
@@ -852,14 +855,14 @@ export function GraphView({
                                                                                     <svg
                                                                                         width="14"
                                                                                         height="14"
-                                                                                        viewBox="0 0 16 16"
+                                                                                        viewBox="0 0 36 36"
                                                                                         fill="currentColor"
                                                                                     >
-                                                                                        <path
-                                                                                            fillRule="evenodd"
-                                                                                            clipRule="evenodd"
-                                                                                            d="M1 2v3h1V2h12v12h-3v1h4V1H1v1zm12 12V5H5v9h8zm-1-1H6V6h6v7zM1 9h3V6H1v3zm1 4h3v-3H1v3z"
-                                                                                        />
+                                                                                        <rect width="6" height="6" x="10" y="26" rx="1" ry="1" />
+                                                                                        <path d="M15 16h-4a1 1 0 0 0-1 1v1.2H5.8V12H7a1 1 0 0 0 1-1V7a1 1 0 0 0-1-1H3a1 1 0 0 0-1 1v4a1 1 0 0 0 1 1h1.2v17.8H11a.8.8 0 1 0 0-1.6H5.8v-8.4H10V21a1 1 0 0 0 1 1h4a1 1 0 0 0 1-1v-4a1 1 0 0 0-1-1" />
+                                                                                        <path d="M33 8H10v2h23a1 1 0 0 0 0-2" />
+                                                                                        <path d="M33 18H18v2h15a1 1 0 0 0 0-2" />
+                                                                                        <path d="M33 28H18v2h15a1 1 0 0 0 0-2" />
                                                                                     </svg>
                                                                                 </button>
                                                                             </div>
