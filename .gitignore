@@ -36,10 +36,9 @@ Thumbs.db
 .claude.json
 .cursor/
 .codex/
-*.sh
+.github/
 
-# Trellis
-.trellis/workspace/
+*.sh
 
 # Configuration files that should be committed
 !commitlint.config.js
