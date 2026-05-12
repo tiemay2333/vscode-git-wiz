@@ -43,3 +43,4 @@ Thumbs.db
 # Configuration files that should be committed
 !commitlint.config.js
 !stylelint.config.js
+!scripts/*
