@@ -1,8 +1,9 @@
 import type { GitCommit } from "../../gitParser";
 import type { SettingsData } from "../settings/SettingsForm";
+import type { FileTreeItem } from "../shared/FileTreeView";
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { SettingsForm } from "../settings/SettingsForm";
-import { FileTree } from "../shared/FileTree";
+import { FileTree } from "../shared/FileTreeView";
 import { vscode } from "../vscodeApi";
 import { CommitRow } from "./CommitRow";
 import { computeGraphLayout } from "./graphLayout";
@@ -312,9 +313,9 @@ export function GraphView({
                         if (q || a) {
                             const info: Record<string, { q: boolean; h: boolean; a: boolean }> = {};
                             for (const c of msg.commits) {
-                                const qMsg = q && c.message.toLowerCase().includes(q);
-                                const qHash = q && (c.hash.toLowerCase().includes(q) || c.shortHash.toLowerCase().includes(q));
-                                const aMatch = a && c.author.toLowerCase().includes(a);
+                                const qMsg = !!(q && c.message.toLowerCase().includes(q));
+                                const qHash = !!(q && (c.hash.toLowerCase().includes(q) || c.shortHash.toLowerCase().includes(q)));
+                                const aMatch = !!(a && c.author.toLowerCase().includes(a));
                                 if ((!q || qMsg || qHash) && (!a || aMatch)) {
                                     info[c.hash] = { q: qMsg, h: qHash, a: aMatch };
                                 }
@@ -335,9 +336,9 @@ export function GraphView({
                     if (q || a) {
                         const info: Record<string, { q: boolean; h: boolean; a: boolean }> = {};
                         for (const c of msg.commits) {
-                            const qMsg = q && c.message.toLowerCase().includes(q);
-                            const qHash = q && (c.hash.toLowerCase().includes(q) || c.shortHash.toLowerCase().includes(q));
-                            const aMatch = a && c.author.toLowerCase().includes(a);
+                            const qMsg = !!(q && c.message.toLowerCase().includes(q));
+                            const qHash = !!(q && (c.hash.toLowerCase().includes(q) || c.shortHash.toLowerCase().includes(q)));
+                            const aMatch = !!(a && c.author.toLowerCase().includes(a));
                             if ((!q || qMsg || qHash) && (!a || aMatch)) {
                                 info[c.hash] = { q: qMsg, h: qHash, a: aMatch };
                             }
@@ -416,9 +417,9 @@ export function GraphView({
             const a = searchAuthor.toLowerCase();
             const info: Record<string, { q: boolean; h: boolean; a: boolean }> = {};
             for (const c of commitsRef.current) {
-                const qMsg = q && c.message.toLowerCase().includes(q);
-                const qHash = q && (c.hash.toLowerCase().includes(q) || c.shortHash.toLowerCase().includes(q));
-                const aMatch = a && c.author.toLowerCase().includes(a);
+                const qMsg = !!(q && c.message.toLowerCase().includes(q));
+                const qHash = !!(q && (c.hash.toLowerCase().includes(q) || c.shortHash.toLowerCase().includes(q)));
+                const aMatch = !!(a && c.author.toLowerCase().includes(a));
                 // AND: all non-empty fields must match
                 if ((!q || qMsg || qHash) && (!a || aMatch)) {
                     info[c.hash] = { q: qMsg, h: qHash, a: aMatch };
@@ -1072,7 +1073,7 @@ export function GraphView({
                                                                                                         ? (
                                                                                                                 <FileTree
                                                                                                                     items={files}
-                                                                                                                    renderLeaf={(path, name, item) => (
+                                                                                                                    renderLeaf={(path: string, name: string, item: FileTreeItem) => (
                                                                                                                         <div
                                                                                                                             className="file-tree-file"
                                                                                                                             onClick={() =>
@@ -1109,7 +1110,6 @@ export function GraphView({
                                                                                                                                     vscode.postMessage({ command: "openFile", filePath: path });
                                                                                                                                 }}
                                                                                                                             >
-                                                                                                                                ↗
                                                                                                                             </span>
                                                                                                                         </div>
                                                                                                                     )}

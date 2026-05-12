@@ -1,6 +1,6 @@
-import type { FileTreeItem, FileTreeNodeData } from "./fileTree";
+import type { FileTreeItem, FileTreeNodeData } from "./fileTreeUtils";
 import React, { useMemo, useState } from "react";
-import { getFileTree, sortEntries } from "./fileTree.js";
+import { getFileTree, sortEntries } from "./fileTreeUtils.js";
 
 export type { FileTreeItem };
 
@@ -9,7 +9,7 @@ export function FileTree({
     renderLeaf,
 }: {
     items: FileTreeItem[];
-    renderLeaf: (path: string, name: string, item: FileTreeItem) => React.ReactNode;
+    renderLeaf: (path: string, name: string, item: FileTreeNodeData) => React.ReactNode;
 }) {
     const tree = useMemo(() => getFileTree(items), [items]);
 
@@ -34,7 +34,7 @@ function FileTreeNode({
 }: {
     node: FileTreeNodeData;
     level: number;
-    renderLeaf: (path: string, name: string, item: FileTreeItem) => React.ReactNode;
+    renderLeaf: (path: string, name: string, item: FileTreeNodeData) => React.ReactNode;
 }) {
     const [expanded, setExpanded] = useState(true);
 
@@ -103,12 +103,7 @@ function FileTreeNode({
                 className="file-tree-node"
                 style={{ "--tree-level": level } as React.CSSProperties}
             >
-                {renderLeaf(node.path, node.name, {
-                    path: node.path,
-                    status: node.status,
-                    insertions: node.insertions,
-                    deletions: node.deletions,
-                })}
+                {renderLeaf(node.path, node.name, node)}
             </div>
         </div>
     );

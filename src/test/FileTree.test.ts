@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getFileTree } from "../webview/shared/fileTree";
+import { getFileTree } from "../webview/shared/fileTreeUtils";
 
 describe("getFileTree", () => {
     it("returns empty array for empty input", () => {

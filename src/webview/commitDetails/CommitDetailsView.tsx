@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { FileTree } from "../shared/FileTree";
+import { FileTree } from "../shared/FileTreeView";
 import { vscode } from "../vscodeApi";
 
 interface FileDiff {
