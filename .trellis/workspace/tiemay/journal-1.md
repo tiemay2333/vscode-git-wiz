@@ -71,3 +71,36 @@ Created i18n.ts with zh/en translation dictionary; added locale field to Setting
 ### Next Steps
 
 - None - task complete
+
+
+## Session 3: Remove Amend Commit Feature
+
+**Date**: 2026-05-13
+**Task**: Remove Amend Commit Feature
+**Branch**: `main`
+
+### Summary
+
+Completely removed the 'amend commit' functionality across frontend (GraphView context menu), messaging (gitGraphView), logic (gitOperations), and documentation (README/README.zh-CN). Verified with lint, typecheck, and existing unit tests.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `36af15f` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
