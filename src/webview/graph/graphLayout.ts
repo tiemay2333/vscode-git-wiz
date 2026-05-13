@@ -84,19 +84,44 @@ export function computeGraphLayout(commits: GitCommit[]): GraphNode[] {
 
         // Outgoing to parents
         if (commit.parents.length > 0) {
-            activeTracks[cIdx] = { hash: commit.parents[0], color: commitColor };
-            lines.push({
-                x1: cIdx,
-                y1: 1,
-                x2: cIdx,
-                y2: 2,
-                color: commitColor,
-            });
+            const firstParentHash = commit.parents[0];
+            const existingPt = activeTracks.findIndex((t, idx) => idx !== cIdx && t?.hash === firstParentHash);
+
+            if (existingPt !== -1) {
+                lines.push({
+                    x1: cIdx,
+                    y1: 1,
+                    x2: existingPt,
+                    y2: 2,
+                    color: activeTracks[existingPt]!.color,
+                });
+                activeTracks[cIdx] = null;
+            }
+            else {
+                activeTracks[cIdx] = { hash: firstParentHash, color: commitColor };
+                lines.push({
+                    x1: cIdx,
+                    y1: 1,
+                    x2: cIdx,
+                    y2: 2,
+                    color: commitColor,
+                });
+            }
 
             for (let p = 1; p < commit.parents.length; p++) {
-                const pt = findAvailableTrack();
-                const pColor = nextColor++;
-                activeTracks[pt] = { hash: commit.parents[p], color: pColor };
+                const parentHash = commit.parents[p];
+                let pt = activeTracks.findIndex(t => t?.hash === parentHash);
+                let pColor: number;
+
+                if (pt === -1) {
+                    pt = findAvailableTrack();
+                    pColor = nextColor++;
+                    activeTracks[pt] = { hash: parentHash, color: pColor };
+                }
+                else {
+                    pColor = activeTracks[pt]!.color;
+                }
+
                 lines.push({
                     x1: cIdx,
                     y1: 1,
@@ -111,7 +136,7 @@ export function computeGraphLayout(commits: GitCommit[]): GraphNode[] {
         }
 
         // Find maxTrack to size the SVG horizontally
-        let maxTrack = 0;
+        let maxTrack = cIdx;
         for (const line of lines) {
             maxTrack = Math.max(maxTrack, line.x1, line.x2);
         }
