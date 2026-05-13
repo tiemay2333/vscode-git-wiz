@@ -37,6 +37,8 @@ Thumbs.db
 .cursor/
 .codex/
 .github/
+.gemini/
+.agents/
 
 *.sh
 
