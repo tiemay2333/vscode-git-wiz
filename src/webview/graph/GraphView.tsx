@@ -1171,11 +1171,6 @@ export function GraphView({
                         style={{ display: "block", left: singleMenu.x, top: singleMenu.y }}
                         onClick={e => e.stopPropagation()}
                     >
-                        {headCommitAncestors.has(singleMenu.hash) && singleMenu.hash === headCommitHash && (
-                            <div className="context-menu-item" onClick={() => handleSingleAction("amendCommit")}>
-                                Amend Commit
-                            </div>
-                        )}
                         <div className="context-menu-item" onClick={() => handleSingleAction("cherryPick")}>
                             Cherry-pick to current branch
                         </div>

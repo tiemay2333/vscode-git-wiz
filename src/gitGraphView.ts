@@ -126,7 +126,7 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider {
     private async handleMessage(message: WebviewMessage, webview: vscode.Webview) {
         const cmd = message.command;
         // git operations — direct delegation to _gitOps
-        if (cmd === "amendCommit" || cmd === "cherryPick"
+        if (cmd === "cherryPick"
             || cmd === "copyHash" || cmd === "copyCommitMessage"
             || cmd === "revertCommit" || cmd === "resetToCommit"
             || cmd === "dropCommit" || cmd === "squashCommits" || cmd === "cherryPickRange"
@@ -161,9 +161,6 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider {
 
     private async execGitOperation(cmd: string, msg: WebviewMessage): Promise<void> {
         switch (cmd) {
-            case "amendCommit":
-                this._gitOps.amendCommit();
-                break;
             case "cherryPick":
                 this._gitOps.cherryPickCommit(msg.commitHash!);
                 break;

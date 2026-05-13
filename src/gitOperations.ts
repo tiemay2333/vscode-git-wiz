@@ -226,40 +226,6 @@ export class GitOperations {
         });
     }
 
-    async amendCommit() {
-        const cwd = this.getCwd();
-        if (!cwd) {
-            return;
-        }
-
-        const confirm = await vscode.window.showWarningMessage(
-            "Amend HEAD commit with staged changes?",
-            "Amend",
-            "Cancel",
-        );
-        if (confirm !== "Amend") {
-            return;
-        }
-
-        await vscode.window.withProgress(
-            { location: vscode.ProgressLocation.Window, title: "Amending commit..." },
-            async () => {
-                return new Promise<void>((resolve) => {
-                    cp.execFile("git", ["commit", "--amend", "--no-edit"], { cwd }, (error, _stdout, stderr) => {
-                        if (error) {
-                            vscode.window.showErrorMessage(`Failed to amend commit: ${stderr || error.message}`);
-                        }
-                        else {
-                            vscode.window.showInformationMessage("Commit amended successfully");
-                            this.onRefresh();
-                        }
-                        resolve();
-                    });
-                });
-            },
-        );
-    }
-
     async cherryPickCommit(commitHash: string) {
         const cwd = this.getCwd();
         if (!cwd) {

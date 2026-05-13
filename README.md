@@ -44,7 +44,6 @@ A minimalist Git extension for VS Code with a canvas-rendered commit graph and v
 | Copy Commit Message | Copy commit message text to clipboard |
 | Revert | Create a revert commit |
 | Reset to commit | Soft-reset branch to this commit |
-| Amend | Amend the HEAD commit |
 | Drop commit | Remove commit from history (requires confirmation) |
 | Squash commits | Combine multiple consecutive commits into one |
 | Cherry-pick range | Apply a range of commits to current branch |
