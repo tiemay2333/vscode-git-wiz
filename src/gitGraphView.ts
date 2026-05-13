@@ -26,6 +26,12 @@ class AsyncHighlightVerifier {
         this.processQueue();
     }
 
+    public reset() {
+        this._queue = [];
+        this._numstatCache.clear();
+        this._patchIdCache.clear();
+    }
+
     private async processQueue() {
         if (this._inProgress >= this.MAX_CONCURRENCY || this._queue.length === 0)
             return;
@@ -192,6 +198,10 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider {
             this._initialized = false;
             this._filterBranch = null;
             this._filterFile = null;
+            this._loadedCount = 0;
+            this._searchFilters = undefined;
+            this._branchSignaturesCache = null;
+            this._verifier?.reset();
         });
 
         webviewView.webview.options = {
