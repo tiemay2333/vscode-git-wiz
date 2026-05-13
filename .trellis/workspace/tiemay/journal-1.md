@@ -104,3 +104,37 @@ Completely removed the 'amend commit' functionality across frontend (GraphView c
 ### Next Steps
 
 - None - task complete
+
+
+## Session 4: Fix Branch Highlighting Logic
+
+**Date**: 2026-05-13
+**Task**: Fix Branch Highlighting Logic
+**Branch**: `main`
+
+### Summary
+
+Fixed bugs in current branch highlighting logic by: 1) Switching to \x1f delimiter in git log output to avoid conflicts; 2) Standardizing commit signature generation with a shared utility and consistent trimming; 3) Implementing Head Hash-based cache invalidation in the webview provider. Verified with expanded unit tests.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `bcdd6b3` | (see git log) |
+| `31077a7` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
