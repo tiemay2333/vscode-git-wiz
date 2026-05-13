@@ -11,13 +11,12 @@ class AsyncHighlightVerifier {
     private _queue: { hash: string; targets: string[] }[] = [];
     private _inProgress = 0;
     private readonly MAX_CONCURRENCY = 3;
-    private _numstatCache = new Map<string, string>();
     private _patchIdCache = new Map<string, string>();
 
     constructor(
         private readonly _gitOps: GitOperations,
         private readonly _onUpdate: (hash: string, status: "verified" | "failed") => void,
-    ) {}
+    ) { }
 
     public queueVerification(hash: string, targets: string[]) {
         if (this._queue.some(q => q.hash === hash))
@@ -28,7 +27,6 @@ class AsyncHighlightVerifier {
 
     public reset() {
         this._queue = [];
-        this._numstatCache.clear();
         this._patchIdCache.clear();
     }
 
@@ -52,16 +50,6 @@ class AsyncHighlightVerifier {
         }
     }
 
-    private async getFingerprint(hash: string): Promise<string> {
-        let fp = this._numstatCache.get(hash);
-        if (fp === undefined) {
-            const numstat = await this._gitOps.getNumstat(hash);
-            fp = numstat.map(n => `${n.added}:${n.deleted}:${n.path}`).sort().join("\n");
-            this._numstatCache.set(hash, fp);
-        }
-        return fp;
-    }
-
     private async getPatchId(hash: string): Promise<string> {
         let pid = this._patchIdCache.get(hash);
         if (pid === undefined) {
@@ -72,17 +60,6 @@ class AsyncHighlightVerifier {
     }
 
     private async verify(hash: string, targets: string[]): Promise<"verified" | "failed"> {
-        const sourceFp = await this.getFingerprint(hash);
-
-        // Tier 2: Fingerprint
-        for (const target of targets) {
-            const targetFp = await this.getFingerprint(target);
-            if (sourceFp === targetFp && sourceFp !== "") {
-                return "verified";
-            }
-        }
-
-        // Tier 3: Patch-id
         const sourcePid = await this.getPatchId(hash);
         for (const target of targets) {
             const targetPid = await this.getPatchId(target);
@@ -221,6 +198,35 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider {
 
     private async handleMessage(message: WebviewMessage, webview: vscode.Webview) {
         const cmd = message.command;
+
+        if (cmd === "reverifyCommit" && message.commitHash) {
+            const commits = await this._gitOps.getGitLog(null, 0, 1, { query: message.commitHash });
+            if (commits.length > 0) {
+                const commit = commits[0];
+                const currentBranch = await this._gitOps.getCurrentBranch();
+                if (currentBranch) {
+                    const branchHashes = await this._gitOps.getBranchCommits(currentBranch);
+                    const headHash = await this._gitOps.getHeadHash(currentBranch);
+                    if (!this._branchSignaturesCache
+                        || this._branchSignaturesCache.branch !== currentBranch
+                        || (headHash && this._branchSignaturesCache.headHash !== headHash)) {
+                        const signatures = await this._gitOps.getBranchCommitSignatures(currentBranch);
+                        this._branchSignaturesCache = {
+                            branch: currentBranch,
+                            headHash: headHash || "",
+                            signatures,
+                        };
+                    }
+                    const result = getCurrentBranchHashes([commit], branchHashes, this._branchSignaturesCache.signatures);
+                    if (result.pending.has(commit.hash)) {
+                        const targets = result.pending.get(commit.hash)!;
+                        this._verifier?.queueVerification(commit.hash, targets);
+                    }
+                }
+            }
+            return;
+        }
+
         // git operations — direct delegation to _gitOps
         if (cmd === "cherryPick"
             || cmd === "copyHash" || cmd === "copyCommitMessage"
@@ -723,8 +729,6 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider {
             else if (result.pending.has(c.hash)) {
                 c.isCurrentBranch = true;
                 c.verificationStatus = "pending";
-                const targets = result.pending.get(c.hash)!;
-                this._verifier?.queueVerification(c.hash, targets);
             }
             else {
                 c.isCurrentBranch = false;

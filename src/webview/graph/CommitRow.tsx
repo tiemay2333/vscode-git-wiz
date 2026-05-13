@@ -1,5 +1,6 @@
 import type { GraphNode } from "./graphLayout";
 import React from "react";
+import { vscode } from "../vscodeApi";
 
 const COLORS = [
     "#3d9fd4", // blue
@@ -187,17 +188,25 @@ export const CommitRow = React.memo(({
                 {commit.verificationStatus === "pending" && (
                     <span
                         className="verification-pending-icon"
-                        title="Current Branch Matching: Metadata matched, verifying content similarity..."
+                        title="Suspected to be the same submission record, click on the left icon to revalidate."
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            vscode.postMessage({
+                                command: "reverifyCommit",
+                                commitHash: commit.hash,
+                            });
+                        }}
                         style={{
                             marginRight: "4px",
                             color: "#d4a13d",
                             display: "inline-flex",
                             alignItems: "center",
                             verticalAlign: "middle",
+                            cursor: "pointer",
                         }}
                     >
-                        <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
-                            <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0-1A6 6 0 1 0 8 2a6 6 0 0 0 0 12zM7.002 11a1 1 0 1 1 2 0 1 1 0 0 1-2 0zM7.1 4.995a.905.905 0 1 1 1.8 0c0 1.054-.35 1.522-.925 2.015-.58.496-.975.867-1.1 1.49a.5.5 0 1 1-.975-.19c.187-1 1-1.353 1.455-1.742.42-.36.545-.643.545-.968z" />
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="m21.171 15.398l-5.912-9.854C14.483 4.251 13.296 3.511 12 3.511s-2.483.74-3.259 2.031l-5.912 9.856c-.786 1.309-.872 2.705-.235 3.83C3.23 20.354 4.472 21 6 21h12c1.528 0 2.77-.646 3.406-1.771s.551-2.521-.235-3.831M12 17.549c-.854 0-1.55-.695-1.55-1.549c0-.855.695-1.551 1.55-1.551s1.55.696 1.55 1.551c0 .854-.696 1.549-1.55 1.549m1.633-7.424c-.011.031-1.401 3.468-1.401 3.468c-.038.094-.13.156-.231.156s-.193-.062-.231-.156l-1.391-3.438a1.8 1.8 0 0 1-.129-.655c0-.965.785-1.75 1.75-1.75a1.752 1.752 0 0 1 1.633 2.375" />
                         </svg>
                     </span>
                 )}
