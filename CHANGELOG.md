@@ -2,6 +2,10 @@
 
 All notable changes to Git Wiz are documented here.
 
+## [1.3.3] - 2026-05-13
+- Stability Improvement
+- Bug Fixes
+
 ## [1.3.2] - 2026-05-12
 - New Features
 - Bug Fixes
