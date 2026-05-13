@@ -10,6 +10,7 @@ export interface GitCommit {
     parents: string[];
     refs: string[];
     isCurrentBranch?: boolean;
+    verificationStatus?: "pending" | "verified" | "failed";
 }
 
 export function parseGitLogOutput(stdout: string): GitCommit[] {

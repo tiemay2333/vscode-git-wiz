@@ -121,26 +121,28 @@ export class GitOperations {
         });
     }
 
-    async getBranchCommitSignatures(branchName: string): Promise<Set<string>> {
+    async getBranchCommitSignatures(branchName: string): Promise<Map<string, string[]>> {
         return new Promise((resolve) => {
             const cwd = this.getCwd();
             if (!cwd || !branchName)
-                return resolve(new Set());
+                return resolve(new Map());
             cp.exec(
-                `git log --format="%ae\x1F%at\x1F%s" "${branchName}"`,
+                `git log --format="%ae\x1F%at\x1F%s\x1F%H" "${branchName}"`,
                 { cwd, maxBuffer: 50 * 1024 * 1024 },
                 (err, stdout) => {
                     if (err)
-                        return resolve(new Set());
-                    const signatures = new Set(
-                        stdout.split("\n")
-                            .filter(Boolean)
-                            .map((line) => {
-                                const [email, at, s] = line.split("\x1F");
-                                return createSignature(email, at, s);
-                            }),
-                    );
-                    resolve(signatures);
+                        return resolve(new Map());
+                    const signatureMap = new Map<string, string[]>();
+                    stdout.split("\n")
+                        .filter(Boolean)
+                        .forEach((line) => {
+                            const [email, at, s, hash] = line.split("\x1F");
+                            const sig = createSignature(email, at, s);
+                            const hashes = signatureMap.get(sig) || [];
+                            hashes.push(hash);
+                            signatureMap.set(sig, hashes);
+                        });
+                    resolve(signatureMap);
                 },
             );
         });
@@ -847,6 +849,72 @@ export class GitOperations {
             cp.exec(`git config ${scopeArg} "${key}"`, { cwd }, (err, stdout) => {
                 resolve(err ? "" : stdout.trim());
             });
+        });
+    }
+
+    async getNumstat(hash: string): Promise<{ added: number | null; deleted: number | null; path: string }[]> {
+        return new Promise((resolve) => {
+            const cwd = this.getCwd();
+            if (!cwd) {
+                resolve([]);
+                return;
+            }
+            cp.execFile("git", ["show", "--numstat", "--format=", hash], { cwd }, (error, stdout) => {
+                if (error) {
+                    resolve([]);
+                    return;
+                }
+                const results = stdout.trim().split("\n").filter(Boolean).map((line) => {
+                    const parts = line.split("\t");
+                    if (parts.length >= 3) {
+                        return {
+                            added: parts[0] === "-" ? null : Number.parseInt(parts[0], 10),
+                            deleted: parts[1] === "-" ? null : Number.parseInt(parts[1], 10),
+                            path: parts[2],
+                        };
+                    }
+                    // Fallback for cases where tabs might not be present or format is unexpected
+                    const [added, deleted, ...pathParts] = line.trim().split(/\s+/);
+                    return {
+                        added: added === "-" ? null : Number.parseInt(added, 10),
+                        deleted: deleted === "-" ? null : Number.parseInt(deleted, 10),
+                        path: pathParts.join(" "),
+                    };
+                });
+                resolve(results);
+            });
+        });
+    }
+
+    async getPatchId(hash: string): Promise<string> {
+        const cwd = this.getCwd();
+        if (!cwd) {
+            return "";
+        }
+
+        return new Promise((resolve, reject) => {
+            const show = cp.spawn("git", ["show", hash], { cwd });
+            const patchId = cp.spawn("git", ["patch-id"], { cwd });
+
+            show.stdout.pipe(patchId.stdin);
+
+            let output = "";
+            patchId.stdout.on("data", (data) => {
+                output += data.toString();
+            });
+
+            patchId.on("close", (code) => {
+                if (code === 0) {
+                    // Output format: <patch-id> <commit-hash>
+                    resolve(output.trim().split(" ")[0]);
+                }
+                else {
+                    reject(new Error(`git patch-id failed with code ${code}`));
+                }
+            });
+
+            show.on("error", reject);
+            patchId.on("error", reject);
         });
     }
 

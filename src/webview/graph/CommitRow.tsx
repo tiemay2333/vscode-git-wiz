@@ -184,6 +184,23 @@ export const CommitRow = React.memo(({
             )}
             <td className="message-cell" title={commit.message}>
                 <RefBadges refs={commit.refs} showTags={showTags} showRemoteBranches={showRemoteBranches} />
+                {commit.verificationStatus === "pending" && (
+                    <span
+                        className="verification-pending-icon"
+                        title="Current Branch Matching: Metadata matched, verifying content similarity..."
+                        style={{
+                            marginRight: "4px",
+                            color: "#d4a13d",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            verticalAlign: "middle",
+                        }}
+                    >
+                        <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+                            <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0-1A6 6 0 1 0 8 2a6 6 0 0 0 0 12zM7.002 11a1 1 0 1 1 2 0 1 1 0 0 1-2 0zM7.1 4.995a.905.905 0 1 1 1.8 0c0 1.054-.35 1.522-.925 2.015-.58.496-.975.867-1.1 1.49a.5.5 0 1 1-.975-.19c.187-1 1-1.353 1.455-1.742.42-.36.545-.643.545-.968z" />
+                        </svg>
+                    </span>
+                )}
                 <span className="message-text">{commit.message}</span>
                 {isLoading && <span className="row-loading-spinner" title="Loading files..."></span>}
             </td>

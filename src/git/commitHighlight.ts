@@ -13,25 +13,31 @@ export function getCommitSignature(c: GitCommit): string {
     return createSignature(c.email, c.authorTimestamp, subject);
 }
 
+export interface HighlightResult {
+    verified: Set<string>;
+    pending: Map<string, string[]>; // commit hash -> potential match hashes on current branch
+}
+
 /**
  * Pure function: returns hashes of commits belonging to the current branch.
  *
- * Two-tier matching:
+ * Tiered matching:
  *   Tier 1 — exact hash match against `git rev-list <branch>` output
- *   Tier 2 — signature match (cherry-pick detection via email + timestamp + subject)
+ *   Tier 2 — signature match (cherry-pick candidate via email + timestamp + subject)
  */
 export function getCurrentBranchHashes(
     commits: GitCommit[],
     branchHashes: Set<string>,
-    branchSignatures: Set<string>,
-): Set<string> {
-    const result = new Set<string>();
+    branchSignatures: Map<string, string[]>,
+): HighlightResult {
+    const verified = new Set<string>();
+    const pending = new Map<string, string[]>();
     const remaining: GitCommit[] = [];
 
     // Tier 1: hash match (fast, exact)
     for (const c of commits) {
         if (branchHashes.has(c.hash)) {
-            result.add(c.hash);
+            verified.add(c.hash);
         }
         else {
             remaining.push(c);
@@ -39,16 +45,17 @@ export function getCurrentBranchHashes(
     }
 
     if (remaining.length === 0) {
-        return result;
+        return { verified, pending };
     }
 
-    // Tier 2: signature match (cherry-picks)
+    // Tier 2: signature match (cherry-pick candidates)
     for (const c of remaining) {
         const sig = getCommitSignature(c);
-        if (branchSignatures.has(sig)) {
-            result.add(c.hash);
+        const matches = branchSignatures.get(sig);
+        if (matches) {
+            pending.set(c.hash, matches);
         }
     }
 
-    return result;
+    return { verified, pending };
 }

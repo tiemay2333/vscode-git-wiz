@@ -7,6 +7,88 @@ import { getCommitDetailsHtml, getHtmlForWebview } from "./webviewContent";
 
 const PAGE_SIZE = 200;
 
+class AsyncHighlightVerifier {
+    private _queue: { hash: string; targets: string[] }[] = [];
+    private _inProgress = 0;
+    private readonly MAX_CONCURRENCY = 3;
+    private _numstatCache = new Map<string, string>();
+    private _patchIdCache = new Map<string, string>();
+
+    constructor(
+        private readonly _gitOps: GitOperations,
+        private readonly _onUpdate: (hash: string, status: "verified" | "failed") => void,
+    ) {}
+
+    public queueVerification(hash: string, targets: string[]) {
+        if (this._queue.some(q => q.hash === hash))
+            return;
+        this._queue.push({ hash, targets });
+        this.processQueue();
+    }
+
+    private async processQueue() {
+        if (this._inProgress >= this.MAX_CONCURRENCY || this._queue.length === 0)
+            return;
+
+        const item = this._queue.shift()!;
+        this._inProgress++;
+
+        try {
+            const status = await this.verify(item.hash, item.targets);
+            this._onUpdate(item.hash, status);
+        }
+        catch {
+            this._onUpdate(item.hash, "failed");
+        }
+        finally {
+            this._inProgress--;
+            this.processQueue();
+        }
+    }
+
+    private async getFingerprint(hash: string): Promise<string> {
+        let fp = this._numstatCache.get(hash);
+        if (fp === undefined) {
+            const numstat = await this._gitOps.getNumstat(hash);
+            fp = numstat.map(n => `${n.added}:${n.deleted}:${n.path}`).sort().join("\n");
+            this._numstatCache.set(hash, fp);
+        }
+        return fp;
+    }
+
+    private async getPatchId(hash: string): Promise<string> {
+        let pid = this._patchIdCache.get(hash);
+        if (pid === undefined) {
+            pid = await this._gitOps.getPatchId(hash);
+            this._patchIdCache.set(hash, pid);
+        }
+        return pid;
+    }
+
+    private async verify(hash: string, targets: string[]): Promise<"verified" | "failed"> {
+        const sourceFp = await this.getFingerprint(hash);
+
+        // Tier 2: Fingerprint
+        for (const target of targets) {
+            const targetFp = await this.getFingerprint(target);
+            if (sourceFp === targetFp && sourceFp !== "") {
+                return "verified";
+            }
+        }
+
+        // Tier 3: Patch-id
+        const sourcePid = await this.getPatchId(hash);
+        for (const target of targets) {
+            const targetPid = await this.getPatchId(target);
+            if (sourcePid === targetPid && sourcePid !== "") {
+                return "verified";
+            }
+        }
+
+        return "failed";
+    }
+}
+
 interface WebviewMessage {
     command: string;
     commitHash?: string;
@@ -41,11 +123,15 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider {
     private _refreshTimer?: ReturnType<typeof setTimeout>;
     private _initialized = false;
     private _pendingRefresh = false;
-    private _branchSignaturesCache: { branch: string; headHash: string; signatures: Set<string> } | null = null;
+    private _branchSignaturesCache: { branch: string; headHash: string; signatures: Map<string, string[]> } | null = null;
     private _settingsScope: "local" | "global" = "global";
+    private _verifier?: AsyncHighlightVerifier;
 
     constructor(private readonly _extensionUri: vscode.Uri) {
         this._gitOps = new GitOperations(() => this.refresh());
+        this._verifier = new AsyncHighlightVerifier(this._gitOps, (hash, status) => {
+            this.postToWebview({ command: "updateCommitHighlight", hash, verificationStatus: status });
+        });
         this.setupGitWatcher();
         vscode.workspace.onDidChangeConfiguration((e) => {
             if (e.affectsConfiguration("git-wiz.highlightCurrentBranch") || e.affectsConfiguration("git-wiz.showTags") || e.affectsConfiguration("git-wiz.showRemoteBranches") || e.affectsConfiguration("git-wiz.showGraph") || e.affectsConfiguration("git-wiz.searchDefaultMode")) {
@@ -618,10 +704,21 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider {
             };
         }
 
-        const highlighted = getCurrentBranchHashes(commits, branchHashes, this._branchSignaturesCache.signatures);
+        const result = getCurrentBranchHashes(commits, branchHashes, this._branchSignaturesCache.signatures);
         for (const c of commits) {
-            if (highlighted.has(c.hash)) {
+            if (result.verified.has(c.hash)) {
                 c.isCurrentBranch = true;
+                c.verificationStatus = "verified";
+            }
+            else if (result.pending.has(c.hash)) {
+                c.isCurrentBranch = true;
+                c.verificationStatus = "pending";
+                const targets = result.pending.get(c.hash)!;
+                this._verifier?.queueVerification(c.hash, targets);
+            }
+            else {
+                c.isCurrentBranch = false;
+                c.verificationStatus = undefined;
             }
         }
     }

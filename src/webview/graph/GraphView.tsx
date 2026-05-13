@@ -368,6 +368,20 @@ export function GraphView({
                     setLoadingHash(prev => (prev === msg.commitHash ? msg.commitHash : prev));
                 }
             }
+            else if (msg.command === "updateCommitHighlight") {
+                setCommits((prev) => {
+                    return prev.map((c) => {
+                        if (c.hash === msg.hash) {
+                            return {
+                                ...c,
+                                verificationStatus: msg.verificationStatus,
+                                isCurrentBranch: msg.verificationStatus === "verified" || msg.verificationStatus === "pending",
+                            };
+                        }
+                        return c;
+                    });
+                });
+            }
             else if (msg.command === "showSettingsModal") {
                 setSettingsData(msg.data);
                 setShowSettings(true);

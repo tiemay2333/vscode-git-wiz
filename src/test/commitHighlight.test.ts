@@ -35,46 +35,51 @@ describe("getCommitSignature", () => {
 });
 
 describe("getCurrentBranchHashes", () => {
-    it("returns empty set for empty commits", () => {
-        const result = getCurrentBranchHashes([], new Set(), new Set());
-        expect(result.size).toBe(0);
+    it("returns empty result for empty commits", () => {
+        const result = getCurrentBranchHashes([], new Set(), new Map());
+        expect(result.verified.size).toBe(0);
+        expect(result.pending.size).toBe(0);
     });
 
     it("matches by exact hash (tier 1)", () => {
         const commits = [makeCommit("aaa"), makeCommit("bbb"), makeCommit("ccc")];
         const branchHashes = new Set(["aaa", "ccc"]);
-        const result = getCurrentBranchHashes(commits, branchHashes, new Set());
-        expect(result).toEqual(new Set(["aaa", "ccc"]));
+        const result = getCurrentBranchHashes(commits, branchHashes, new Map());
+        expect(result.verified).toEqual(new Set(["aaa", "ccc"]));
+        expect(result.pending.size).toBe(0);
     });
 
-    it("matches by signature when hash differs (tier 2 — cherry-pick)", () => {
+    it("matches by signature as pending when hash differs (tier 2 — cherry-pick candidate)", () => {
         const c = makeCommit("xxx", "alice@example.com", 1700000, "Fix the thing");
-        const signatures = new Set([getCommitSignature(c)]);
+        const signatures = new Map([[getCommitSignature(c), ["target-hash"]]]);
         const result = getCurrentBranchHashes([c], new Set(), signatures);
-        expect(result).toEqual(new Set(["xxx"]));
+        expect(result.verified.size).toBe(0);
+        expect(result.pending.get("xxx")).toEqual(["target-hash"]);
     });
 
-    it("matches even if signature in set used different spacing but shared utility matches", () => {
+    it("matches even if signature in map used different spacing but shared utility matches", () => {
         const c = makeCommit("xxx", "alice@example.com", 1700000, "Fix the thing  ");
-        // Signature in set was trimmed
-        const signatures = new Set(["alice@example.com\x1F1700000\x1FFix the thing"]);
+        // Signature in map was trimmed
+        const signatures = new Map([["alice@example.com\x1F1700000\x1FFix the thing", ["target-hash"]]]);
         const result = getCurrentBranchHashes([c], new Set(), signatures);
-        expect(result).toEqual(new Set(["xxx"]));
+        expect(result.pending.get("xxx")).toEqual(["target-hash"]);
     });
 
     it("prefers tier 1 over tier 2", () => {
         const c = makeCommit("aaa", "alice@example.com", 1700000, "Fix the thing");
         const branchHashes = new Set(["aaa"]);
-        // Also add a signature that matches a different hash, to prove tier 1 dominates
-        const signatures = new Set(["bob@example.com\x1F1800000\x1FOther msg"]);
+        // Also add a signature that matches, to prove tier 1 (verified) dominates
+        const signatures = new Map([[getCommitSignature(c), ["aaa"]]]);
         const result = getCurrentBranchHashes([c], branchHashes, signatures);
-        expect(result).toEqual(new Set(["aaa"]));
+        expect(result.verified).toEqual(new Set(["aaa"]));
+        expect(result.pending.size).toBe(0);
     });
 
     it("does not match when neither hash nor signature matches", () => {
         const commits = [makeCommit("zzz", "alice@example.com", 1700000, "Unique")];
-        const result = getCurrentBranchHashes(commits, new Set(["other"]), new Set(["other\x1Fsig"]));
-        expect(result.size).toBe(0);
+        const result = getCurrentBranchHashes(commits, new Set(["other"]), new Map([["other\x1Fsig", ["other"]]]));
+        expect(result.verified.size).toBe(0);
+        expect(result.pending.size).toBe(0);
     });
 
     it("matches multiple commits with mixed tier 1 and tier 2", () => {
@@ -84,9 +89,10 @@ describe("getCurrentBranchHashes", () => {
             makeCommit("hash3", "carol@example.com", 300, "Gamma"),
         ];
         const branchHashes = new Set(["hash1"]);
-        const signatures = new Set([getCommitSignature(commits[2])]);
+        const signatures = new Map([[getCommitSignature(commits[2]), ["target3"]]]);
         const result = getCurrentBranchHashes(commits, branchHashes, signatures);
-        expect(result).toEqual(new Set(["hash1", "hash3"]));
+        expect(result.verified).toEqual(new Set(["hash1"]));
+        expect(result.pending.get("hash3")).toEqual(["target3"]);
     });
 
     it("handles commits with missing optional fields gracefully", () => {
@@ -103,6 +109,6 @@ describe("getCurrentBranchHashes", () => {
             refs: [],
         };
         // Should not throw for any missing field
-        expect(() => getCurrentBranchHashes([c], new Set(), new Set())).not.toThrow();
+        expect(() => getCurrentBranchHashes([c], new Set(), new Map())).not.toThrow();
     });
 });
