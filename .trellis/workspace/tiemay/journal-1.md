@@ -138,3 +138,36 @@ Fixed bugs in current branch highlighting logic by: 1) Switching to \x1f delimit
 ### Next Steps
 
 - None - task complete
+
+
+## Session 5: Tiered Branch Highlighting with Async Verification
+
+**Date**: 2026-05-13
+**Task**: Tiered Branch Highlighting with Async Verification
+**Branch**: `main`
+
+### Summary
+
+Implemented a 3-tier branch highlighting system: Metadata matching (Instant) -> Fingerprint (numstat) -> Content (patch-id). Included an AsyncHighlightVerifier with concurrency control (max 3) to prevent git command storms. Added a yellow question mark icon and tooltip in the UI to indicate pending verification status, which upgrades to a full highlight or removal upon completion.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `3287166` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
