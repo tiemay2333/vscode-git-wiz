@@ -2,6 +2,7 @@ import type { GitRunner } from "./git/GitRunner";
 import type { GitCommit } from "./gitParser";
 import * as cp from "node:child_process";
 import * as vscode from "vscode";
+import { createSignature } from "./git/commitHighlight";
 import { ChildProcessGitRunner } from "./git/GitRunner";
 import { makeMsgEditorScript, makeSeqEditorScript } from "./git/rebaseScripts";
 import { runRebaseWithScripts } from "./git/scriptedEditor";
@@ -44,7 +45,7 @@ export class GitOperations {
                 resolve([]);
                 return;
             }
-            cp.exec("git for-each-ref --format=\"%(refname)|%(refname:short)|%(HEAD)\" refs/heads/ refs/remotes/ refs/tags/", { cwd }, (err, stdout) => {
+            cp.exec("git for-each-ref --format=\"%(refname)\x1F%(refname:short)\x1F%(HEAD)\" refs/heads/ refs/remotes/ refs/tags/", { cwd }, (err, stdout) => {
                 if (err) {
                     resolve([]);
                     return;
@@ -53,7 +54,7 @@ export class GitOperations {
                     .split("\n")
                     .filter(line => line.trim())
                     .map((line) => {
-                        const parts = line.split("|");
+                        const parts = line.split("\x1F");
                         const refname = parts[0];
                         const fullName = parts[1];
                         const head = parts[2];
@@ -93,6 +94,19 @@ export class GitOperations {
         });
     }
 
+    async getHeadHash(branchName: string): Promise<string | null> {
+        return new Promise((resolve) => {
+            const cwd = this.getCwd();
+            if (!cwd || !branchName)
+                return resolve(null);
+            cp.exec(`git rev-parse "${branchName}"`, { cwd }, (err, stdout) => {
+                if (err)
+                    return resolve(null);
+                resolve(stdout.trim());
+            });
+        });
+    }
+
     async getBranchCommits(branchName: string): Promise<Set<string>> {
         return new Promise((resolve) => {
             const cwd = this.getCwd();
@@ -113,12 +127,19 @@ export class GitOperations {
             if (!cwd || !branchName)
                 return resolve(new Set());
             cp.exec(
-                `git log --format="%ae|%at|%s" "${branchName}"`,
+                `git log --format="%ae\x1F%at\x1F%s" "${branchName}"`,
                 { cwd, maxBuffer: 50 * 1024 * 1024 },
                 (err, stdout) => {
                     if (err)
                         return resolve(new Set());
-                    const signatures = new Set(stdout.split("\n").filter(Boolean));
+                    const signatures = new Set(
+                        stdout.split("\n")
+                            .filter(Boolean)
+                            .map((line) => {
+                                const [email, at, s] = line.split("\x1F");
+                                return createSignature(email, at, s);
+                            }),
+                    );
                     resolve(signatures);
                 },
             );
@@ -139,7 +160,7 @@ export class GitOperations {
 
             const branchArg = filterBranch ? ` ${filterBranch}` : " --all";
             const skipArg = skip > 0 ? ` --skip=${skip}` : "";
-            const gitCommand = `git log${branchArg}${skipArg} --max-count=${limit} --pretty=format:"%H|%h|%P|%an|%ae|%ai|%D|%ct|%at|%s" --date-order`;
+            const gitCommand = `git log${branchArg}${skipArg} --max-count=${limit} --pretty=format:"%H\x1F%h\x1F%P\x1F%an\x1F%ae\x1F%ai\x1F%D\x1F%ct\x1F%at\x1F%s" --date-order`;
 
             cp.exec(gitCommand, { cwd, maxBuffer: 100 * 1024 * 1024 }, (error, stdout) => {
                 if (error) {
@@ -188,7 +209,7 @@ export class GitOperations {
             }
 
             const fileArg = filePath ? ` -- "${filePath}"` : "";
-            const gitCommand = `git log${branchArg}${skipArg} --max-count=${limit}${filterArgs} --pretty=format:"%H|%h|%P|%an|%ae|%ai|%D|%ct|%at|%s" --date-order${fileArg}`;
+            const gitCommand = `git log${branchArg}${skipArg} --max-count=${limit}${filterArgs} --pretty=format:"%H\x1F%h\x1F%P\x1F%an\x1F%ae\x1F%ai\x1F%D\x1F%ct\x1F%at\x1F%s" --date-order${fileArg}`;
 
             const runCommand = (cmd: string): Promise<string> => {
                 return new Promise((res) => {
@@ -203,7 +224,7 @@ export class GitOperations {
             if (filters?.query && /^[a-f0-9]{4,40}$/i.test(filters.query) && skip === 0) {
                 // If query looks like a hash and we are on the first page, try fetching it directly
                 // in case it's a commit hash. By using git log -1 it will silently fail if not found.
-                const hashCommand = `git log -1 ${filters.query} --pretty=format:"%H|%h|%P|%an|%ae|%ai|%D|%ct|%at|%s"`;
+                const hashCommand = `git log -1 ${filters.query} --pretty=format:"%H\x1F%h\x1F%P\x1F%an\x1F%ae\x1F%ai\x1F%D\x1F%ct\x1F%at\x1F%s"`;
                 promises.push(runCommand(hashCommand));
             }
 
@@ -214,8 +235,8 @@ export class GitOperations {
                 // Combine results, ensuring no duplicates by checking full hash (the first part of the line)
                 const lines = stdoutMain ? stdoutMain.split("\n") : [];
                 if (stdoutHash) {
-                    const hashLineHash = stdoutHash.split("|")[0];
-                    if (!lines.some(line => line.startsWith(`${hashLineHash}|`))) {
+                    const hashLineHash = stdoutHash.split("\x1F")[0];
+                    if (!lines.some(line => line.startsWith(`${hashLineHash}\x1F`))) {
                         lines.unshift(stdoutHash);
                     }
                 }

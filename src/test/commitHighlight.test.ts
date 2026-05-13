@@ -1,6 +1,6 @@
 import type { GitCommit } from "../gitParser";
 import { describe, expect, it } from "vitest";
-import { getCurrentBranchHashes } from "../git/commitHighlight";
+import { getCommitSignature, getCurrentBranchHashes } from "../git/commitHighlight";
 
 function makeCommit(hash: string, email?: string, timestamp?: number, message?: string): GitCommit {
     return {
@@ -17,6 +17,23 @@ function makeCommit(hash: string, email?: string, timestamp?: number, message?: 
     };
 }
 
+describe("getCommitSignature", () => {
+    it("generates signature with \x1F delimiter", () => {
+        const c = makeCommit("xxx", "alice@example.com", 100, "Subject");
+        expect(getCommitSignature(c)).toBe("alice@example.com\x1F100\x1FSubject");
+    });
+
+    it("trims email and subject", () => {
+        const c = makeCommit("xxx", "  alice@example.com  ", 100, "  Subject  ");
+        expect(getCommitSignature(c)).toBe("alice@example.com\x1F100\x1FSubject");
+    });
+
+    it("uses only the first line of message", () => {
+        const c = makeCommit("xxx", "alice@example.com", 100, "Line 1\nLine 2");
+        expect(getCommitSignature(c)).toBe("alice@example.com\x1F100\x1FLine 1");
+    });
+});
+
 describe("getCurrentBranchHashes", () => {
     it("returns empty set for empty commits", () => {
         const result = getCurrentBranchHashes([], new Set(), new Set());
@@ -31,9 +48,17 @@ describe("getCurrentBranchHashes", () => {
     });
 
     it("matches by signature when hash differs (tier 2 — cherry-pick)", () => {
-        const commits = [makeCommit("xxx", "alice@example.com", 1700000, "Fix the thing")];
-        const signatures = new Set(["alice@example.com|1700000|Fix the thing"]);
-        const result = getCurrentBranchHashes(commits, new Set(), signatures);
+        const c = makeCommit("xxx", "alice@example.com", 1700000, "Fix the thing");
+        const signatures = new Set([getCommitSignature(c)]);
+        const result = getCurrentBranchHashes([c], new Set(), signatures);
+        expect(result).toEqual(new Set(["xxx"]));
+    });
+
+    it("matches even if signature in set used different spacing but shared utility matches", () => {
+        const c = makeCommit("xxx", "alice@example.com", 1700000, "Fix the thing  ");
+        // Signature in set was trimmed
+        const signatures = new Set(["alice@example.com\x1F1700000\x1FFix the thing"]);
+        const result = getCurrentBranchHashes([c], new Set(), signatures);
         expect(result).toEqual(new Set(["xxx"]));
     });
 
@@ -41,14 +66,14 @@ describe("getCurrentBranchHashes", () => {
         const c = makeCommit("aaa", "alice@example.com", 1700000, "Fix the thing");
         const branchHashes = new Set(["aaa"]);
         // Also add a signature that matches a different hash, to prove tier 1 dominates
-        const signatures = new Set(["bob@example.com|1800000|Other msg"]);
+        const signatures = new Set(["bob@example.com\x1F1800000\x1FOther msg"]);
         const result = getCurrentBranchHashes([c], branchHashes, signatures);
         expect(result).toEqual(new Set(["aaa"]));
     });
 
     it("does not match when neither hash nor signature matches", () => {
         const commits = [makeCommit("zzz", "alice@example.com", 1700000, "Unique")];
-        const result = getCurrentBranchHashes(commits, new Set(["other"]), new Set(["other|sig"]));
+        const result = getCurrentBranchHashes(commits, new Set(["other"]), new Set(["other\x1Fsig"]));
         expect(result.size).toBe(0);
     });
 
@@ -59,16 +84,9 @@ describe("getCurrentBranchHashes", () => {
             makeCommit("hash3", "carol@example.com", 300, "Gamma"),
         ];
         const branchHashes = new Set(["hash1"]);
-        const signatures = new Set(["carol@example.com|300|Gamma"]);
+        const signatures = new Set([getCommitSignature(commits[2])]);
         const result = getCurrentBranchHashes(commits, branchHashes, signatures);
         expect(result).toEqual(new Set(["hash1", "hash3"]));
-    });
-
-    it("uses only the first line of message for signature matching", () => {
-        const c = makeCommit("zzz", "alice@example.com", 1700000, "First line\nSecond line\nThird line");
-        const signatures = new Set(["alice@example.com|1700000|First line"]);
-        const result = getCurrentBranchHashes([c], new Set(), signatures);
-        expect(result).toEqual(new Set(["zzz"]));
     });
 
     it("handles commits with missing optional fields gracefully", () => {

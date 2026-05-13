@@ -41,7 +41,7 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider {
     private _refreshTimer?: ReturnType<typeof setTimeout>;
     private _initialized = false;
     private _pendingRefresh = false;
-    private _branchSignaturesCache: { branch: string; signatures: Set<string> } | null = null;
+    private _branchSignaturesCache: { branch: string; headHash: string; signatures: Set<string> } | null = null;
     private _settingsScope: "local" | "global" = "global";
 
     constructor(private readonly _extensionUri: vscode.Uri) {
@@ -605,10 +605,17 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider {
 
     private async applyHighlight(commits: GitCommit[], currentBranch: string): Promise<void> {
         const branchHashes = await this._gitOps.getBranchCommits(currentBranch);
+        const headHash = await this._gitOps.getHeadHash(currentBranch);
 
-        if (!this._branchSignaturesCache || this._branchSignaturesCache.branch !== currentBranch) {
+        if (!this._branchSignaturesCache
+            || this._branchSignaturesCache.branch !== currentBranch
+            || (headHash && this._branchSignaturesCache.headHash !== headHash)) {
             const signatures = await this._gitOps.getBranchCommitSignatures(currentBranch);
-            this._branchSignaturesCache = { branch: currentBranch, signatures };
+            this._branchSignaturesCache = {
+                branch: currentBranch,
+                headHash: headHash || "",
+                signatures,
+            };
         }
 
         const highlighted = getCurrentBranchHashes(commits, branchHashes, this._branchSignaturesCache.signatures);

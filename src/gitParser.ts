@@ -17,19 +17,21 @@ export function parseGitLogOutput(stdout: string): GitCommit[] {
         .split("\n")
         .filter(line => line.trim())
         .map((line) => {
-            const [fullHash, shortHash, parents, author, email, date, refs, ct, at, ...messageParts] = line.split("|");
+            const [fullHash, shortHash, parents, author, email, date, refs, ct, at, ...messageParts] = line.split("\x1F");
             const refList = refs
-                .trim()
-                .split(",")
-                .map(r => r.trim())
-                .filter(r => r);
+                ? refs
+                        .trim()
+                        .split(",")
+                        .map(r => r.trim())
+                        .filter(r => r)
+                : [];
             return {
                 hash: fullHash.trim(),
                 shortHash: shortHash.trim(),
-                message: messageParts.join("|").trim(),
-                date: new Date(date).toLocaleString(),
-                timestamp: Number.parseInt(ct, 10),
-                authorTimestamp: Number.parseInt(at, 10),
+                message: messageParts.join("\x1F").trim(),
+                date: new Date(date.trim()).toLocaleString(),
+                timestamp: Number.parseInt(ct.trim(), 10),
+                authorTimestamp: Number.parseInt(at.trim(), 10),
                 author: author.trim(),
                 email: email.trim(),
                 parents: parents

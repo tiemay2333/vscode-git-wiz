@@ -1,6 +1,19 @@
 import type { GitCommit } from "../gitParser";
 
 /**
+ * Shared signature generation for cherry-pick detection.
+ * Cherry-pick preserves author email, author timestamp, and subject line.
+ */
+export function createSignature(email: string, authorTimestamp: string | number, subject: string): string {
+    return `${email.trim()}\x1F${String(authorTimestamp).trim()}\x1F${subject.trim()}`;
+}
+
+export function getCommitSignature(c: GitCommit): string {
+    const subject = c.message.split("\n")[0];
+    return createSignature(c.email, c.authorTimestamp, subject);
+}
+
+/**
  * Pure function: returns hashes of commits belonging to the current branch.
  *
  * Two-tier matching:
@@ -30,9 +43,8 @@ export function getCurrentBranchHashes(
     }
 
     // Tier 2: signature match (cherry-picks)
-    // Cherry-pick preserves author email, author timestamp, and subject line.
     for (const c of remaining) {
-        const sig = `${c.email}|${c.authorTimestamp}|${c.message.split("\n")[0]}`;
+        const sig = getCommitSignature(c);
         if (branchSignatures.has(sig)) {
             result.add(c.hash);
         }
