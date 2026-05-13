@@ -171,3 +171,36 @@ Implemented a 3-tier branch highlighting system: Metadata matching (Instant) -> 
 ### Next Steps
 
 - None - task complete
+
+
+## Session 6: Fix Stale View After Reopen
+
+**Date**: 2026-05-13
+**Task**: Fix Stale View After Reopen
+**Branch**: `main`
+
+### Summary
+
+Reset all critical view state (loadedCount, searchFilters, highlighting cache, and verifier queue) in the onDidDispose handler of the webview provider. This ensures a fresh load of commits and clear filters whenever the panel is closed and reopened.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `56d9ca9` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
