@@ -1,0 +1,6 @@
+{"_example": "Fill with {\"file\": \"<path>\", \"reason\": \"<why>\"}. Put spec/research files only — no code paths. Run `python3 .trellis/scripts/get_context.py --mode packages` to list available specs. Delete this line once real entries are added."}
+{"file": "src/gitGraphView.ts", "reason": "View provider and async verification queue"}
+{"file": "src/gitOperations.ts", "reason": "Git numstat and patch-id commands"}
+{"file": "src/webview/graph/CommitRow.tsx", "reason": "SVG icon and tooltip UI"}
+{"file": "src/gitParser.ts", "reason": "GitCommit interface update"}
+{"file": ".trellis/tasks/05-13-research-git-id/research/git-fingerprint.md", "reason": "Research findings"}
