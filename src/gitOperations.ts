@@ -126,7 +126,7 @@ export class GitService {
             args.push(filterBranch);
         }
         else {
-            args.push("--all");
+            args.push("--branches", "--tags", "--remotes", "HEAD");
         }
 
         if (skip > 0) {
@@ -155,7 +155,7 @@ export class GitService {
             args.push(filterBranch);
         }
         else {
-            args.push("--all");
+            args.push("--branches", "--tags", "--remotes", "HEAD");
         }
 
         if (skip > 0) {
