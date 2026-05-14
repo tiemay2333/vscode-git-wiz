@@ -34,6 +34,7 @@ export interface WebviewMessage {
 export class GitGraphViewProvider implements vscode.WebviewViewProvider, vscode.Disposable {
     public static readonly viewType = "gitLeanGraphView";
     private static currentPanel: vscode.WebviewPanel | undefined;
+    private static currentProvider: GitGraphViewProvider | undefined;
     private _view?: vscode.WebviewView;
     private _watchers: vscode.Disposable[] = [];
     private _filterBranch: string | null = null;
@@ -94,6 +95,7 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider, vscode.
 
         if (GitGraphViewProvider.currentPanel) {
             GitGraphViewProvider.currentPanel.reveal(column);
+            GitGraphViewProvider.currentProvider?.refresh();
             return;
         }
 
@@ -110,10 +112,12 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider, vscode.
         GitGraphViewProvider.currentPanel = panel;
 
         const provider = new GitGraphViewProvider(extensionUri);
+        GitGraphViewProvider.currentProvider = provider;
         provider.updateWebview(panel.webview);
 
         panel.onDidDispose(() => {
             GitGraphViewProvider.currentPanel = undefined;
+            GitGraphViewProvider.currentProvider = undefined;
         });
 
         panel.webview.onDidReceiveMessage(message => provider.handleMessage(message, panel.webview));
@@ -125,6 +129,12 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider, vscode.
         _token: vscode.CancellationToken,
     ) {
         this._view = webviewView;
+
+        webviewView.onDidChangeVisibility(() => {
+            if (webviewView.visible && this._initialized) {
+                this.refresh();
+            }
+        });
 
         webviewView.onDidDispose(() => {
             this._view = undefined;
