@@ -272,3 +272,36 @@ Refactored GitOperations into a deep GitService, decoupled from VS Code UI. Enfo
 ### Next Steps
 
 - None - task complete
+
+
+## Session 9: Decompose GitGraphViewProvider
+
+**Date**: 2026-05-14
+**Task**: Decompose GitGraphViewProvider
+**Branch**: `main`
+
+### Summary
+
+Decomposed GitGraphViewProvider (1006→769 lines) by extracting AsyncHighlightVerifier into src/git/ and splitting handleMessage into GitCommandHandler, SettingsHandler, and FileHandler. All handlers implement Disposable with dependency injection of only needed services. Updated quality-guidelines.md with handler-based routing pattern.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `9d812b1` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
