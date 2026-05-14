@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import { GitGraphViewProvider } from "./gitGraphView";
-import { GitOperations } from "./gitOperations";
+import { GitService } from "./gitOperations";
 
 export function activate(context: vscode.ExtensionContext) {
     const statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
@@ -31,9 +31,8 @@ export function activate(context: vscode.ExtensionContext) {
     const graphProvider = new GitGraphViewProvider(context.extensionUri);
     context.subscriptions.push(graphProvider);
 
-    const gitOps = new GitOperations(() => {
-        graphProvider.refresh();
-    });
+    const cwd = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || "";
+    const gitService = new GitService({ cwd });
 
     const provider = new (class implements vscode.TextDocumentContentProvider {
         async provideTextDocumentContent(uri: vscode.Uri): Promise<string> {
@@ -44,8 +43,8 @@ export function activate(context: vscode.ExtensionContext) {
                 if (!hash) {
                     return "";
                 }
-                const ops = new GitOperations(() => {});
-                return await ops.getFileContentAtRev(hash, fileParam || uri.path.substring(1));
+                const service = new GitService({ cwd });
+                return await service.getFileContentAtRev(hash, fileParam || uri.path.substring(1));
             }
             catch {
                 return "";
@@ -112,20 +111,19 @@ export function activate(context: vscode.ExtensionContext) {
             if (!branchName)
                 return;
 
-            const args = isRemote ? ["checkout", "--track", branchName] : ["checkout", branchName];
-
-            const result = await gitOps.getRunner().exec(args);
-            if (result.exitCode !== 0) {
-                // Fallback: simple checkout if --track fails
-                const fallback = await gitOps.getRunner().exec(["checkout", branchName]);
-                if (fallback.exitCode !== 0) {
-                    vscode.window.showErrorMessage(`Failed to checkout branch: ${fallback.stderr}`);
-                    return;
-                }
-                vscode.window.showInformationMessage(`Switched to tracking branch '${branchName}'`);
-            }
-            else {
+            try {
+                await gitService.checkoutBranch(branchName, { track: isRemote });
                 vscode.window.showInformationMessage(`Switched to branch '${branchName}'`);
+            }
+            catch {
+                // Fallback: simple checkout if --track fails
+                try {
+                    await gitService.checkoutBranch(branchName);
+                    vscode.window.showInformationMessage(`Switched to tracking branch '${branchName}'`);
+                }
+                catch (fallbackErr: any) {
+                    vscode.window.showErrorMessage(`Failed to checkout branch: ${fallbackErr.message}`);
+                }
             }
             graphProvider.refresh();
         }),
@@ -149,24 +147,19 @@ export function activate(context: vscode.ExtensionContext) {
                 title: `Fetching ${remote} and tracking ${branchName}...`,
                 cancellable: false,
             }, async () => {
-                const fetchResult = await gitOps.getRunner().exec(["fetch", remote]);
-                if (fetchResult.exitCode !== 0) {
-                    vscode.window.showErrorMessage(`Failed to fetch remote '${remote}': ${fetchResult.stderr}`);
-                    return;
-                }
-
-                const checkoutResult = await gitOps.getRunner().exec(["checkout", "-t", branchName]);
-                if (checkoutResult.exitCode !== 0) {
-                    // Fallback: checkout existing local branch
-                    const fallback = await gitOps.getRunner().exec(["checkout", localBranchName]);
-                    if (fallback.exitCode !== 0) {
-                        vscode.window.showErrorMessage(`Failed to checkout remote branch: ${checkoutResult.stderr}`);
-                        return;
-                    }
-                    vscode.window.showInformationMessage(`Switched to existing branch '${localBranchName}'`);
-                }
-                else {
+                try {
+                    await gitService.fetch({ remote });
+                    await gitService.checkoutBranch(branchName, { track: true });
                     vscode.window.showInformationMessage(`Checked out and tracking '${branchName}'`);
+                }
+                catch (err: any) {
+                    try {
+                        await gitService.checkoutBranch(localBranchName);
+                        vscode.window.showInformationMessage(`Switched to existing branch '${localBranchName}'`);
+                    }
+                    catch {
+                        vscode.window.showErrorMessage(`Failed to checkout remote branch: ${err.message}`);
+                    }
                 }
                 graphProvider.refresh();
             });
@@ -179,8 +172,7 @@ export function activate(context: vscode.ExtensionContext) {
             if (!branchName)
                 return;
 
-            const upstreamResult = await gitOps.getRunner().exec(["rev-parse", "--abbrev-ref", `${branchName}@{upstream}`]);
-            const upstream = upstreamResult.exitCode === 0 ? upstreamResult.stdout.trim() : null;
+            const upstream = await gitService.getUpstream(branchName);
 
             let confirm: string | undefined;
             if (upstream) {
@@ -208,34 +200,11 @@ export function activate(context: vscode.ExtensionContext) {
             await vscode.window.withProgress(
                 { location: vscode.ProgressLocation.Window, title: `Deleting branch '${branchName}'...` },
                 async () => {
-                    const deleteLocalCommand = async (force: boolean): Promise<void> => {
-                        const result = await gitOps.getRunner().exec(["branch", force ? "-D" : "-d", branchName]);
-                        if (result.exitCode !== 0) {
-                            if (!force && result.stderr.includes("not fully merged")) {
-                                throw new Error("not fully merged");
-                            }
-                            throw new Error(`Failed to delete branch: ${result.stderr}`);
-                        }
-                    };
-
-                    const deleteRemoteCommand = async (remoteStr: string): Promise<void> => {
-                        const firstSlash = remoteStr.indexOf("/");
-                        if (firstSlash === -1)
-                            return;
-                        const remoteName = remoteStr.substring(0, firstSlash);
-                        const remoteBranch = remoteStr.substring(firstSlash + 1);
-
-                        const result = await gitOps.getRunner().exec(["push", remoteName, "--delete", remoteBranch]);
-                        if (result.exitCode !== 0) {
-                            throw new Error(result.stderr);
-                        }
-                    };
-
                     try {
-                        await deleteLocalCommand(false);
+                        await gitService.deleteBranch(branchName, false);
                     }
                     catch (err: any) {
-                        if (err.message === "not fully merged") {
+                        if (err.message.includes("not fully merged")) {
                             const forceConfirm = await vscode.window.showWarningMessage(
                                 `Branch '${branchName}' is not fully merged. Force delete anyway?`,
                                 "Force Delete",
@@ -245,7 +214,7 @@ export function activate(context: vscode.ExtensionContext) {
                                 return;
                             }
                             try {
-                                await deleteLocalCommand(true);
+                                await gitService.deleteBranch(branchName, true);
                             }
                             catch (err2: any) {
                                 vscode.window.showErrorMessage(err2.message);
@@ -260,8 +229,13 @@ export function activate(context: vscode.ExtensionContext) {
 
                     if (doDeleteRemote && upstream) {
                         try {
-                            await deleteRemoteCommand(upstream);
-                            vscode.window.showInformationMessage(`Deleted branch '${branchName}' and its remote tracking branch '${upstream}'`);
+                            const firstSlash = upstream.indexOf("/");
+                            if (firstSlash !== -1) {
+                                const remoteName = upstream.substring(0, firstSlash);
+                                const remoteBranch = upstream.substring(firstSlash + 1);
+                                await gitService.deleteRemoteBranch(remoteName, remoteBranch);
+                                vscode.window.showInformationMessage(`Deleted branch '${branchName}' and its remote tracking branch '${upstream}'`);
+                            }
                         }
                         catch (err: any) {
                             vscode.window.showErrorMessage(`Deleted local branch, but failed to delete remote branch: ${err.message}`);
@@ -306,13 +280,13 @@ export function activate(context: vscode.ExtensionContext) {
             await vscode.window.withProgress(
                 { location: vscode.ProgressLocation.Window, title: `Deleting remote branch '${branch}'...` },
                 async () => {
-                    const result = await gitOps.getRunner().exec(["push", remote, "--delete", branch]);
-                    if (result.exitCode !== 0) {
-                        vscode.window.showErrorMessage(`Failed to delete remote branch: ${result.stderr}`);
-                    }
-                    else {
+                    try {
+                        await gitService.deleteRemoteBranch(remote, branch);
                         vscode.window.showInformationMessage(`Deleted remote branch '${branch}' from '${remote}'`);
                         graphProvider.refresh();
+                    }
+                    catch (err: any) {
+                        vscode.window.showErrorMessage(`Failed to delete remote branch: ${err.message}`);
                     }
                 },
             );
@@ -342,13 +316,13 @@ export function activate(context: vscode.ExtensionContext) {
             vscode.window.withProgress(
                 { location: vscode.ProgressLocation.Window, title: "Fetching..." },
                 async () => {
-                    const result = await gitOps.getRunner().exec(["fetch", "--all"]);
-                    if (result.exitCode !== 0) {
-                        vscode.window.showErrorMessage(`Fetch failed: ${result.stderr}`);
-                    }
-                    else {
+                    try {
+                        await gitService.fetch({ all: true });
                         vscode.window.showInformationMessage("Fetch successful");
                         graphProvider.refresh();
+                    }
+                    catch (err: any) {
+                        vscode.window.showErrorMessage(`Fetch failed: ${err.message}`);
                     }
                 },
             );
@@ -360,13 +334,13 @@ export function activate(context: vscode.ExtensionContext) {
             vscode.window.withProgress(
                 { location: vscode.ProgressLocation.Window, title: "Pulling..." },
                 async () => {
-                    const result = await gitOps.getRunner().exec(["pull"]);
-                    if (result.exitCode !== 0) {
-                        vscode.window.showErrorMessage(`Pull failed: ${result.stderr}`);
-                    }
-                    else {
+                    try {
+                        await gitService.pull();
                         vscode.window.showInformationMessage("Pull successful");
                         graphProvider.refresh();
+                    }
+                    catch (err: any) {
+                        vscode.window.showErrorMessage(`Pull failed: ${err.message}`);
                     }
                 },
             );
@@ -378,31 +352,30 @@ export function activate(context: vscode.ExtensionContext) {
             vscode.window.withProgress(
                 { location: vscode.ProgressLocation.Window, title: "Pushing..." },
                 async () => {
-                    const result = await gitOps.getRunner().exec(["push"]);
-                    if (result.exitCode !== 0) {
-                        if (result.stderr.includes("has no upstream branch")) {
-                            const branchResult = await gitOps.getRunner().exec(["rev-parse", "--abbrev-ref", "HEAD"]);
-                            if (branchResult.exitCode !== 0) {
-                                vscode.window.showErrorMessage(`Push failed: ${result.stderr}`);
+                    try {
+                        await gitService.push();
+                        vscode.window.showInformationMessage("Push successful");
+                        graphProvider.refresh();
+                    }
+                    catch (err: any) {
+                        if (err.message.includes("has no upstream branch")) {
+                            const branch = await gitService.getCurrentBranch();
+                            if (!branch) {
+                                vscode.window.showErrorMessage(`Push failed: ${err.message}`);
                                 return;
                             }
-                            const branch = branchResult.stdout.trim();
-                            const pushResult = await gitOps.getRunner().exec(["push", "-u", "origin", branch]);
-                            if (pushResult.exitCode !== 0) {
-                                vscode.window.showErrorMessage(`Push failed: ${pushResult.stderr}`);
-                            }
-                            else {
+                            try {
+                                await gitService.push({ setUpstream: branch });
                                 vscode.window.showInformationMessage("Push successful (set upstream to origin)");
                                 graphProvider.refresh();
                             }
+                            catch (pushErr: any) {
+                                vscode.window.showErrorMessage(`Push failed: ${pushErr.message}`);
+                            }
                         }
                         else {
-                            vscode.window.showErrorMessage(`Push failed: ${result.stderr}`);
+                            vscode.window.showErrorMessage(`Push failed: ${err.message}`);
                         }
-                    }
-                    else {
-                        vscode.window.showInformationMessage("Push successful");
-                        graphProvider.refresh();
                     }
                 },
             );
@@ -422,31 +395,30 @@ export function activate(context: vscode.ExtensionContext) {
             vscode.window.withProgress(
                 { location: vscode.ProgressLocation.Window, title: "Force Pushing..." },
                 async () => {
-                    const result = await gitOps.getRunner().exec(["push", "--force-with-lease"]);
-                    if (result.exitCode !== 0) {
-                        if (result.stderr.includes("has no upstream branch")) {
-                            const branchResult = await gitOps.getRunner().exec(["rev-parse", "--abbrev-ref", "HEAD"]);
-                            if (branchResult.exitCode !== 0) {
-                                vscode.window.showErrorMessage(`Force push failed: ${result.stderr}`);
+                    try {
+                        await gitService.push({ force: true });
+                        vscode.window.showInformationMessage("Force push successful");
+                        graphProvider.refresh();
+                    }
+                    catch (err: any) {
+                        if (err.message.includes("has no upstream branch")) {
+                            const branch = await gitService.getCurrentBranch();
+                            if (!branch) {
+                                vscode.window.showErrorMessage(`Force push failed: ${err.message}`);
                                 return;
                             }
-                            const branch = branchResult.stdout.trim();
-                            const pushResult = await gitOps.getRunner().exec(["push", "--force-with-lease", "-u", "origin", branch]);
-                            if (pushResult.exitCode !== 0) {
-                                vscode.window.showErrorMessage(`Force push failed: ${pushResult.stderr}`);
-                            }
-                            else {
+                            try {
+                                await gitService.push({ force: true, setUpstream: branch });
                                 vscode.window.showInformationMessage("Force push successful (set upstream to origin)");
                                 graphProvider.refresh();
                             }
+                            catch (pushErr: any) {
+                                vscode.window.showErrorMessage(`Force push failed: ${pushErr.message}`);
+                            }
                         }
                         else {
-                            vscode.window.showErrorMessage(`Force push failed: ${result.stderr}`);
+                            vscode.window.showErrorMessage(`Force push failed: ${err.message}`);
                         }
-                    }
-                    else {
-                        vscode.window.showInformationMessage("Force push successful");
-                        graphProvider.refresh();
                     }
                 },
             );
@@ -457,7 +429,17 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.commands.registerCommand("git-wiz.rebaseBranch", async (branchTreeItem: { branchName: string }) => {
             const targetBranch = branchTreeItem.branchName;
             if (targetBranch) {
-                await gitOps.rebaseBranch(targetBranch);
+                try {
+                    await vscode.window.withProgress({ location: vscode.ProgressLocation.Window, title: `Rebasing onto '${targetBranch}'...` }, async () => {
+                        await gitService.rebaseBranch(targetBranch);
+                        vscode.window.showInformationMessage(`Rebased onto '${targetBranch}' successfully`);
+                        graphProvider.refresh();
+                    });
+                }
+                catch (err: any) {
+                    vscode.window.showErrorMessage(err.message);
+                    graphProvider.refresh();
+                }
             }
         }),
     );
@@ -466,7 +448,31 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.commands.registerCommand("git-wiz.mergeBranch", async (branchTreeItem: { branchName: string }) => {
             const sourceBranch = branchTreeItem.branchName;
             if (sourceBranch) {
-                await gitOps.mergeBranch(sourceBranch);
+                try {
+                    await vscode.window.withProgress({ location: vscode.ProgressLocation.Window, title: `Merging '${sourceBranch}'...` }, async () => {
+                        const result = await gitService.mergeBranch(sourceBranch);
+                        if (!result.success) {
+                            if (result.isConflict) {
+                                const choice = await vscode.window.showErrorMessage(`Merge failed with conflicts: ${result.error}`, "Abort Merge", "Close");
+                                if (choice === "Abort Merge") {
+                                    await gitService.abortMerge();
+                                    vscode.window.showInformationMessage("Merge aborted");
+                                }
+                            }
+                            else {
+                                vscode.window.showErrorMessage(`Merge failed: ${result.error}`);
+                            }
+                        }
+                        else {
+                            vscode.window.showInformationMessage(`Merged '${sourceBranch}' successfully`);
+                        }
+                        graphProvider.refresh();
+                    });
+                }
+                catch (err: any) {
+                    vscode.window.showErrorMessage(err.message);
+                    graphProvider.refresh();
+                }
             }
         }),
     );
@@ -491,34 +497,31 @@ export function activate(context: vscode.ExtensionContext) {
             await vscode.window.withProgress(
                 { location: vscode.ProgressLocation.Window, title: `Deleting ${label}...` },
                 async () => {
-                    const tryDelete = async (
-                        name: string,
-                        force: boolean,
-                    ): Promise<{ name: string; notMerged: boolean; error?: string }> => {
-                        const result = await gitOps.getRunner().exec(["branch", force ? "-D" : "-d", name]);
-                        if (result.exitCode !== 0) {
-                            if (!force && result.stderr.includes("not fully merged")) {
-                                return { name, notMerged: true };
+                    const deleted: string[] = [];
+                    const notMerged: string[] = [];
+                    const failed: { name: string; error: string }[] = [];
+
+                    for (const name of branchNames) {
+                        try {
+                            await gitService.deleteBranch(name, false);
+                            deleted.push(name);
+                        }
+                        catch (err: any) {
+                            if (err.message.includes("not fully merged")) {
+                                notMerged.push(name);
                             }
                             else {
-                                return { name, notMerged: false, error: result.stderr };
+                                failed.push({ name, error: err.message });
                             }
                         }
-                        return { name, notMerged: false };
-                    };
-
-                    const results = await Promise.all(branchNames.map(name => tryDelete(name, false)));
-                    const notMerged = results.filter(r => r.notMerged).map(r => r.name);
-                    const failed = results.filter(r => !r.notMerged && r.error);
-                    const deletedCount = results.filter(r => !r.notMerged && !r.error).length;
+                    }
 
                     if (failed.length > 0) {
                         vscode.window.showErrorMessage(`Failed to delete: ${failed.map(r => r.name).join(", ")}`);
                     }
 
                     if (notMerged.length > 0) {
-                        const notMergedLabel
-                            = notMerged.length === 1 ? `Branch '${notMerged[0]}' is` : `${notMerged.length} branches are`;
+                        const notMergedLabel = notMerged.length === 1 ? `Branch '${notMerged[0]}' is` : `${notMerged.length} branches are`;
                         const forceConfirm = await vscode.window.showWarningMessage(
                             `${notMergedLabel} not fully merged. Force delete?`,
                             { detail: notMerged.join(", ") },
@@ -526,27 +529,20 @@ export function activate(context: vscode.ExtensionContext) {
                             "Cancel",
                         );
                         if (forceConfirm === "Force Delete") {
-                            const forceResults = await Promise.all(notMerged.map(name => tryDelete(name, true)));
-                            const forceDeleted = forceResults.filter(r => !r.error).length;
-                            const forceFailed = forceResults.filter(r => r.error);
-                            if (forceFailed.length > 0) {
-                                vscode.window.showErrorMessage(
-                                    `Failed to force delete: ${forceFailed.map(r => r.name).join(", ")}`,
-                                );
+                            for (const name of notMerged) {
+                                try {
+                                    await gitService.deleteBranch(name, true);
+                                    deleted.push(name);
+                                }
+                                catch (err: any) {
+                                    vscode.window.showErrorMessage(`Failed to force delete '${name}': ${err.message}`);
+                                }
                             }
-                            const total = deletedCount + forceDeleted;
-                            if (total > 0) {
-                                vscode.window.showInformationMessage(`Deleted ${total} branch${total > 1 ? "es" : ""}`);
-                            }
-                        }
-                        else if (deletedCount > 0) {
-                            vscode.window.showInformationMessage(
-                                `Deleted ${deletedCount} branch${deletedCount > 1 ? "es" : ""}`,
-                            );
                         }
                     }
-                    else if (deletedCount > 0) {
-                        vscode.window.showInformationMessage(`Deleted ${deletedCount} branch${deletedCount > 1 ? "es" : ""}`);
+
+                    if (deleted.length > 0) {
+                        vscode.window.showInformationMessage(`Deleted ${deleted.length} branch${deleted.length > 1 ? "es" : ""}`);
                     }
 
                     graphProvider.refresh();
@@ -582,16 +578,14 @@ export function activate(context: vscode.ExtensionContext) {
                 await vscode.window.withProgress(
                     { location: vscode.ProgressLocation.Window, title: `Deleting tag '${tagName}'...` },
                     async () => {
-                        const result = await gitOps.getRunner().exec(["tag", "-d", tagName]);
-                        if (result.exitCode !== 0) {
-                            vscode.window.showErrorMessage(`Failed to delete tag: ${result.stderr}`);
-                        }
-                        else {
+                        try {
+                            await gitService.deleteTag(tagName);
                             vscode.window.showInformationMessage(`Tag '${tagName}' deleted successfully`);
                             vscode.commands.executeCommand("git-wiz.refreshBranches");
-                            if (graphProvider) {
-                                graphProvider.refresh();
-                            }
+                            graphProvider.refresh();
+                        }
+                        catch (err: any) {
+                            vscode.window.showErrorMessage(`Failed to delete tag: ${err.message}`);
                         }
                     },
                 );
@@ -620,13 +614,14 @@ export function activate(context: vscode.ExtensionContext) {
                 return;
             }
 
-            const result = await gitOps.getRunner().exec(["checkout", "-b", newBranchName, sourceBranch]);
-            if (result.exitCode !== 0) {
-                vscode.window.showErrorMessage(`Failed to create branch: ${result.stderr}`);
-                return;
+            try {
+                await gitService.checkoutBranch(newBranchName, { create: true });
+                vscode.window.showInformationMessage(`Created and switched to branch '${newBranchName}'`);
+                graphProvider.refresh();
             }
-            vscode.window.showInformationMessage(`Created and switched to branch '${newBranchName}'`);
-            graphProvider.refresh();
+            catch (err: any) {
+                vscode.window.showErrorMessage(`Failed to create branch: ${err.message}`);
+            }
         }),
     );
 }
