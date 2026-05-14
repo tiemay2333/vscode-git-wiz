@@ -204,3 +204,37 @@ Reset all critical view state (loadedCount, searchFilters, highlighting cache, a
 ### Next Steps
 
 - None - task complete
+
+
+## Session 7: Refine Git Watcher & Quality Guidelines
+
+**Date**: 2026-05-14
+**Task**: Refine Git Watcher & Quality Guidelines
+**Branch**: `main`
+
+### Summary
+
+Refined Git filesystem watcher to use precise paths (HEAD, refs, packed-refs), avoiding unnecessary refreshes from index/objects changes. Improved refresh logic with concurrency guards and resource cleanup. Updated frontend quality guidelines to mandate precise watching and proper disposal.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `69c49ad` | (see git log) |
+| `32bc3f7` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
