@@ -34,6 +34,7 @@
 - **Debounced refresh**: 500ms cooldown for filesystem watchers.
 - **Resource Cleanup**: All `FileSystemWatcher` instances and timers MUST be added to `context.subscriptions` or explicitly disposed of in a `dispose()` method.
 - **Refresh Concurrency**: The `refresh()` method should implement a concurrency guard (e.g., `_refreshInProgress`) to prevent overlapping Git operations from multiple rapid events.
+- **Handler-based message routing**: When a `WebviewViewProvider` or `WebviewPanel` grows a large `handleMessage` method, extract command groups into dedicated handler classes. Each handler receives only what it needs (service, callbacks), never the provider itself. All handlers implement `vscode.Disposable` so the provider can chain `dispose()` through them.
 
 ---
 

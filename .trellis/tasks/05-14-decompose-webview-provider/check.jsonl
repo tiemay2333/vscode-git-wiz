@@ -1,0 +1,3 @@
+{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "Review decomposition against quality standards"}
+{"file": ".trellis/spec/frontend/index.md", "reason": "Verify code follows project conventions"}
+{"file": ".trellis/spec/frontend/directory-structure.md", "reason": "Verify new files follow directory conventions"}

@@ -1,77 +1,16 @@
 import type { GitCommit } from "./gitOperations";
 import * as vscode from "vscode";
+import { FileHandler } from "./fileHandler";
+import { AsyncHighlightVerifier } from "./git/AsyncHighlightVerifier";
 import { getCurrentBranchHashes } from "./git/commitHighlight";
+import { GitCommandHandler } from "./gitCommandHandler";
 import { GitService } from "./gitOperations";
+import { SettingsHandler } from "./settingsHandler";
 import { getCommitDetailsHtml, getHtmlForWebview } from "./webviewContent";
 
 const PAGE_SIZE = 200;
 
-class AsyncHighlightVerifier {
-    private _queue: { hash: string; targets: string[] }[] = [];
-    private _inProgress = 0;
-    private readonly MAX_CONCURRENCY = 3;
-    private _patchIdCache = new Map<string, string>();
-
-    constructor(
-        private readonly _gitService: GitService,
-        private readonly _onUpdate: (hash: string, status: "verified" | "failed") => void,
-    ) { }
-
-    public queueVerification(hash: string, targets: string[]) {
-        if (this._queue.some(q => q.hash === hash))
-            return;
-        this._queue.push({ hash, targets });
-        this.processQueue();
-    }
-
-    public reset() {
-        this._queue = [];
-        this._patchIdCache.clear();
-    }
-
-    private async processQueue() {
-        if (this._inProgress >= this.MAX_CONCURRENCY || this._queue.length === 0)
-            return;
-
-        const item = this._queue.shift()!;
-        this._inProgress++;
-
-        try {
-            const status = await this.verify(item.hash, item.targets);
-            this._onUpdate(item.hash, status);
-        }
-        catch {
-            this._onUpdate(item.hash, "failed");
-        }
-        finally {
-            this._inProgress--;
-            this.processQueue();
-        }
-    }
-
-    private async getPatchId(hash: string): Promise<string> {
-        let pid = this._patchIdCache.get(hash);
-        if (pid === undefined) {
-            pid = await this._gitService.getPatchId(hash);
-            this._patchIdCache.set(hash, pid);
-        }
-        return pid;
-    }
-
-    private async verify(hash: string, targets: string[]): Promise<"verified" | "failed"> {
-        const sourcePid = await this.getPatchId(hash);
-        for (const target of targets) {
-            const targetPid = await this.getPatchId(target);
-            if (sourcePid === targetPid && sourcePid !== "") {
-                return "verified";
-            }
-        }
-
-        return "failed";
-    }
-}
-
-interface WebviewMessage {
+export interface WebviewMessage {
     command: string;
     commitHash?: string;
     commitMessage?: string;
@@ -110,6 +49,9 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider, vscode.
     private _branchSignaturesCache: { branch: string; headHash: string; signatures: Map<string, string[]> } | null = null;
     private _settingsScope: "local" | "global" = "global";
     private _verifier?: AsyncHighlightVerifier;
+    private readonly _gitCommandHandler: GitCommandHandler;
+    private readonly _settingsHandler: SettingsHandler;
+    private readonly _fileHandler: FileHandler;
 
     constructor(private readonly _extensionUri: vscode.Uri) {
         const cwd = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || "";
@@ -117,6 +59,17 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider, vscode.
         this._verifier = new AsyncHighlightVerifier(this._gitService, (hash, status) => {
             this.postToWebview({ command: "updateCommitHighlight", hash, verificationStatus: status });
         });
+        this._gitCommandHandler = new GitCommandHandler(
+            this._gitService,
+            () => this.refresh(),
+            tagName => this.pushTag(tagName),
+        );
+        this._settingsHandler = new SettingsHandler(
+            this._gitService,
+            () => this._gitService.getUniqueRemotes(),
+            (scope) => { this._settingsScope = scope; },
+        );
+        this._fileHandler = new FileHandler();
         this.setupGitWatcher();
         vscode.workspace.onDidChangeWorkspaceFolders(() => this.setupGitWatcher());
         vscode.workspace.onDidChangeConfiguration((e) => {
@@ -204,44 +157,22 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider, vscode.
     private async handleMessage(message: WebviewMessage, webview: vscode.Webview) {
         const cmd = message.command;
 
+        // Special case: reverify commit highlight
         if (cmd === "reverifyCommit" && message.commitHash) {
-            const commits = await this._gitService.getGitLog(null, 0, 1, { query: message.commitHash });
-            if (commits.length > 0) {
-                const commit = commits[0];
-                const currentBranch = await this._gitService.getCurrentBranch();
-                if (currentBranch) {
-                    const branchHashes = await this._gitService.getBranchCommits(currentBranch);
-                    const headHash = await this._gitService.getHeadHash(currentBranch);
-                    if (!this._branchSignaturesCache
-                        || this._branchSignaturesCache.branch !== currentBranch
-                        || (headHash && this._branchSignaturesCache.headHash !== headHash)) {
-                        const signatures = await this._gitService.getBranchCommitSignatures(currentBranch);
-                        this._branchSignaturesCache = {
-                            branch: currentBranch,
-                            headHash: headHash || "",
-                            signatures,
-                        };
-                    }
-                    const result = getCurrentBranchHashes([commit], branchHashes, this._branchSignaturesCache.signatures);
-                    if (result.pending.has(commit.hash)) {
-                        const targets = result.pending.get(commit.hash)!;
-                        this._verifier?.queueVerification(commit.hash, targets);
-                    }
-                }
-            }
+            await this._reverifyCommit(message.commitHash);
             return;
         }
 
-        // git operations
+        // Git operations — delegate to GitCommandHandler
         if (cmd === "cherryPick"
             || cmd === "copyHash" || cmd === "copyCommitMessage"
             || cmd === "revertCommit" || cmd === "resetToCommit"
             || cmd === "dropCommit" || cmd === "squashCommits" || cmd === "cherryPickRange"
             || cmd === "revertCommits" || cmd === "dropCommits" || cmd === "pushTag") {
-            await this.execGitOperation(cmd, message);
+            await this._gitCommandHandler.handle(cmd, message);
             return;
         }
-        // branch/tag operations
+        // Branch/tag operations — delegate to GitCommandHandler
         if (cmd === "newTag" || cmd === "createBranch" || cmd === "selectBranch"
             || cmd === "deleteMultipleBranches" || cmd === "createBranchFromTag"
             || cmd === "deleteTag" || cmd === "checkoutBranch" || cmd === "deleteBranch"
@@ -249,133 +180,55 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider, vscode.
             this.execBranchTagCommand(cmd, message);
             return;
         }
-        // settings & configuration
+        // Settings & configuration — delegate to SettingsHandler
         if (cmd === "saveFilesViewMode" || cmd === "saveCommitDetailsViewMode"
             || cmd === "settingsUpdateSetting" || cmd === "settingsSetGitConfig"
             || cmd === "settingsGetGitConfig" || cmd === "settingsAddRemote"
             || cmd === "settingsRemoveRemote") {
-            await this.execSettingsCommand(cmd, message, webview);
+            await this._settingsHandler.handle(cmd, message, webview);
             return;
         }
-        // file & diff operations
-        if (cmd === "getCommitFiles" || cmd === "openDiff" || cmd === "openFile") {
-            this.execFileCommand(cmd, message, webview);
+        // File & diff operations
+        if (cmd === "getCommitFiles") {
+            await this.getCommitFiles(message.commitHash!, webview);
             return;
         }
-        // UI state management
+        if (cmd === "openDiff" || cmd === "openFile") {
+            this._fileHandler.handle(cmd, message);
+            return;
+        }
+        // UI state management — stays on provider (tightly coupled to state)
         this.handleUIState(cmd, message, webview);
     }
 
-    private async execGitOperation(cmd: string, msg: WebviewMessage): Promise<void> {
-        try {
-            switch (cmd) {
-                case "cherryPick":
-                    await vscode.window.withProgress({ location: vscode.ProgressLocation.Window, title: `Cherry-picking commit ${msg.commitHash!.substring(0, 7)}...` }, async () => {
-                        await this._gitService.cherryPickCommit(msg.commitHash!);
-                        vscode.window.showInformationMessage("Commit cherry-picked successfully");
-                        this.refresh();
-                    });
-                    break;
-                case "copyHash":
-                    await vscode.env.clipboard.writeText(msg.commitHash!);
-                    vscode.window.showInformationMessage("Commit hash copied to clipboard");
-                    break;
-                case "copyCommitMessage":
-                    await vscode.env.clipboard.writeText(msg.commitMessage!);
-                    vscode.window.showInformationMessage("Commit message copied to clipboard");
-                    break;
-                case "revertCommit": {
-                    const confirm = await vscode.window.showWarningMessage(`Are you sure you want to revert commit ${msg.commitHash!.substring(0, 7)}?`, "Yes", "No");
-                    if (confirm === "Yes") {
-                        await vscode.window.withProgress({ location: vscode.ProgressLocation.Window, title: `Reverting commit ${msg.commitHash!.substring(0, 7)}...` }, async () => {
-                            await this._gitService.revertCommit(msg.commitHash!);
-                            vscode.window.showInformationMessage("Commit reverted successfully");
-                            this.refresh();
-                        });
-                    }
-                    break;
-                }
-                case "resetToCommit": {
-                    const items: (vscode.QuickPickItem & { value: string })[] = [
-                        { label: "Soft", description: "Keep changes staged", value: "--soft" },
-                        { label: "Mixed", description: "Keep changes unstaged", value: "--mixed" },
-                        { label: "Hard", description: "Discard all changes", value: "--hard" },
-                    ];
-                    const resetType = await vscode.window.showQuickPick(items, { placeHolder: "Select reset type" });
-                    if (resetType) {
-                        const confirm = await vscode.window.showWarningMessage(`Are you sure you want to reset to commit ${msg.commitHash!.substring(0, 7)} (${resetType.label})?`, "Yes", "No");
-                        if (confirm === "Yes") {
-                            await vscode.window.withProgress({ location: vscode.ProgressLocation.Window, title: `Resetting to commit ${msg.commitHash!.substring(0, 7)} (${resetType.label})...` }, async () => {
-                                await this._gitService.resetToCommit(msg.commitHash!, resetType.value);
-                                vscode.window.showInformationMessage(`Reset to commit ${msg.commitHash!.substring(0, 7)} successfully`);
-                                this.refresh();
-                            });
-                        }
-                    }
-                    break;
-                }
-                case "dropCommit": {
-                    const confirm = await vscode.window.showWarningMessage(`Are you sure you want to permanently drop commit ${msg.commitHash!.substring(0, 7)}? This cannot be undone.`, "Drop", "Cancel");
-                    if (confirm === "Drop") {
-                        await vscode.window.withProgress({ location: vscode.ProgressLocation.Window, title: `Dropping commit ${msg.commitHash!.substring(0, 7)}...` }, async () => {
-                            await this._gitService.dropCommit(msg.commitHash!);
-                            vscode.window.showInformationMessage("Commit dropped successfully");
-                            this.refresh();
-                        });
-                    }
-                    break;
-                }
-                case "squashCommits": {
-                    const newMessage = await vscode.window.showInputBox({
-                        prompt: `Squash ${msg.hashes!.length} commits into one`,
-                        placeHolder: "New commit message",
-                        validateInput: v => (!v || !v.trim() ? "Message cannot be empty" : null),
-                    });
-                    if (newMessage) {
-                        await vscode.window.withProgress({ location: vscode.ProgressLocation.Window, title: `Squashing ${msg.hashes!.length} commits...` }, async () => {
-                            await this._gitService.squashCommits(msg.hashes!, msg.parentHash!, newMessage);
-                            vscode.window.showInformationMessage(`Squashed ${msg.hashes!.length} commits successfully`);
-                            this.refresh();
-                        });
-                    }
-                    break;
-                }
-                case "cherryPickRange":
-                    await vscode.window.withProgress({ location: vscode.ProgressLocation.Window, title: `Cherry-picking ${msg.hashes!.length} commits...` }, async () => {
-                        await this._gitService.cherryPickRange(msg.hashes!);
-                        vscode.window.showInformationMessage(`Cherry-picked ${msg.hashes!.length} commits successfully`);
-                        this.refresh();
-                    });
-                    break;
-                case "revertCommits": {
-                    const confirm = await vscode.window.showWarningMessage(`Are you sure you want to revert ${msg.hashes!.length} commits? This will create ${msg.hashes!.length} new revert commits.`, "Yes", "No");
-                    if (confirm === "Yes") {
-                        await vscode.window.withProgress({ location: vscode.ProgressLocation.Window, title: `Reverting ${msg.hashes!.length} commits...` }, async () => {
-                            await this._gitService.revertCommits(msg.hashes!);
-                            vscode.window.showInformationMessage(`Reverted ${msg.hashes!.length} commits successfully`);
-                            this.refresh();
-                        });
-                    }
-                    break;
-                }
-                case "dropCommits": {
-                    const confirm = await vscode.window.showWarningMessage(`Are you sure you want to permanently drop ${msg.hashes!.length} commits? This cannot be undone.`, "Drop", "Cancel");
-                    if (confirm === "Drop") {
-                        await vscode.window.withProgress({ location: vscode.ProgressLocation.Window, title: `Dropping ${msg.hashes!.length} commits...` }, async () => {
-                            await this._gitService.dropCommits(msg.hashes!, msg.parentHash!);
-                            vscode.window.showInformationMessage(`Dropped ${msg.hashes!.length} commits successfully`);
-                            this.refresh();
-                        });
-                    }
-                    break;
-                }
-                case "pushTag":
-                    await this.pushTag(msg.tagName!);
-                    break;
-            }
+    private async _reverifyCommit(commitHash: string): Promise<void> {
+        const commits = await this._gitService.getGitLog(null, 0, 1, { query: commitHash });
+        if (commits.length === 0)
+            return;
+
+        const commit = commits[0];
+        const currentBranch = await this._gitService.getCurrentBranch();
+        if (!currentBranch)
+            return;
+
+        const branchHashes = await this._gitService.getBranchCommits(currentBranch);
+        const headHash = await this._gitService.getHeadHash(currentBranch);
+
+        if (!this._branchSignaturesCache
+            || this._branchSignaturesCache.branch !== currentBranch
+            || (headHash && this._branchSignaturesCache.headHash !== headHash)) {
+            const signatures = await this._gitService.getBranchCommitSignatures(currentBranch);
+            this._branchSignaturesCache = {
+                branch: currentBranch,
+                headHash: headHash || "",
+                signatures,
+            };
         }
-        catch (e: any) {
-            vscode.window.showErrorMessage(e.message || "Operation failed");
+
+        const result = getCurrentBranchHashes([commit], branchHashes, this._branchSignaturesCache.signatures);
+        if (result.pending.has(commit.hash)) {
+            const targets = result.pending.get(commit.hash)!;
+            this._verifier?.queueVerification(commit.hash, targets);
         }
     }
 
@@ -410,75 +263,6 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider, vscode.
             case "rebaseBranch":
             case "mergeBranch":
                 vscode.commands.executeCommand(`git-wiz.${cmd}`, { branchName: msg.branchName });
-                break;
-        }
-    }
-
-    private async execSettingsCommand(cmd: string, msg: WebviewMessage, webview: vscode.Webview): Promise<void> {
-        switch (cmd) {
-            case "saveFilesViewMode":
-                vscode.workspace.getConfiguration("git-wiz").update("filesViewMode", msg.mode, vscode.ConfigurationTarget.Global);
-                break;
-            case "saveCommitDetailsViewMode":
-                vscode.workspace.getConfiguration("git-wiz").update("commitDetailsViewMode", msg.mode, vscode.ConfigurationTarget.Global);
-                break;
-            case "settingsUpdateSetting": {
-                const config = vscode.workspace.getConfiguration("git-wiz");
-                await config.update(msg.key!, msg.value, vscode.ConfigurationTarget.Global);
-                if (msg.key === "showTags") {
-                    webview.postMessage({ command: "updateShowTags", value: msg.value });
-                }
-                if (msg.key === "showRemoteBranches") {
-                    webview.postMessage({ command: "updateShowRemoteBranches", value: msg.value });
-                }
-                if (msg.key === "showGraph") {
-                    webview.postMessage({ command: "updateShowGraph", value: msg.value });
-                }
-                if (msg.key === "searchDefaultMode") {
-                    webview.postMessage({ command: "updateSearchDefaultMode", value: msg.value });
-                }
-                break;
-            }
-            case "settingsSetGitConfig":
-                await this._gitService.setGitConfig(msg.key!, msg.value as string, msg.scope!);
-                break;
-            case "settingsGetGitConfig": {
-                this._settingsScope = msg.scope!;
-                const userName = await this._gitService.getGitConfig("user.name", this._settingsScope) || "";
-                const userEmail = await this._gitService.getGitConfig("user.email", this._settingsScope) || "";
-                webview.postMessage({ command: "settingsUpdateForm", userName, userEmail });
-                break;
-            }
-            case "settingsAddRemote": {
-                const name = await vscode.window.showInputBox({ prompt: "Remote name", placeHolder: "origin" });
-                if (!name)
-                    break;
-                const url = await vscode.window.showInputBox({ prompt: `Remote URL for "${name}"`, placeHolder: "https://github.com/user/repo.git" });
-                if (!url)
-                    break;
-                await this._gitService.addRemote(name, url);
-                vscode.commands.executeCommand("git-wiz.refreshBranches");
-                webview.postMessage({ command: "settingsUpdateForm", remotes: await this._gitService.getUniqueRemotes() });
-                break;
-            }
-            case "settingsRemoveRemote":
-                await this._gitService.removeRemote(msg.remoteName!);
-                vscode.commands.executeCommand("git-wiz.refreshBranches");
-                webview.postMessage({ command: "settingsUpdateForm", remotes: await this._gitService.getUniqueRemotes() });
-                break;
-        }
-    }
-
-    private execFileCommand(cmd: string, msg: WebviewMessage, webview: vscode.Webview): void {
-        switch (cmd) {
-            case "getCommitFiles":
-                this.getCommitFiles(msg.commitHash!, webview);
-                break;
-            case "openDiff":
-                this.openDiff(msg.commitHash!, msg.filePath!, msg.parentHash);
-                break;
-            case "openFile":
-                this.openFile(msg.filePath!);
                 break;
         }
     }
@@ -679,6 +463,10 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider, vscode.
         }
         this._watchers.forEach(w => w.dispose());
         this._watchers = [];
+        this._gitCommandHandler.dispose();
+        this._settingsHandler.dispose();
+        this._fileHandler.dispose();
+        this._verifier?.dispose();
     }
 
     public async createNewTag(commitHash: string) {
@@ -913,31 +701,6 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider, vscode.
                 error: e.message || "Failed to load commit files",
             });
         }
-    }
-
-    private openDiff(commitHash: string, filePath: string, parentHash?: string) {
-        const shortCommit = commitHash.substring(0, 7);
-        const diffParent = parentHash || `${commitHash}~1`;
-        const shortParent = parentHash ? parentHash.substring(0, 7) : `${shortCommit}~1`;
-
-        const fileName = filePath.split("/").pop() || filePath;
-
-        const uri1 = vscode.Uri.parse(`git-wiz:/${shortParent}/${fileName}?hash=${diffParent}&file=${encodeURIComponent(filePath)}`);
-        const uri2 = vscode.Uri.parse(`git-wiz:/${shortCommit}/${fileName}?hash=${commitHash}&file=${encodeURIComponent(filePath)}`);
-
-        const title = `${fileName} (${shortParent} ↔ ${shortCommit})`;
-        vscode.commands.executeCommand("vscode.diff", uri1, uri2, title);
-    }
-
-    private openFile(filePath: string) {
-        const cwd = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
-        if (!cwd) {
-            return;
-        }
-        vscode.commands.executeCommand(
-            "vscode.open",
-            vscode.Uri.file(vscode.Uri.joinPath(vscode.Uri.file(cwd), filePath).fsPath),
-        );
     }
 
     // Delegated public methods for extension.ts commands

@@ -1,0 +1,71 @@
+import type { WebviewMessage } from "./gitGraphView";
+import type { GitService } from "./gitOperations";
+import * as vscode from "vscode";
+
+export class SettingsHandler implements vscode.Disposable {
+    constructor(
+        private readonly _gitService: GitService,
+        private readonly _getUniqueRemotes: () => Promise<{ name: string; url: string }[]>,
+        private readonly _setScope: (scope: "local" | "global") => void,
+    ) { }
+
+    dispose(): void {
+        // No resources to manage
+    }
+
+    async handle(cmd: string, msg: WebviewMessage, webview: vscode.Webview): Promise<void> {
+        switch (cmd) {
+            case "saveFilesViewMode":
+                vscode.workspace.getConfiguration("git-wiz").update("filesViewMode", msg.mode, vscode.ConfigurationTarget.Global);
+                break;
+            case "saveCommitDetailsViewMode":
+                vscode.workspace.getConfiguration("git-wiz").update("commitDetailsViewMode", msg.mode, vscode.ConfigurationTarget.Global);
+                break;
+            case "settingsUpdateSetting": {
+                const config = vscode.workspace.getConfiguration("git-wiz");
+                await config.update(msg.key!, msg.value, vscode.ConfigurationTarget.Global);
+                if (msg.key === "showTags") {
+                    webview.postMessage({ command: "updateShowTags", value: msg.value });
+                }
+                if (msg.key === "showRemoteBranches") {
+                    webview.postMessage({ command: "updateShowRemoteBranches", value: msg.value });
+                }
+                if (msg.key === "showGraph") {
+                    webview.postMessage({ command: "updateShowGraph", value: msg.value });
+                }
+                if (msg.key === "searchDefaultMode") {
+                    webview.postMessage({ command: "updateSearchDefaultMode", value: msg.value });
+                }
+                break;
+            }
+            case "settingsSetGitConfig":
+                await this._gitService.setGitConfig(msg.key!, msg.value as string, msg.scope!);
+                break;
+            case "settingsGetGitConfig": {
+                const scope = msg.scope!;
+                this._setScope(scope);
+                const userName = await this._gitService.getGitConfig("user.name", scope) || "";
+                const userEmail = await this._gitService.getGitConfig("user.email", scope) || "";
+                webview.postMessage({ command: "settingsUpdateForm", userName, userEmail });
+                break;
+            }
+            case "settingsAddRemote": {
+                const name = await vscode.window.showInputBox({ prompt: "Remote name", placeHolder: "origin" });
+                if (!name)
+                    break;
+                const url = await vscode.window.showInputBox({ prompt: `Remote URL for "${name}"`, placeHolder: "https://github.com/user/repo.git" });
+                if (!url)
+                    break;
+                await this._gitService.addRemote(name, url);
+                vscode.commands.executeCommand("git-wiz.refreshBranches");
+                webview.postMessage({ command: "settingsUpdateForm", remotes: await this._getUniqueRemotes() });
+                break;
+            }
+            case "settingsRemoveRemote":
+                await this._gitService.removeRemote(msg.remoteName!);
+                vscode.commands.executeCommand("git-wiz.refreshBranches");
+                webview.postMessage({ command: "settingsUpdateForm", remotes: await this._getUniqueRemotes() });
+                break;
+        }
+    }
+}

@@ -1,0 +1,4 @@
+{"file": ".trellis/spec/frontend/index.md", "reason": "General frontend conventions and patterns"}
+{"file": ".trellis/spec/frontend/directory-structure.md", "reason": "Module organization — where to place new extracted modules"}
+{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "Required patterns: resource cleanup, refresh concurrency, watcher precision"}
+{"file": ".trellis/spec/guides/code-reuse-thinking-guide.md", "reason": "Extract shared code properly, avoid duplication when decomposing provider"}
