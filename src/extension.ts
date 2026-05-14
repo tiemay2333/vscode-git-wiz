@@ -29,6 +29,7 @@ export function activate(context: vscode.ExtensionContext) {
     );
 
     const graphProvider = new GitGraphViewProvider(context.extensionUri);
+    context.subscriptions.push(graphProvider);
 
     const gitOps = new GitOperations(() => {
         graphProvider.refresh();

@@ -93,11 +93,11 @@ interface WebviewMessage {
     remoteName?: string;
 }
 
-export class GitGraphViewProvider implements vscode.WebviewViewProvider {
+export class GitGraphViewProvider implements vscode.WebviewViewProvider, vscode.Disposable {
     public static readonly viewType = "gitLeanGraphView";
     private static currentPanel: vscode.WebviewPanel | undefined;
     private _view?: vscode.WebviewView;
-    private _watcher?: vscode.FileSystemWatcher;
+    private _watchers: vscode.Disposable[] = [];
     private _filterBranch: string | null = null;
     private _filterFile: string | null = null;
     private _loadedCount = 0;
@@ -106,6 +106,8 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider {
     private _refreshTimer?: ReturnType<typeof setTimeout>;
     private _initialized = false;
     private _pendingRefresh = false;
+    private _refreshing = false;
+    private _pendingResetScroll = false;
     private _branchSignaturesCache: { branch: string; headHash: string; signatures: Map<string, string[]> } | null = null;
     private _settingsScope: "local" | "global" = "global";
     private _verifier?: AsyncHighlightVerifier;
@@ -116,6 +118,7 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider {
             this.postToWebview({ command: "updateCommitHighlight", hash, verificationStatus: status });
         });
         this.setupGitWatcher();
+        vscode.workspace.onDidChangeWorkspaceFolders(() => this.setupGitWatcher());
         vscode.workspace.onDidChangeConfiguration((e) => {
             if (e.affectsConfiguration("git-wiz.highlightCurrentBranch") || e.affectsConfiguration("git-wiz.showTags") || e.affectsConfiguration("git-wiz.showRemoteBranches") || e.affectsConfiguration("git-wiz.showGraph") || e.affectsConfiguration("git-wiz.searchDefaultMode")) {
                 this.refresh();
@@ -191,8 +194,10 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider {
         this.updateWebview(webviewView.webview);
         this._initialized = true;
         if (this._pendingRefresh) {
+            const reset = this._pendingResetScroll;
             this._pendingRefresh = false;
-            this.refresh();
+            this._pendingResetScroll = false;
+            this.refresh(reset);
         }
     }
 
@@ -443,13 +448,29 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider {
             return;
         }
 
-        this._watcher = vscode.workspace.createFileSystemWatcher(
-            new vscode.RelativePattern(workspaceFolders[0], ".git/**"),
-        );
+        // Clean up any existing watchers before creating new ones
+        this._watchers.forEach(w => w.dispose());
+        this._watchers = [];
 
-        this._watcher.onDidChange(() => this.debouncedRefresh());
-        this._watcher.onDidCreate(() => this.debouncedRefresh());
-        this._watcher.onDidDelete(() => this.debouncedRefresh());
+        const patterns = [
+            ".git/HEAD",
+            ".git/packed-refs",
+            ".git/refs/heads/**",
+            ".git/refs/remotes/**",
+            ".git/refs/tags/**",
+        ];
+
+        for (const pattern of patterns) {
+            const watcher = vscode.workspace.createFileSystemWatcher(
+                new vscode.RelativePattern(workspaceFolders[0], pattern),
+            );
+
+            watcher.onDidChange(() => this.debouncedRefresh());
+            watcher.onDidCreate(() => this.debouncedRefresh());
+            watcher.onDidDelete(() => this.debouncedRefresh());
+
+            this._watchers.push(watcher);
+        }
     }
 
     private getConfig<T>(key: string, defaultValue: T): T {
@@ -520,48 +541,74 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider {
     public async refresh(resetScroll: boolean = false) {
         if (!this._initialized) {
             this._pendingRefresh = true;
+            if (resetScroll)
+                this._pendingResetScroll = true;
             return;
         }
-        // Branch state may have changed (cherry-pick, rebase, etc.)
-        // so invalidate signature cache to ensure fresh highlight matching
-        this._branchSignaturesCache = null;
-        // Use the current loaded count to ensure we don't shrink the list on refresh
-        const countToLoad = Math.max(PAGE_SIZE, this._loadedCount);
-        const commits = await this._gitOps.getGitLog(this._filterBranch, 0, countToLoad, this._searchFilters, this._filterFile);
-        const currentBranch = await this._gitOps.getCurrentBranch();
-        const branches = await this._gitOps.getBranches();
-        const highlightCurrentBranch = this.getConfig("highlightCurrentBranch", false);
-        const showTags = this.getConfig("showTags", true);
-        const showRemoteBranches = this.getConfig("showRemoteBranches", true);
-        const showGraph = this.getConfig("showGraph", true);
-
-        if (highlightCurrentBranch && currentBranch) {
-            await this.applyHighlight(commits, currentBranch);
+        if (this._refreshing) {
+            this._pendingRefresh = true;
+            if (resetScroll)
+                this._pendingResetScroll = true;
+            return;
         }
 
-        this.updateViewTitle(currentBranch);
+        const actualResetScroll = resetScroll || this._pendingResetScroll;
+        this._pendingResetScroll = false;
 
-        this._loadedCount = commits.length;
-        const hasMore = commits.length >= countToLoad; // Keep hasMore if we hit the limit
-        const msg = {
-            command: "replaceCommits",
-            commits,
-            hasMore,
-            filterBranch: this._filterBranch,
-            filterFile: this._filterFile,
-            currentBranch,
-            resetScroll,
-            highlightCurrentBranch,
-            showTags,
-            showRemoteBranches,
-            showGraph,
-        };
-        this.postToWebview(msg);
-        this.postToWebview({ command: "replaceBranches", branches });
+        this._refreshing = true;
+        try {
+            // Branch state may have changed (cherry-pick, rebase, etc.)
+            // so invalidate signature cache to ensure fresh highlight matching
+            this._branchSignaturesCache = null;
+            // Use the current loaded count to ensure we don't shrink the list on refresh
+            const countToLoad = Math.max(PAGE_SIZE, this._loadedCount);
+            const commits = await this._gitOps.getGitLog(this._filterBranch, 0, countToLoad, this._searchFilters, this._filterFile);
+            const currentBranch = await this._gitOps.getCurrentBranch();
+            const branches = await this._gitOps.getBranches();
+            const highlightCurrentBranch = this.getConfig("highlightCurrentBranch", false);
+            const showTags = this.getConfig("showTags", true);
+            const showRemoteBranches = this.getConfig("showRemoteBranches", true);
+            const showGraph = this.getConfig("showGraph", true);
+
+            if (highlightCurrentBranch && currentBranch) {
+                await this.applyHighlight(commits, currentBranch);
+            }
+
+            this.updateViewTitle(currentBranch);
+
+            this._loadedCount = commits.length;
+            const hasMore = commits.length >= countToLoad; // Keep hasMore if we hit the limit
+            const msg = {
+                command: "replaceCommits",
+                commits,
+                hasMore,
+                filterBranch: this._filterBranch,
+                filterFile: this._filterFile,
+                currentBranch,
+                resetScroll: actualResetScroll,
+                highlightCurrentBranch,
+                showTags,
+                showRemoteBranches,
+                showGraph,
+            };
+            this.postToWebview(msg);
+            this.postToWebview({ command: "replaceBranches", branches });
+        }
+        finally {
+            this._refreshing = false;
+            if (this._pendingRefresh) {
+                this._pendingRefresh = false;
+                this.refresh(this._pendingResetScroll);
+            }
+        }
     }
 
     public dispose() {
-        this._watcher?.dispose();
+        if (this._refreshTimer) {
+            clearTimeout(this._refreshTimer);
+        }
+        this._watchers.forEach(w => w.dispose());
+        this._watchers = [];
     }
 
     // Delegated public methods so extension.ts commands can still call them on the provider
