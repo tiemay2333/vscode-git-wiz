@@ -2,7 +2,7 @@ import type { GraphNode } from "./graphLayout";
 import React from "react";
 import { vscode } from "../vscodeApi";
 
-const COLORS = [
+export const COLORS = [
     "#3d9fd4", // blue
     "#d43d3d", // red
     "#3dd45c", // green
