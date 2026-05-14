@@ -20,17 +20,17 @@ function makeCommit(hash: string, email?: string, timestamp?: number, message?: 
 describe("getCommitSignature", () => {
     it("generates signature with \x1F delimiter", () => {
         const c = makeCommit("xxx", "alice@example.com", 100, "Subject");
-        expect(getCommitSignature(c)).toBe("alice@example.com\x1F100\x1FSubject");
+        expect(getCommitSignature(c)).toBe("alice@example.com\x1FSubject");
     });
 
     it("trims email and subject", () => {
         const c = makeCommit("xxx", "  alice@example.com  ", 100, "  Subject  ");
-        expect(getCommitSignature(c)).toBe("alice@example.com\x1F100\x1FSubject");
+        expect(getCommitSignature(c)).toBe("alice@example.com\x1FSubject");
     });
 
     it("uses only the first line of message", () => {
         const c = makeCommit("xxx", "alice@example.com", 100, "Line 1\nLine 2");
-        expect(getCommitSignature(c)).toBe("alice@example.com\x1F100\x1FLine 1");
+        expect(getCommitSignature(c)).toBe("alice@example.com\x1FLine 1");
     });
 });
 
@@ -60,7 +60,7 @@ describe("getCurrentBranchHashes", () => {
     it("matches even if signature in map used different spacing but shared utility matches", () => {
         const c = makeCommit("xxx", "alice@example.com", 1700000, "Fix the thing  ");
         // Signature in map was trimmed
-        const signatures = new Map([["alice@example.com\x1F1700000\x1FFix the thing", ["target-hash"]]]);
+        const signatures = new Map([["alice@example.com\x1FFix the thing", ["target-hash"]]]);
         const result = getCurrentBranchHashes([c], new Set(), signatures);
         expect(result.pending.get("xxx")).toEqual(["target-hash"]);
     });

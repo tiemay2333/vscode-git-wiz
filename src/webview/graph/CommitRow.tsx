@@ -136,6 +136,43 @@ export const CommitRow = React.memo(({
         isMatchAuthor ? "row-search-match-author" : "",
     ].filter(Boolean).join(" ") || undefined;
 
+    const spinnerRef = React.useRef<HTMLSpanElement>(null);
+
+    React.useEffect(() => {
+        if (commit.verificationStatus !== "pending")
+            return;
+
+        const target = spinnerRef.current;
+        if (!target)
+            return;
+
+        let timeoutId: any;
+
+        const observer = new IntersectionObserver((entries) => {
+            const entry = entries[0];
+            if (entry.isIntersecting) {
+                timeoutId = setTimeout(() => {
+                    vscode.postMessage({
+                        command: "reverifyCommit",
+                        commitHash: commit.hash,
+                    });
+                }, 200);
+            }
+            else {
+                clearTimeout(timeoutId);
+            }
+        }, { threshold: 0.1 });
+
+        observer.observe(target);
+        return () => {
+            clearTimeout(timeoutId);
+            observer.unobserve(target);
+            observer.disconnect();
+        };
+    }, [commit.verificationStatus, commit.hash]);
+
+    const showSpinner = isLoading || commit.verificationStatus === "pending";
+
     return (
         <tr
             className={rowClassName}
@@ -185,33 +222,8 @@ export const CommitRow = React.memo(({
             )}
             <td className="message-cell" title={commit.message}>
                 <RefBadges refs={commit.refs} showTags={showTags} showRemoteBranches={showRemoteBranches} />
-                {commit.verificationStatus === "pending" && (
-                    <span
-                        className="verification-pending-icon"
-                        title="Suspected to be the same submission record, click on the left icon to revalidate."
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            vscode.postMessage({
-                                command: "reverifyCommit",
-                                commitHash: commit.hash,
-                            });
-                        }}
-                        style={{
-                            marginRight: "4px",
-                            color: "#d4a13d",
-                            display: "inline-flex",
-                            alignItems: "center",
-                            verticalAlign: "middle",
-                            cursor: "pointer",
-                        }}
-                    >
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="m21.171 15.398l-5.912-9.854C14.483 4.251 13.296 3.511 12 3.511s-2.483.74-3.259 2.031l-5.912 9.856c-.786 1.309-.872 2.705-.235 3.83C3.23 20.354 4.472 21 6 21h12c1.528 0 2.77-.646 3.406-1.771s.551-2.521-.235-3.831M12 17.549c-.854 0-1.55-.695-1.55-1.549c0-.855.695-1.551 1.55-1.551s1.55.696 1.55 1.551c0 .854-.696 1.549-1.55 1.549m1.633-7.424c-.011.031-1.401 3.468-1.401 3.468c-.038.094-.13.156-.231.156s-.193-.062-.231-.156l-1.391-3.438a1.8 1.8 0 0 1-.129-.655c0-.965.785-1.75 1.75-1.75a1.752 1.752 0 0 1 1.633 2.375" />
-                        </svg>
-                    </span>
-                )}
                 <span className="message-text">{commit.message}</span>
-                {isLoading && <span className="row-loading-spinner" title="Loading files..."></span>}
+                {showSpinner && <span ref={spinnerRef} className="row-loading-spinner" title={commit.verificationStatus === "pending" ? "Verifying commit..." : "Loading files..."}></span>}
             </td>
             <td className="hash-cell">{commit.shortHash}</td>
             <td className="author-cell">{commit.author}</td>

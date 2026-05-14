@@ -2,15 +2,15 @@ import type { GitCommit } from "../gitParser";
 
 /**
  * Shared signature generation for cherry-pick detection.
- * Cherry-pick preserves author email, author timestamp, and subject line.
+ * Cherry-pick preserves author email and subject line.
  */
-export function createSignature(email: string, authorTimestamp: string | number, subject: string): string {
-    return `${email.trim()}\x1F${String(authorTimestamp).trim()}\x1F${subject.trim()}`;
+export function createSignature(email: string, subject: string): string {
+    return `${email.trim()}\x1F${subject.trim()}`;
 }
 
 export function getCommitSignature(c: GitCommit): string {
     const subject = c.message.split("\n")[0];
-    return createSignature(c.email, c.authorTimestamp, subject);
+    return createSignature(c.email, subject);
 }
 
 export interface HighlightResult {

@@ -127,7 +127,7 @@ export class GitOperations {
             if (!cwd || !branchName)
                 return resolve(new Map());
             cp.exec(
-                `git log --format="%ae\x1F%at\x1F%s\x1F%H" "${branchName}"`,
+                `git log --format="%ae\x1F%s\x1F%H" "${branchName}"`,
                 { cwd, maxBuffer: 50 * 1024 * 1024 },
                 (err, stdout) => {
                     if (err)
@@ -136,8 +136,8 @@ export class GitOperations {
                     stdout.split("\n")
                         .filter(Boolean)
                         .forEach((line) => {
-                            const [email, at, s, hash] = line.split("\x1F");
-                            const sig = createSignature(email, at, s);
+                            const [email, s, hash] = line.split("\x1F");
+                            const sig = createSignature(email, s);
                             const hashes = signatureMap.get(sig) || [];
                             hashes.push(hash);
                             signatureMap.set(sig, hashes);
