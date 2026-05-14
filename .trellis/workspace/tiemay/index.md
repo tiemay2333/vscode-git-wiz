@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 7
+- **Total Sessions**: 8
 - **Last Active**: 2026-05-14
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~240 | Active |
+| `journal-1.md` | ~274 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 8 | 2026-05-14 | Deepen GitService & Enforce GitRunner Seam | `b8de511`, `3f8f61f` | `main` |
 | 7 | 2026-05-14 | Refine Git Watcher & Quality Guidelines | `69c49ad`, `32bc3f7` | `main` |
 | 6 | 2026-05-13 | Fix Stale View After Reopen | `56d9ca9` | `main` |
 | 5 | 2026-05-13 | Tiered Branch Highlighting with Async Verification | `3287166` | `main` |

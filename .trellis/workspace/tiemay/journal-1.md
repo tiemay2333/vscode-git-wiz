@@ -238,3 +238,37 @@ Refined Git filesystem watcher to use precise paths (HEAD, refs, packed-refs), a
 ### Next Steps
 
 - None - task complete
+
+
+## Session 8: Deepen GitService & Enforce GitRunner Seam
+
+**Date**: 2026-05-14
+**Task**: Deepen GitService & Enforce GitRunner Seam
+**Branch**: `main`
+
+### Summary
+
+Refactored GitOperations into a deep GitService, decoupled from VS Code UI. Enforced the GitRunner seam for all Git executions. Moved Git command logic from extension.ts to GitService. Added comprehensive unit tests for GitService.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `b8de511` | (see git log) |
+| `3f8f61f` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
