@@ -1,7 +1,5 @@
 import type { GitRunner } from "./git/GitRunner";
 import type { GitCommit } from "./gitParser";
-import * as cp from "node:child_process";
-import * as vscode from "vscode";
 import { createSignature } from "./git/commitHighlight";
 import { ChildProcessGitRunner } from "./git/GitRunner";
 import { makeMsgEditorScript, makeSeqEditorScript } from "./git/rebaseScripts";
@@ -18,134 +16,104 @@ export interface Branch {
     isTag: boolean;
 }
 
-export class GitOperations {
-    private readonly runner: GitRunner;
+export interface GitServiceOptions {
+    cwd: string;
+    runner?: GitRunner;
+}
 
-    constructor(
-        private readonly onRefresh: () => void,
-        runner?: GitRunner,
-    ) {
-        this.runner = runner ?? new ChildProcessGitRunner(
-            vscode.workspace.workspaceFolders?.[0]?.uri.fsPath,
-        );
+export class GitService {
+    private readonly runner: GitRunner;
+    private readonly cwd: string;
+
+    constructor(options: GitServiceOptions) {
+        this.cwd = options.cwd;
+        this.runner = options.runner ?? new ChildProcessGitRunner(this.cwd);
     }
 
     getRunner(): GitRunner {
         return this.runner;
     }
 
-    private getCwd(): string | null {
-        return vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? null;
-    }
-
     async getBranches(): Promise<Branch[]> {
-        return new Promise((resolve) => {
-            const cwd = this.getCwd();
-            if (!cwd) {
-                resolve([]);
-                return;
-            }
-            cp.exec("git for-each-ref --format=\"%(refname)\x1F%(refname:short)\x1F%(HEAD)\" refs/heads/ refs/remotes/ refs/tags/", { cwd }, (err, stdout) => {
-                if (err) {
-                    resolve([]);
-                    return;
+        const result = await this.runner.exec(["for-each-ref", "--format=%(refname)\x1F%(refname:short)\x1F%(HEAD)", "refs/heads/", "refs/remotes/", "refs/tags/"]);
+        if (result.exitCode !== 0) {
+            return [];
+        }
+        const branches = result.stdout
+            .split("\n")
+            .filter(line => line.trim())
+            .map((line) => {
+                const parts = line.split("\x1F");
+                const refname = parts[0];
+                const fullName = parts[1];
+                const head = parts[2];
+
+                const isRemote = refname.startsWith("refs/remotes/");
+                const isTag = refname.startsWith("refs/tags/");
+                if (isRemote && refname.endsWith("/HEAD")) {
+                    return null;
                 }
-                const branches = stdout
-                    .split("\n")
-                    .filter(line => line.trim())
-                    .map((line) => {
-                        const parts = line.split("\x1F");
-                        const refname = parts[0];
-                        const fullName = parts[1];
-                        const head = parts[2];
 
-                        const isRemote = refname.startsWith("refs/remotes/");
-                        const isTag = refname.startsWith("refs/tags/");
-                        if (isRemote && refname.endsWith("/HEAD")) {
-                            return null;
-                        }
+                const name = isTag ? fullName.substring(fullName.indexOf("/") + 1) : (isRemote ? fullName.substring(fullName.indexOf("/") + 1) : fullName);
 
-                        const name = isTag ? fullName.substring(fullName.indexOf("/") + 1) : (isRemote ? fullName.substring(fullName.indexOf("/") + 1) : fullName);
-
-                        return {
-                            name,
-                            fullName,
-                            isRemote,
-                            isHead: head === "*",
-                            isTag,
-                        };
-                    })
-                    .filter((b): b is Branch => b !== null);
-                resolve(branches);
-            });
-        });
+                return {
+                    name,
+                    fullName,
+                    isRemote,
+                    isHead: head === "*",
+                    isTag,
+                };
+            })
+            .filter((b): b is Branch => b !== null);
+        return branches;
     }
 
     async getCurrentBranch(): Promise<string | null> {
-        return new Promise((resolve) => {
-            const cwd = this.getCwd();
-            if (!cwd)
-                return resolve(null);
-            cp.exec("git rev-parse --abbrev-ref HEAD", { cwd }, (err, stdout) => {
-                if (err)
-                    return resolve(null);
-                resolve(stdout.trim());
-            });
-        });
+        const result = await this.runner.exec(["rev-parse", "--abbrev-ref", "HEAD"]);
+        if (result.exitCode !== 0)
+            return null;
+        return result.stdout.trim();
     }
 
     async getHeadHash(branchName: string): Promise<string | null> {
-        return new Promise((resolve) => {
-            const cwd = this.getCwd();
-            if (!cwd || !branchName)
-                return resolve(null);
-            cp.exec(`git rev-parse "${branchName}"`, { cwd }, (err, stdout) => {
-                if (err)
-                    return resolve(null);
-                resolve(stdout.trim());
-            });
-        });
+        if (!branchName)
+            return null;
+        const result = await this.runner.exec(["rev-parse", branchName]);
+        if (result.exitCode !== 0)
+            return null;
+        return result.stdout.trim();
     }
 
     async getBranchCommits(branchName: string): Promise<Set<string>> {
-        return new Promise((resolve) => {
-            const cwd = this.getCwd();
-            if (!cwd || !branchName)
-                return resolve(new Set());
-            cp.exec(`git rev-list "${branchName}"`, { cwd, maxBuffer: 50 * 1024 * 1024 }, (err, stdout) => {
-                if (err)
-                    return resolve(new Set());
-                const hashes = new Set(stdout.split("\n").filter(Boolean));
-                resolve(hashes);
-            });
-        });
+        if (!branchName)
+            return new Set();
+        const result = await this.runner.exec(["rev-list", branchName], { maxBuffer: 50 * 1024 * 1024 });
+        if (result.exitCode !== 0)
+            return new Set();
+        const hashes = new Set(result.stdout.split("\n").filter(Boolean));
+        return hashes;
     }
 
     async getBranchCommitSignatures(branchName: string): Promise<Map<string, string[]>> {
-        return new Promise((resolve) => {
-            const cwd = this.getCwd();
-            if (!cwd || !branchName)
-                return resolve(new Map());
-            cp.exec(
-                `git log --format="%ae\x1F%s\x1F%H" "${branchName}"`,
-                { cwd, maxBuffer: 50 * 1024 * 1024 },
-                (err, stdout) => {
-                    if (err)
-                        return resolve(new Map());
-                    const signatureMap = new Map<string, string[]>();
-                    stdout.split("\n")
-                        .filter(Boolean)
-                        .forEach((line) => {
-                            const [email, s, hash] = line.split("\x1F");
-                            const sig = createSignature(email, s);
-                            const hashes = signatureMap.get(sig) || [];
-                            hashes.push(hash);
-                            signatureMap.set(sig, hashes);
-                        });
-                    resolve(signatureMap);
-                },
-            );
-        });
+        if (!branchName)
+            return new Map();
+        const result = await this.runner.exec(
+            ["log", "--format=%ae\x1F%s\x1F%H", branchName],
+            { maxBuffer: 50 * 1024 * 1024 },
+        );
+        if (result.exitCode !== 0)
+            return new Map();
+        const signatureMap = new Map<string, string[]>();
+        result.stdout.split("\n")
+            .filter(Boolean)
+            .forEach((line) => {
+                const [email, s, hash] = line.split("\x1F");
+                const sig = createSignature(email, s);
+                const hashes = signatureMap.get(sig) || [];
+                hashes.push(hash);
+                signatureMap.set(sig, hashes);
+            });
+        return signatureMap;
     }
 
     async getUnfilteredLog(
@@ -153,25 +121,26 @@ export class GitOperations {
         skip = 0,
         limit = 200,
     ): Promise<GitCommit[]> {
-        return new Promise((resolve) => {
-            const cwd = this.getCwd();
-            if (!cwd) {
-                resolve([]);
-                return;
-            }
+        const args = ["log"];
+        if (filterBranch) {
+            args.push(filterBranch);
+        }
+        else {
+            args.push("--all");
+        }
 
-            const branchArg = filterBranch ? ` ${filterBranch}` : " --all";
-            const skipArg = skip > 0 ? ` --skip=${skip}` : "";
-            const gitCommand = `git log${branchArg}${skipArg} --max-count=${limit} --pretty=format:"%H\x1F%h\x1F%P\x1F%an\x1F%ae\x1F%ai\x1F%D\x1F%ct\x1F%at\x1F%s" --date-order`;
+        if (skip > 0) {
+            args.push(`--skip=${skip}`);
+        }
+        args.push(`--max-count=${limit}`);
+        args.push("--pretty=format:%H\x1F%h\x1F%P\x1F%an\x1F%ae\x1F%ai\x1F%D\x1F%ct\x1F%at\x1F%s");
+        args.push("--date-order");
 
-            cp.exec(gitCommand, { cwd, maxBuffer: 100 * 1024 * 1024 }, (error, stdout) => {
-                if (error) {
-                    resolve([]);
-                    return;
-                }
-                resolve(parseGitLogOutput(stdout.trim()));
-            });
-        });
+        const result = await this.runner.exec(args, { maxBuffer: 100 * 1024 * 1024 });
+        if (result.exitCode !== 0) {
+            return [];
+        }
+        return parseGitLogOutput(result.stdout.trim());
     }
 
     async getGitLog(
@@ -181,772 +150,357 @@ export class GitOperations {
         filters?: { query?: string; author?: string; from?: string; to?: string },
         filePath?: string | null,
     ): Promise<GitCommit[]> {
-        return new Promise((resolve) => {
-            const cwd = this.getCwd();
-            if (!cwd) {
-                resolve([]);
-                return;
-            }
-
-            const branchArg = filterBranch ? ` ${filterBranch}` : " --all";
-            const skipArg = skip > 0 ? ` --skip=${skip}` : "";
-
-            let filterArgs = "";
-            if (filters?.query) {
-                const escapedQuery = filters.query.replace(/"/g, "\\\"");
-                // To search both commit message (--grep) and diff contents (-G), using -G or --grep.
-                // Since "全部内容" can mean message or file content, let's use --grep and -G
-                // But combining them is an AND. We can't OR them easily.
-                // We'll use --grep to search commit messages, which is standard. For "全部内容", maybe just simple grep is intended, but we use -i for case-insensitive.
-                filterArgs += ` --grep="${escapedQuery}" -i`;
-            }
-            if (filters?.author) {
-                filterArgs += ` --author="${filters.author.replace(/"/g, "\\\"")}" -i`;
-            }
-            if (filters?.from) {
-                filterArgs += ` --since="${filters.from.replace(/\//g, "-")} 00:00:00"`;
-            }
-            if (filters?.to) {
-                filterArgs += ` --until="${filters.to.replace(/\//g, "-")} 23:59:59"`;
-            }
-
-            const fileArg = filePath ? ` -- "${filePath}"` : "";
-            const gitCommand = `git log${branchArg}${skipArg} --max-count=${limit}${filterArgs} --pretty=format:"%H\x1F%h\x1F%P\x1F%an\x1F%ae\x1F%ai\x1F%D\x1F%ct\x1F%at\x1F%s" --date-order${fileArg}`;
-
-            const runCommand = (cmd: string): Promise<string> => {
-                return new Promise((res) => {
-                    cp.exec(cmd, { cwd, maxBuffer: 100 * 1024 * 1024 }, (error, stdout) => {
-                        res(error ? "" : stdout.trim());
-                    });
-                });
-            };
-
-            const promises: Promise<string>[] = [runCommand(gitCommand)];
-
-            if (filters?.query && /^[a-f0-9]{4,40}$/i.test(filters.query) && skip === 0) {
-                // If query looks like a hash and we are on the first page, try fetching it directly
-                // in case it's a commit hash. By using git log -1 it will silently fail if not found.
-                const hashCommand = `git log -1 ${filters.query} --pretty=format:"%H\x1F%h\x1F%P\x1F%an\x1F%ae\x1F%ai\x1F%D\x1F%ct\x1F%at\x1F%s"`;
-                promises.push(runCommand(hashCommand));
-            }
-
-            Promise.all(promises).then((results) => {
-                const stdoutMain = results[0];
-                const stdoutHash = results[1] || "";
-
-                // Combine results, ensuring no duplicates by checking full hash (the first part of the line)
-                const lines = stdoutMain ? stdoutMain.split("\n") : [];
-                if (stdoutHash) {
-                    const hashLineHash = stdoutHash.split("\x1F")[0];
-                    if (!lines.some(line => line.startsWith(`${hashLineHash}\x1F`))) {
-                        lines.unshift(stdoutHash);
-                    }
-                }
-
-                const commits = parseGitLogOutput(lines.join("\n"));
-                resolve(commits);
-            });
-        });
-    }
-
-    async cherryPickCommit(commitHash: string) {
-        const cwd = this.getCwd();
-        if (!cwd) {
-            return;
-        }
-
-        await vscode.window.withProgress(
-            { location: vscode.ProgressLocation.Window, title: `Cherry-picking commit ${commitHash.substring(0, 7)}...` },
-            async () => {
-                return new Promise<void>((resolve) => {
-                    cp.exec(`git cherry-pick ${commitHash}`, { cwd }, (error, _stdout, stderr) => {
-                        if (error) {
-                            vscode.window.showErrorMessage(`Failed to cherry-pick commit: ${error.message}\n${stderr}`);
-                        }
-                        else {
-                            vscode.window.showInformationMessage("Commit cherry-picked successfully");
-                            this.onRefresh();
-                        }
-                        resolve();
-                    });
-                });
-            },
-        );
-    }
-
-    async copyCommitHash(commitHash: string) {
-        await vscode.env.clipboard.writeText(commitHash);
-        vscode.window.showInformationMessage("Commit hash copied to clipboard");
-    }
-
-    async copyCommitMessage(commitHash: string, commitMessage: string) {
-        await vscode.env.clipboard.writeText(commitMessage);
-        vscode.window.showInformationMessage("Commit message copied to clipboard");
-    }
-
-    async revertCommit(commitHash: string) {
-        const confirm = await vscode.window.showWarningMessage(
-            `Are you sure you want to revert commit ${commitHash.substring(0, 7)}?`,
-            "Yes",
-            "No",
-        );
-        if (confirm !== "Yes") {
-            return;
-        }
-
-        const cwd = this.getCwd();
-        if (!cwd) {
-            return;
-        }
-
-        await vscode.window.withProgress(
-            { location: vscode.ProgressLocation.Window, title: `Reverting commit ${commitHash.substring(0, 7)}...` },
-            async () => {
-                return new Promise<void>((resolve) => {
-                    cp.exec(`git revert ${commitHash} --no-edit`, { cwd }, (error, _stdout, stderr) => {
-                        if (error) {
-                            vscode.window.showErrorMessage(`Failed to revert commit: ${error.message}\n${stderr}`);
-                        }
-                        else {
-                            vscode.window.showInformationMessage("Commit reverted successfully");
-                            this.onRefresh();
-                        }
-                        resolve();
-                    });
-                });
-            },
-        );
-    }
-
-    async dropCommit(commitHash: string) {
-        const confirm = await vscode.window.showWarningMessage(
-            `Are you sure you want to permanently drop commit ${commitHash.substring(0, 7)}? This cannot be undone.`,
-            "Drop",
-            "Cancel",
-        );
-        if (confirm !== "Drop") {
-            return;
-        }
-
-        const cwd = this.getCwd();
-        if (!cwd) {
-            return;
-        }
-
-        await vscode.window.withProgress(
-            { location: vscode.ProgressLocation.Window, title: `Dropping commit ${commitHash.substring(0, 7)}...` },
-            async () => {
-                return new Promise<void>((resolve) => {
-                    cp.exec(`git rebase --onto ${commitHash}^ ${commitHash}`, { cwd }, (error, _stdout, stderr) => {
-                        if (error) {
-                            vscode.window.showErrorMessage(`Failed to drop commit: ${error.message}\n${stderr}`);
-                        }
-                        else {
-                            vscode.window.showInformationMessage("Commit dropped successfully");
-                            this.onRefresh();
-                        }
-                        resolve();
-                    });
-                });
-            },
-        );
-    }
-
-    async resetToCommit(commitHash: string) {
-        if (!commitHash) {
-            return;
-        }
-
-        const items: (vscode.QuickPickItem & { value: string })[] = [
-            { label: "Soft", description: "Keep changes staged", value: "--soft" },
-            { label: "Mixed", description: "Keep changes unstaged", value: "--mixed" },
-            { label: "Hard", description: "Discard all changes", value: "--hard" },
-        ];
-
-        const resetType = await vscode.window.showQuickPick(items, {
-            placeHolder: "Select reset type",
-        });
-
-        if (!resetType) {
-            return;
-        }
-
-        const confirm = await vscode.window.showWarningMessage(
-            `Are you sure you want to reset to commit ${commitHash.substring(0, 7)} (${resetType.label})?`,
-            "Yes",
-            "No",
-        );
-        if (confirm !== "Yes") {
-            return;
-        }
-
-        const cwd = this.getCwd();
-        if (!cwd) {
-            vscode.window.showErrorMessage("No workspace folder found.");
-            return;
-        }
-
-        await vscode.window.withProgress(
-            { location: vscode.ProgressLocation.Window, title: `Resetting to commit ${commitHash.substring(0, 7)} (${resetType.label})...` },
-            async () => {
-                return new Promise<void>((resolve) => {
-                    cp.exec(`git reset ${resetType.value} "${commitHash}"`, { cwd }, (error, _stdout, stderr) => {
-                        if (error) {
-                            vscode.window.showErrorMessage(`Failed to reset: ${error.message}\n${stderr}`);
-                        }
-                        else {
-                            vscode.window.showInformationMessage(`Reset to commit ${commitHash.substring(0, 7)} successfully`);
-                            this.onRefresh();
-                        }
-                        resolve();
-                    });
-                });
-            },
-        );
-    }
-
-    async squashCommits(hashes: string[], parentHash: string) {
-        if (!parentHash) {
-            vscode.window.showErrorMessage("Cannot squash: oldest selected commit has no parent.");
-            return;
-        }
-
-        const cwd = this.getCwd();
-        if (!cwd) {
-            return;
-        }
-
-        const newMessage = await vscode.window.showInputBox({
-            prompt: `Squash ${hashes.length} commits into one`,
-            placeHolder: "New commit message",
-            validateInput: v => (!v || !v.trim() ? "Message cannot be empty" : null),
-        });
-        if (!newMessage) {
-            return;
-        }
-
-        const headHash = await new Promise<string>((resolve) => {
-            cp.exec("git rev-parse HEAD", { cwd }, (err, stdout) => resolve(err ? "" : stdout.trim()));
-        });
-
-        if (hashes[0] === headHash) {
-            // Selection ends at HEAD — simple reset + commit
-            const escaped = newMessage.replace(/"/g, "\\\"");
-            await vscode.window.withProgress(
-                { location: vscode.ProgressLocation.Window, title: `Squashing ${hashes.length} commits...` },
-                async () => {
-                    return new Promise<void>((resolve) => {
-                        cp.exec(`git reset --soft ${parentHash}`, { cwd }, (error) => {
-                            if (error) {
-                                vscode.window.showErrorMessage(`Failed to squash: ${error.message}`);
-                                resolve();
-                                return;
-                            }
-                            cp.exec(`git commit -m "${escaped}"`, { cwd }, (err2) => {
-                                if (err2) {
-                                    vscode.window.showErrorMessage(`Failed to commit squash: ${err2.message}`);
-                                }
-                                else {
-                                    vscode.window.showInformationMessage(`Squashed ${hashes.length} commits successfully`);
-                                    this.onRefresh();
-                                }
-                                resolve();
-                            });
-                        });
-                    });
-                },
-            );
+        const args = ["log"];
+        if (filterBranch) {
+            args.push(filterBranch);
         }
         else {
-            // Selection is in the middle — use interactive rebase with scripted editors.
-            // hashes[hashes.length-1] is the oldest selected (stays 'pick');
-            // all others become 'squash'.
-            const squashableHashes = hashes.slice(0, -1);
+            args.push("--all");
+        }
 
-            const squashInProgress = await runRebaseWithScripts(cwd, parentHash, {
+        if (skip > 0) {
+            args.push(`--skip=${skip}`);
+        }
+        args.push(`--max-count=${limit}`);
+
+        if (filters?.query) {
+            args.push(`--grep=${filters.query}`, "-i");
+        }
+        if (filters?.author) {
+            args.push(`--author=${filters.author}`, "-i");
+        }
+        if (filters?.from) {
+            args.push(`--since=${filters.from.replace(/\//g, "-")} 00:00:00`);
+        }
+        if (filters?.to) {
+            args.push(`--until=${filters.to.replace(/\//g, "-")} 23:59:59`);
+        }
+
+        args.push("--pretty=format:%H\x1F%h\x1F%P\x1F%an\x1F%ae\x1F%ai\x1F%D\x1F%ct\x1F%at\x1F%s");
+        args.push("--date-order");
+
+        if (filePath) {
+            args.push("--", filePath);
+        }
+
+        const promises: Promise<GitCommit[]>[] = [
+            this.runner.exec(args, { maxBuffer: 100 * 1024 * 1024 }).then(res => (res.exitCode === 0 ? parseGitLogOutput(res.stdout.trim()) : [])),
+        ];
+
+        if (filters?.query && /^[a-f0-9]{4,40}$/i.test(filters.query) && skip === 0) {
+            const hashArgs = ["log", "-1", filters.query, "--pretty=format:%H\x1F%h\x1F%P\x1F%an\x1F%ae\x1F%ai\x1F%D\x1F%ct\x1F%at\x1F%s"];
+            promises.push(this.runner.exec(hashArgs).then(res => (res.exitCode === 0 ? parseGitLogOutput(res.stdout.trim()) : [])));
+        }
+
+        const results = await Promise.all(promises);
+        const mainCommits = results[0];
+        const hashCommits = results[1] || [];
+
+        if (hashCommits.length > 0) {
+            const hashCommit = hashCommits[0];
+            if (!mainCommits.some(c => c.hash === hashCommit.hash)) {
+                mainCommits.unshift(hashCommit);
+            }
+        }
+
+        return mainCommits;
+    }
+
+    async cherryPickCommit(commitHash: string): Promise<void> {
+        const result = await this.runner.exec(["cherry-pick", commitHash]);
+        if (result.exitCode !== 0) {
+            throw new Error(result.stderr || `Cherry-pick failed with exit code ${result.exitCode}`);
+        }
+    }
+
+    async revertCommit(commitHash: string): Promise<void> {
+        const result = await this.runner.exec(["revert", commitHash, "--no-edit"]);
+        if (result.exitCode !== 0) {
+            throw new Error(result.stderr || `Revert failed with exit code ${result.exitCode}`);
+        }
+    }
+
+    async dropCommit(commitHash: string): Promise<void> {
+        const result = await this.runner.exec(["rebase", "--onto", `${commitHash}^`, commitHash]);
+        if (result.exitCode !== 0) {
+            throw new Error(result.stderr || `Drop failed with exit code ${result.exitCode}`);
+        }
+    }
+
+    async resetToCommit(commitHash: string, type: string): Promise<void> {
+        const result = await this.runner.exec(["reset", type, commitHash]);
+        if (result.exitCode !== 0) {
+            throw new Error(result.stderr || `Reset failed with exit code ${result.exitCode}`);
+        }
+    }
+
+    async squashCommits(hashes: string[], parentHash: string, newMessage: string): Promise<void> {
+        const headHashResult = await this.runner.exec(["rev-parse", "HEAD"]);
+        const headHash = headHashResult.exitCode === 0 ? headHashResult.stdout.trim() : "";
+
+        if (hashes[0] === headHash) {
+            const resetResult = await this.runner.exec(["reset", "--soft", parentHash]);
+            if (resetResult.exitCode !== 0) {
+                throw new Error(`Failed to reset: ${resetResult.stderr}`);
+            }
+            const commitResult = await this.runner.exec(["commit", "-m", newMessage]);
+            if (commitResult.exitCode !== 0) {
+                throw new Error(`Failed to commit squash: ${commitResult.stderr}`);
+            }
+        }
+        else {
+            const squashableHashes = hashes.slice(0, -1);
+            const squashInProgress = await runRebaseWithScripts(this.cwd, parentHash, {
                 seqScript: makeSeqEditorScript(squashableHashes.map(h => ({ hash: h, action: "squash" }))),
                 msgScript: makeMsgEditorScript(`${newMessage}\n`),
             });
 
-            if (squashInProgress.success) {
-                vscode.window.showInformationMessage(`Squashed ${hashes.length} commits successfully`);
-                this.onRefresh();
-            }
-            else {
-                vscode.window.showErrorMessage(`Failed to squash: ${squashInProgress.error}`);
+            if (!squashInProgress.success) {
+                throw new Error(`Failed to squash: ${squashInProgress.error}`);
             }
         }
     }
 
-    async revertCommits(hashes: string[]) {
-        const confirm = await vscode.window.showWarningMessage(
-            `Are you sure you want to revert ${hashes.length} commits? This will create ${hashes.length} new revert commits.`,
-            "Yes",
-            "No",
-        );
-        if (confirm !== "Yes") {
-            return;
+    async revertCommits(hashes: string[]): Promise<void> {
+        const result = await this.runner.exec(["revert", ...hashes, "--no-edit"]);
+        if (result.exitCode !== 0) {
+            throw new Error(result.stderr || `Revert failed with exit code ${result.exitCode}`);
+        }
+    }
+
+    async dropCommits(hashes: string[], parentHash: string): Promise<void> {
+        const result = await this.runner.exec(["rebase", "--onto", parentHash, hashes[0]]);
+        if (result.exitCode !== 0) {
+            throw new Error(result.stderr || `Drop failed with exit code ${result.exitCode}`);
+        }
+    }
+
+    async cherryPickRange(hashes: string[]): Promise<void> {
+        const ordered = [...hashes].reverse();
+        const result = await this.runner.exec(["cherry-pick", ...ordered]);
+        if (result.exitCode !== 0) {
+            throw new Error(result.stderr || `Cherry-pick failed with exit code ${result.exitCode}`);
+        }
+    }
+
+    async mergeBranch(sourceBranch: string): Promise<{ success: boolean; error?: string; isConflict?: boolean }> {
+        const result = await this.runner.exec(["merge", sourceBranch]);
+        if (result.exitCode !== 0) {
+            const isConflict = result.stderr.includes("CONFLICT") || result.stdout.includes("CONFLICT");
+            return { success: false, error: result.stderr || result.stdout, isConflict };
+        }
+        return { success: true };
+    }
+
+    async abortMerge(): Promise<void> {
+        await this.runner.exec(["merge", "--abort"]);
+    }
+
+    async rebaseBranch(targetBranch: string): Promise<void> {
+        const result = await this.runner.exec(["rebase", targetBranch]);
+        if (result.exitCode !== 0) {
+            await this.runner.exec(["rebase", "--abort"]);
+            throw new Error(`Rebase failed: ${result.stderr || result.stdout}. Rebase aborted.`);
+        }
+    }
+
+    async createBranch(branchName: string, startPoint: string): Promise<void> {
+        const result = await this.runner.exec(["branch", branchName, startPoint]);
+        if (result.exitCode !== 0) {
+            throw new Error(result.stderr || `Failed to create branch with exit code ${result.exitCode}`);
+        }
+    }
+
+    async checkoutBranch(branchName: string, options?: { track?: boolean; create?: boolean }): Promise<void> {
+        const args = ["checkout"];
+        if (options?.create)
+            args.push("-b");
+        if (options?.track)
+            args.push("--track");
+        args.push(branchName);
+
+        const result = await this.runner.exec(args);
+        if (result.exitCode !== 0) {
+            throw new Error(result.stderr || `Checkout failed with exit code ${result.exitCode}`);
+        }
+    }
+
+    async fetch(options?: { all?: boolean; remote?: string }): Promise<void> {
+        const args = ["fetch"];
+        if (options?.all)
+            args.push("--all");
+        if (options?.remote)
+            args.push(options.remote);
+
+        const result = await this.runner.exec(args);
+        if (result.exitCode !== 0) {
+            throw new Error(result.stderr || `Fetch failed with exit code ${result.exitCode}`);
+        }
+    }
+
+    async pull(): Promise<void> {
+        const result = await this.runner.exec(["pull"]);
+        if (result.exitCode !== 0) {
+            throw new Error(result.stderr || `Pull failed with exit code ${result.exitCode}`);
+        }
+    }
+
+    async push(options?: { force?: boolean; setUpstream?: string }): Promise<void> {
+        const args = ["push"];
+        if (options?.force)
+            args.push("--force-with-lease");
+        if (options?.setUpstream) {
+            args.push("-u", "origin", options.setUpstream);
         }
 
-        const cwd = this.getCwd();
-        if (!cwd) {
-            return;
+        const result = await this.runner.exec(args);
+        if (result.exitCode !== 0) {
+            throw new Error(result.stderr || result.stdout);
         }
-
-        await vscode.window.withProgress(
-            { location: vscode.ProgressLocation.Window, title: `Reverting ${hashes.length} commits...` },
-            async () => {
-                return new Promise<void>((resolve) => {
-                    // hashes are newest-first; revert in that order so each revert applies cleanly
-                    cp.exec(`git revert ${hashes.join(" ")} --no-edit`, { cwd }, (error, _stdout, stderr) => {
-                        if (error) {
-                            vscode.window.showErrorMessage(`Failed to revert commits: ${error.message}\n${stderr}`);
-                        }
-                        else {
-                            vscode.window.showInformationMessage(`Reverted ${hashes.length} commits successfully`);
-                            this.onRefresh();
-                        }
-                        resolve();
-                    });
-                });
-            },
-        );
     }
 
-    async dropCommits(hashes: string[], parentHash: string) {
-        if (!parentHash) {
-            vscode.window.showErrorMessage("Cannot drop: oldest selected commit has no parent.");
-            return;
+    async createTag(tagName: string, commitHash: string): Promise<void> {
+        const result = await this.runner.exec(["tag", tagName, commitHash]);
+        if (result.exitCode !== 0) {
+            throw new Error(result.stderr || `Failed to create tag with exit code ${result.exitCode}`);
         }
+    }
 
-        const confirm = await vscode.window.showWarningMessage(
-            `Are you sure you want to permanently drop ${hashes.length} commits? This cannot be undone.`,
-            "Drop",
-            "Cancel",
-        );
-        if (confirm !== "Drop") {
-            return;
+    async deleteTag(tagName: string): Promise<void> {
+        const result = await this.runner.exec(["tag", "-d", tagName]);
+        if (result.exitCode !== 0) {
+            throw new Error(result.stderr || `Failed to delete tag with exit code ${result.exitCode}`);
         }
+    }
 
-        const cwd = this.getCwd();
-        if (!cwd) {
-            return;
+    async deleteBranch(branchName: string, force: boolean = false): Promise<void> {
+        const result = await this.runner.exec(["branch", force ? "-D" : "-d", branchName]);
+        if (result.exitCode !== 0) {
+            throw new Error(result.stderr || result.stdout);
         }
-
-        await vscode.window.withProgress(
-            { location: vscode.ProgressLocation.Window, title: `Dropping ${hashes.length} commits...` },
-            async () => {
-                return new Promise<void>((resolve) => {
-                    // hashes[0] is newest; rebase everything after it onto parentHash, dropping the whole range
-                    cp.exec(`git rebase --onto ${parentHash} ${hashes[0]}`, { cwd }, (error, _stdout, stderr) => {
-                        if (error) {
-                            vscode.window.showErrorMessage(`Failed to drop commits: ${error.message}\n${stderr}`);
-                        }
-                        else {
-                            vscode.window.showInformationMessage(`Dropped ${hashes.length} commits successfully`);
-                            this.onRefresh();
-                        }
-                        resolve();
-                    });
-                });
-            },
-        );
     }
 
-    async cherryPickRange(hashes: string[]) {
-        const cwd = this.getCwd();
-        if (!cwd) {
-            return;
+    async deleteRemoteBranch(remote: string, branch: string): Promise<void> {
+        const result = await this.runner.exec(["push", remote, "--delete", branch]);
+        if (result.exitCode !== 0) {
+            throw new Error(result.stderr || `Failed to delete remote branch with exit code ${result.exitCode}`);
         }
-
-        await vscode.window.withProgress(
-            { location: vscode.ProgressLocation.Window, title: `Cherry-picking ${hashes.length} commits...` },
-            async () => {
-                return new Promise<void>((resolve) => {
-                    // hashes are newest-first; cherry-pick oldest to newest
-                    const ordered = [...hashes].reverse().join(" ");
-                    cp.exec(`git cherry-pick ${ordered}`, { cwd }, (error, _stdout, stderr) => {
-                        if (error) {
-                            vscode.window.showErrorMessage(`Failed to cherry-pick: ${error.message}\n${stderr}`);
-                        }
-                        else {
-                            vscode.window.showInformationMessage(`Cherry-picked ${hashes.length} commits successfully`);
-                            this.onRefresh();
-                        }
-                        resolve();
-                    });
-                });
-            },
-        );
-    }
-
-    async mergeBranch(sourceBranch: string) {
-        const cwd = this.getCwd();
-        if (!cwd)
-            return;
-
-        await vscode.window.withProgress(
-            { location: vscode.ProgressLocation.Window, title: `Merging '${sourceBranch}'...` },
-            async () => {
-                return new Promise<void>((resolve) => {
-                    cp.execFile("git", ["merge", sourceBranch], { cwd }, (error, _stdout, stderr) => {
-                        if (error) {
-                            const message = stderr || error.message;
-                            const isConflict = message.includes("CONFLICT") || message.includes("Conflict");
-                            if (isConflict) {
-                                vscode.window.showErrorMessage(`Merge failed with conflicts: ${message}`, "Abort Merge", "Close")
-                                    .then((choice) => {
-                                        if (choice === "Abort Merge") {
-                                            cp.execFile("git", ["merge", "--abort"], { cwd }, () => {
-                                                vscode.window.showInformationMessage("Merge aborted");
-                                                this.onRefresh();
-                                            });
-                                        }
-                                    });
-                            }
-                            else {
-                                vscode.window.showErrorMessage(`Merge failed: ${message}`);
-                            }
-                        }
-                        else {
-                            vscode.window.showInformationMessage(`Merged '${sourceBranch}' successfully`);
-                        }
-                        this.onRefresh();
-                        resolve();
-                    });
-                });
-            },
-        );
-    }
-
-    async rebaseBranch(targetBranch: string) {
-        const cwd = this.getCwd();
-        if (!cwd)
-            return;
-
-        await vscode.window.withProgress(
-            { location: vscode.ProgressLocation.Window, title: `Rebasing onto '${targetBranch}'...` },
-            async () => {
-                return new Promise<void>((resolve) => {
-                    cp.execFile("git", ["rebase", targetBranch], { cwd }, (error, _stdout, stderr) => {
-                        if (error) {
-                            cp.execFile("git", ["rebase", "--abort"], { cwd }, () => {
-                                vscode.window.showErrorMessage(`Rebase failed: ${stderr || error.message}. Rebase aborted.`);
-                                this.onRefresh();
-                                resolve();
-                            });
-                        }
-                        else {
-                            vscode.window.showInformationMessage(`Rebased onto '${targetBranch}' successfully`);
-                            this.onRefresh();
-                            resolve();
-                        }
-                    });
-                });
-            },
-        );
-    }
-
-    async createBranch(branchName: string, startPoint: string) {
-        const cwd = this.getCwd();
-        if (!cwd)
-            return;
-
-        return new Promise<void>((resolve) => {
-            vscode.window.withProgress(
-                { location: vscode.ProgressLocation.Window, title: `Creating branch '${branchName}'...` },
-                async () => {
-                    return new Promise<void>((res) => {
-                        cp.execFile("git", ["branch", branchName, startPoint], { cwd }, (error, _stdout, stderr) => {
-                            if (error) {
-                                vscode.window.showErrorMessage(`Failed to create branch: ${stderr || error.message}`);
-                            }
-                            else {
-                                vscode.window.showInformationMessage(`Branch '${branchName}' created successfully`);
-                                this.onRefresh();
-                            }
-                            res();
-                            resolve();
-                        });
-                    });
-                },
-            );
-        });
-    }
-
-    async createTag(tagName: string, commitHash: string) {
-        const cwd = this.getCwd();
-        if (!cwd)
-            return;
-
-        return new Promise<void>((resolve) => {
-            vscode.window.withProgress(
-                { location: vscode.ProgressLocation.Window, title: `Creating tag '${tagName}'...` },
-                async () => {
-                    return new Promise<void>((res) => {
-                        cp.execFile("git", ["tag", tagName, commitHash], { cwd }, async (error, _stdout, stderr) => {
-                            if (error) {
-                                vscode.window.showErrorMessage(`Failed to create tag: ${stderr || error.message}`);
-                            }
-                            else {
-                                const action = await vscode.window.showInformationMessage(`Tag '${tagName}' created successfully`, "Push Tag");
-                                this.onRefresh();
-                                if (action === "Push Tag") {
-                                    this.pushTag(tagName);
-                                }
-                            }
-                            res();
-                            resolve();
-                        });
-                    });
-                },
-            );
-        });
-    }
-
-    async pushTag(tagName: string) {
-        const cwd = this.getCwd();
-        if (!cwd)
-            return;
-
-        return new Promise<void>((resolve) => {
-            cp.execFile("git", ["remote"], { cwd }, async (error, stdout, stderr) => {
-                if (error) {
-                    vscode.window.showErrorMessage(`Failed to get remotes: ${stderr || error.message}`);
-                    resolve();
-                    return;
-                }
-
-                const remotes = stdout.trim().split("\n").filter(Boolean);
-                if (remotes.length === 0) {
-                    vscode.window.showErrorMessage("No remotes found. Cannot push tag.");
-                    resolve();
-                    return;
-                }
-
-                let targetRemote = remotes.includes("origin") ? "origin" : remotes[0];
-                if (remotes.length > 1) {
-                    const picked = await vscode.window.showQuickPick(remotes, {
-                        placeHolder: "Select a remote to push the tag to",
-                    });
-                    if (!picked) {
-                        resolve();
-                        return;
-                    }
-                    targetRemote = picked;
-                }
-
-                await vscode.window.withProgress(
-                    { location: vscode.ProgressLocation.Window, title: `Pushing tag '${tagName}' to '${targetRemote}'...` },
-                    async () => {
-                        return new Promise<void>((res) => {
-                            cp.execFile("git", ["push", targetRemote, tagName], { cwd }, (pushError, _pushStdout, pushStderr) => {
-                                if (pushError) {
-                                    vscode.window.showErrorMessage(`Failed to push tag: ${pushStderr || pushError.message}`);
-                                }
-                                else {
-                                    vscode.window.showInformationMessage(`Tag '${tagName}' pushed to '${targetRemote}' successfully`);
-                                }
-                                res();
-                                resolve();
-                            });
-                        });
-                    },
-                );
-            });
-        });
     }
 
     async getFileContentAtRev(hash: string, filePath: string): Promise<string> {
-        return new Promise((resolve) => {
-            const cwd = this.getCwd();
-            if (!cwd) {
-                resolve("");
-                return;
-            }
-            cp.execFile("git", ["show", `${hash}:${filePath}`], { cwd }, (error, stdout) => {
-                if (error) {
-                    resolve("");
-                }
-                else {
-                    resolve(stdout);
-                }
-            });
-        });
+        const result = await this.runner.exec(["show", `${hash}:${filePath}`]);
+        return result.exitCode === 0 ? result.stdout : "";
     }
 
     async getCommitFiles(hash: string): Promise<{ status: string; path: string; insertions?: number; deletions?: number }[]> {
-        return new Promise((resolve, reject) => {
-            const cwd = this.getCwd();
-            if (!cwd) {
-                reject(new Error("No workspace folder found"));
-                return;
-            }
-            // First get name-status
-            cp.execFile("git", ["diff-tree", "--no-commit-id", "--name-status", "-r", hash, "--root"], { cwd }, (error, stdout, stderr) => {
-                if (error) {
-                    reject(new Error(`Failed to load commit files: ${stderr || error.message}`));
-                    return;
+        const nameStatusResult = await this.runner.exec(["diff-tree", "--no-commit-id", "--name-status", "-r", hash, "--root"]);
+        if (nameStatusResult.exitCode !== 0) {
+            throw new Error(`Failed to load commit files: ${nameStatusResult.stderr}`);
+        }
+
+        const output = nameStatusResult.stdout.trim();
+        const statusMap = new Map<string, string>();
+
+        if (output) {
+            output.split("\n").filter(Boolean).forEach((line) => {
+                const parts = line.split("\t");
+                if (parts.length >= 2) {
+                    const status = parts[0];
+                    const path = parts[parts.length - 1];
+                    statusMap.set(path, status.charAt(0));
                 }
-
-                const output = stdout.trim();
-                const statusMap = new Map<string, string>();
-
-                if (output) {
-                    output.split("\n").filter(Boolean).forEach((line) => {
-                        const [status, ...paths] = line.split("\t");
-                        statusMap.set(paths[paths.length - 1], status.charAt(0));
-                    });
-                }
-
-                // If no output from diff-tree, it might be the initial commit or something else.
-                // But with --root it should show initial commit.
-                // If still empty, we can try numstat.
-                cp.execFile("git", ["diff-tree", "--no-commit-id", "--numstat", "-r", hash, "--root"], { cwd }, (err, numOut) => {
-                    if (err) {
-                        resolve(Array.from(statusMap.entries()).map(([path, status]) => ({ status, path })));
-                        return;
-                    }
-
-                    const numMap = new Map<string, { insertions: number; deletions: number }>();
-                    const numLines = numOut.trim().split("\n").filter(Boolean);
-
-                    numLines.forEach((line) => {
-                        const parts = line.split("\t");
-                        if (parts.length >= 3) {
-                            const ins = Number.parseInt(parts[0], 10) || 0;
-                            const del = Number.parseInt(parts[1], 10) || 0;
-                            numMap.set(parts[parts.length - 1], { insertions: ins, deletions: del });
-                        }
-                    });
-
-                    // If statusMap is empty but numMap isn't, use numMap to populate paths (status will be 'A' for root commit)
-                    if (statusMap.size === 0 && numMap.size > 0) {
-                        numMap.forEach((_, path) => statusMap.set(path, "A"));
-                    }
-
-                    const files = Array.from(statusMap.entries()).map(([path, status]) => {
-                        const stats = numMap.get(path);
-                        return {
-                            status,
-                            path,
-                            insertions: stats?.insertions,
-                            deletions: stats?.deletions,
-                        };
-                    });
-                    resolve(files);
-                });
             });
+        }
+
+        const numstatResult = await this.runner.exec(["diff-tree", "--no-commit-id", "--numstat", "-r", hash, "--root"]);
+        const numMap = new Map<string, { insertions: number; deletions: number }>();
+        if (numstatResult.exitCode === 0) {
+            const numLines = numstatResult.stdout.trim().split("\n").filter(Boolean);
+            numLines.forEach((line) => {
+                const parts = line.split("\t");
+                if (parts.length >= 3) {
+                    const ins = Number.parseInt(parts[0], 10) || 0;
+                    const del = Number.parseInt(parts[1], 10) || 0;
+                    const path = parts[parts.length - 1];
+                    numMap.set(path, { insertions: ins, deletions: del });
+                }
+            });
+        }
+
+        if (statusMap.size === 0 && numMap.size > 0) {
+            numMap.forEach((_, path) => statusMap.set(path, "A"));
+        }
+
+        return Array.from(statusMap.entries()).map(([path, status]) => {
+            const stats = numMap.get(path);
+            return {
+                status,
+                path,
+                insertions: stats?.insertions,
+                deletions: stats?.deletions,
+            };
         });
     }
 
     async getGitConfig(key: string, scope: "local" | "global"): Promise<string> {
-        return new Promise((resolve) => {
-            const cwd = this.getCwd();
-            if (!cwd)
-                return resolve("");
-            const scopeArg = scope === "global" ? "--global" : "--local";
-            cp.exec(`git config ${scopeArg} "${key}"`, { cwd }, (err, stdout) => {
-                resolve(err ? "" : stdout.trim());
-            });
-        });
+        const scopeArg = scope === "global" ? "--global" : "--local";
+        const result = await this.runner.exec(["config", scopeArg, key]);
+        return result.exitCode === 0 ? result.stdout.trim() : "";
     }
 
     async getNumstat(hash: string): Promise<{ added: number | null; deleted: number | null; path: string }[]> {
-        return new Promise((resolve) => {
-            const cwd = this.getCwd();
-            if (!cwd) {
-                resolve([]);
-                return;
+        const result = await this.runner.exec(["show", "--numstat", "--format=", hash]);
+        if (result.exitCode !== 0) {
+            return [];
+        }
+        return result.stdout.trim().split("\n").filter(Boolean).map((line) => {
+            const parts = line.split("\t");
+            if (parts.length >= 3) {
+                return {
+                    added: parts[0] === "-" ? null : Number.parseInt(parts[0], 10),
+                    deleted: parts[1] === "-" ? null : Number.parseInt(parts[1], 10),
+                    path: parts[2],
+                };
             }
-            cp.execFile("git", ["show", "--numstat", "--format=", hash], { cwd }, (error, stdout) => {
-                if (error) {
-                    resolve([]);
-                    return;
-                }
-                const results = stdout.trim().split("\n").filter(Boolean).map((line) => {
-                    const parts = line.split("\t");
-                    if (parts.length >= 3) {
-                        return {
-                            added: parts[0] === "-" ? null : Number.parseInt(parts[0], 10),
-                            deleted: parts[1] === "-" ? null : Number.parseInt(parts[1], 10),
-                            path: parts[2],
-                        };
-                    }
-                    // Fallback for cases where tabs might not be present or format is unexpected
-                    const [added, deleted, ...pathParts] = line.trim().split(/\s+/);
-                    return {
-                        added: added === "-" ? null : Number.parseInt(added, 10),
-                        deleted: deleted === "-" ? null : Number.parseInt(deleted, 10),
-                        path: pathParts.join(" "),
-                    };
-                });
-                resolve(results);
-            });
+            const [added, deleted, ...pathParts] = line.trim().split(/\s+/);
+            return {
+                added: added === "-" ? null : Number.parseInt(added, 10),
+                deleted: deleted === "-" ? null : Number.parseInt(deleted, 10),
+                path: pathParts.join(" "),
+            };
         });
     }
 
     async getPatchId(hash: string): Promise<string> {
-        const cwd = this.getCwd();
-        if (!cwd) {
+        const show = await this.runner.exec(["show", hash]);
+        if (show.exitCode !== 0)
             return "";
+
+        const result = await this.runner.exec(["patch-id"], { stdin: show.stdout });
+        if (result.exitCode === 0) {
+            return result.stdout.trim().split(" ")[0];
         }
-
-        return new Promise((resolve, reject) => {
-            const show = cp.spawn("git", ["show", hash], { cwd });
-            const patchId = cp.spawn("git", ["patch-id"], { cwd });
-
-            show.stdout.pipe(patchId.stdin);
-
-            let output = "";
-            patchId.stdout.on("data", (data) => {
-                output += data.toString();
-            });
-
-            patchId.on("close", (code) => {
-                if (code === 0) {
-                    // Output format: <patch-id> <commit-hash>
-                    resolve(output.trim().split(" ")[0]);
-                }
-                else {
-                    reject(new Error(`git patch-id failed with code ${code}`));
-                }
-            });
-
-            show.on("error", reject);
-            patchId.on("error", reject);
-        });
+        return "";
     }
 
     async setGitConfig(key: string, value: string, scope: "local" | "global"): Promise<void> {
-        return new Promise((resolve) => {
-            const cwd = this.getCwd();
-            if (!cwd)
-                return resolve();
-            const scopeArg = scope === "global" ? "--global" : "--local";
-            cp.exec(`git config ${scopeArg} "${key}" "${value}"`, { cwd }, () => resolve());
-        });
+        const scopeArg = scope === "global" ? "--global" : "--local";
+        await this.runner.exec(["config", scopeArg, key, value]);
     }
 
     async getRemotes(): Promise<{ name: string; url: string; type: "fetch" | "push" }[]> {
-        return new Promise((resolve) => {
-            const cwd = this.getCwd();
-            if (!cwd)
-                return resolve([]);
-            cp.exec("git remote -v", { cwd }, (err, stdout) => {
-                if (err)
-                    return resolve([]);
-                const remotes: { name: string; url: string; type: "fetch" | "push" }[] = [];
-                for (const line of stdout.split("\n").filter(Boolean)) {
-                    const parts = line.split(/\s+/);
-                    if (parts.length >= 3) {
-                        const type = parts[2] === "(push)" ? "push" as const : "fetch" as const;
-                        remotes.push({ name: parts[0], url: parts[1], type });
-                    }
-                }
-                resolve(remotes);
-            });
-        });
+        const result = await this.runner.exec(["remote", "-v"]);
+        if (result.exitCode !== 0)
+            return [];
+        const remotes: { name: string; url: string; type: "fetch" | "push" }[] = [];
+        for (const line of result.stdout.split("\n").filter(Boolean)) {
+            const parts = line.split(/\s+/);
+            if (parts.length >= 3) {
+                const type = parts[2] === "(push)" ? "push" as const : "fetch" as const;
+                remotes.push({ name: parts[0], url: parts[1], type });
+            }
+        }
+        return remotes;
     }
 
     async getUniqueRemotes(): Promise<{ name: string; url: string }[]> {
@@ -963,20 +517,15 @@ export class GitOperations {
     }
 
     async addRemote(name: string, url: string): Promise<void> {
-        return new Promise((resolve) => {
-            const cwd = this.getCwd();
-            if (!cwd)
-                return resolve();
-            cp.exec(`git remote add "${name}" "${url}"`, { cwd }, () => resolve());
-        });
+        await this.runner.exec(["remote", "add", name, url]);
     }
 
     async removeRemote(name: string): Promise<void> {
-        return new Promise((resolve) => {
-            const cwd = this.getCwd();
-            if (!cwd)
-                return resolve();
-            cp.exec(`git remote remove "${name}"`, { cwd }, () => resolve());
-        });
+        await this.runner.exec(["remote", "remove", name]);
+    }
+
+    async getUpstream(branchName: string): Promise<string | null> {
+        const result = await this.runner.exec(["rev-parse", "--abbrev-ref", `${branchName}@{upstream}`]);
+        return result.exitCode === 0 ? result.stdout.trim() : null;
     }
 }
