@@ -30,24 +30,25 @@
 - **`cp.execFile` over `cp.exec`** for git commands with external data — prevents shell injection.
 - **`vscode.window.withProgress`** for any operation that may take > 1 second (fetch, push, rebase, etc.).
 - **Confirmation dialogs** for destructive operations — `vscode.window.showWarningMessage` for revert, reset, delete, force push, drop, etc.
-- **Debounced refresh** (500ms) when watching `.git/**` file changes.
+- **Precise Git Watcher**: Avoid watching all of `.git/**`. Instead, watch specific paths: `.git/HEAD`, `.git/refs/heads/**`, `.git/refs/remotes/**`, `.git/refs/tags/**`, and `.git/packed-refs`.
+- **Debounced refresh**: 500ms cooldown for filesystem watchers.
+- **Resource Cleanup**: All `FileSystemWatcher` instances and timers MUST be added to `context.subscriptions` or explicitly disposed of in a `dispose()` method.
+- **Refresh Concurrency**: The `refresh()` method should implement a concurrency guard (e.g., `_refreshInProgress`) to prevent overlapping Git operations from multiple rapid events.
 
 ---
 
 ## Testing Requirements
 
-- **Unit tests exist for `gitParser.ts`** — the only pure function in the codebase. Tests cover: empty input, single commit, merge commits, pipe characters in messages, multiple commits, root commits, whitespace trimming, tag refs.
-- **No component or integration tests.** The webview UI is not tested in isolation.
-- **Manual testing** is done via F5 launch in VS Code Extension Development Host.
-- **Test command**: `pnpm run test` (vitest) — runs before changes are submitted.
+- **Unit tests exist for `gitParser.ts` and `GitRunner.ts`** — the pure parsing and command-wrapping logic. Tests cover: empty input, single commit, merge commits, pipe characters in messages, multiple commits, root commits, whitespace trimming, tag refs.
 
 ---
 
 ## Code Review Checklist
 
 1. **Are types correct?** No `any` (except catch/JSON.stringify), all interfaces explicit, `import type` used.
-2. **Are side effects properly cleaned up?** Every `addEventListener` has a return-cleanup; every temp file (seq editor scripts) is `rmSync`'d.
+2. **Are side effects properly cleaned up?** Every `addEventListener` has a return-cleanup; every temp file (seq editor scripts) is `rmSync`'d; all `FileSystemWatcher` instances are disposed.
 3. **Is there confirmation before destructive operations?** Revert, reset, delete, force push, drop, amend all prompt the user.
 4. **Are error paths handled?** Git operations may fail — errors should be surfaced via `vscode.window.showErrorMessage`, not swallowed.
 5. **Are CSP rules maintained?** The `nonce` pattern in `webviewContent.ts` must be preserved; no inline `<script>` tags without nonces.
 6. **Is the refresh cycle correct?** After any git mutation, `this.onRefresh()` must be called to push state to the webview.
+7. **Is Git watching precise?** Watcher avoids `.git/index` and objects to prevent infinite refresh loops during staging or background gc.
