@@ -1,0 +1,5 @@
+{"file": "src/git/commitHighlight.ts"}
+{"file": "src/git/AsyncHighlightVerifier.ts"}
+{"file": "src/gitOperations.ts"}
+{"file": "src/test/commitHighlight.test.ts"}
+{"file": "src/test/GitService.test.ts"}
