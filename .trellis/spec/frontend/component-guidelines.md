@@ -65,6 +65,14 @@ interface Props {
 
 ---
 
+## UI Conventions
+
+- **Icons**: Prefer JSX SVG elements with `currentColor` over emojis or external icon libraries. This ensures icons match the theme and remain crisp at any scale.
+- **Warnings**: Use `var(--vscode-list-warningForeground)` for warning text and `var(--vscode-editorWarning-background)` for background blocks to maintain visual consistency with VS Code's diagnostic UI.
+- **Tooltips**: Use the `title` attribute for simple tooltips on icons or truncated text.
+
+---
+
 ## Accessibility
 
 - **No explicit ARIA attributes.** The extension targets VS Code users (developers) — accessibility relies on VS Code's built-in theming and keyboard navigation.
