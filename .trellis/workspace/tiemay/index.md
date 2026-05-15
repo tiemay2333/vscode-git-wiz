@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 10
+- **Total Sessions**: 11
 - **Last Active**: 2026-05-15
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~341 | Active |
+| `journal-1.md` | ~375 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 11 | 2026-05-15 | Show warning for signature-matched commits with inconsistent content | `b15b803`, `229e652` | `main` |
 | 10 | 2026-05-15 | Make the HEAD branch the main leftmost lane in the git graph visualization. | `70f689f`, `6f9fcb2` | `main` |
 | 9 | 2026-05-14 | Decompose GitGraphViewProvider | `9d812b1` | `main` |
 | 8 | 2026-05-14 | Deepen GitService & Enforce GitRunner Seam | `b8de511`, `3f8f61f` | `main` |

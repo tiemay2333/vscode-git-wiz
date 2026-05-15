@@ -339,3 +339,37 @@ Refactored color management, enhanced graph layout computation, and updated git 
 ### Next Steps
 
 - None - task complete
+
+
+## Session 11: Show warning for signature-matched commits with inconsistent content
+
+**Date**: 2026-05-15
+**Task**: Show warning for signature-matched commits with inconsistent content
+**Branch**: `main`
+
+### Summary
+
+Implemented warning icons and messages for commits that match by signature but fail content verification. Added --stable flag to patch-id comparison, excluded merge commits from warnings, and updated component guidelines.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `b15b803` | (see git log) |
+| `229e652` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
