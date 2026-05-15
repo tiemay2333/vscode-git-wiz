@@ -1,5 +1,6 @@
 import type { GraphNode } from "./graphLayout";
 import React from "react";
+import { IconWarning } from "../shared/Icons";
 import { vscode } from "../vscodeApi";
 
 export const COLORS = [
@@ -224,7 +225,7 @@ export const CommitRow = React.memo(({
                 <RefBadges refs={commit.refs} showTags={showTags} showRemoteBranches={showRemoteBranches} />
                 {commit.verificationStatus === "failed" && (
                     <span className="warning-icon">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M22.56 16.3L14.89 3.58a3.43 3.43 0 0 0-5.78 0L1.44 16.3a3 3 0 0 0-.05 3A3.37 3.37 0 0 0 4.33 21h15.34a3.37 3.37 0 0 0 2.94-1.66a3 3 0 0 0-.05-3.04M12 17a1 1 0 1 1 1-1a1 1 0 0 1-1 1m1-4a1 1 0 0 1-2 0V9a1 1 0 0 1 2 0Z"/></svg>
+                        <IconWarning />
                     </span>
                 )}
                 <span className="message-text">{commit.message}</span>

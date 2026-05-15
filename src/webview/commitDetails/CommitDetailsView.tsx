@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from "react";
 import { FileTree } from "../shared/FileTreeView";
+import { IconList, IconTree } from "../shared/Icons";
 import { vscode } from "../vscodeApi";
 
 interface FileDiff {
@@ -198,18 +199,14 @@ export function CommitDetailsView({ data }: { data: CommitDetailsData }) {
                         onClick={() => handleViewModeChange("list")}
                         title="List View"
                     >
-                        <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
-                            <path fillRule="evenodd" clipRule="evenodd" d="M2 3h12v1H2V3zm0 4h12v1H2V7zm12 4H2v1h12v-1z" />
-                        </svg>
+                        <IconList />
                     </button>
                     <button
                         className={`toggle-btn ${viewMode === "tree" ? "active" : ""}`}
                         onClick={() => handleViewModeChange("tree")}
                         title="Tree View"
                     >
-                        <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
-                            <path fillRule="evenodd" clipRule="evenodd" d="M1 2v3h1V2h12v12h-3v1h4V1H1v1zm12 12V5H5v9h8zm-1-1H6V6h6v7zM1 9h3V6H1v3zm1 4h3v-3H1v3z" />
-                        </svg>
+                        <IconTree />
                     </button>
                 </div>
             </div>

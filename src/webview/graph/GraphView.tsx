@@ -4,6 +4,7 @@ import type { FileTreeItem } from "../shared/FileTreeView";
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { SettingsForm } from "../settings/SettingsForm";
 import { FileTree } from "../shared/FileTreeView";
+import { IconListView, IconSearch, IconTreeView, IconWarning } from "../shared/Icons";
 import { vscode } from "../vscodeApi";
 import { CommitRow } from "./CommitRow";
 import { computeGraphLayout } from "./graphLayout";
@@ -734,19 +735,7 @@ export function GraphView({
                             }}
                             title="Search"
                         >
-                            <svg
-                                width="14"
-                                height="14"
-                                viewBox="0 0 16 16"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="1.5"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                            >
-                                <circle cx="7" cy="7" r="5"></circle>
-                                <line x1="11" y1="11" x2="15" y2="15"></line>
-                            </svg>
+                            <IconSearch />
                         </div>
                     </div>
                     <div style={{ position: "relative", flex: 1, display: "flex" }}>
@@ -781,19 +770,7 @@ export function GraphView({
                             }}
                             title="Search"
                         >
-                            <svg
-                                width="14"
-                                height="14"
-                                viewBox="0 0 16 16"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="1.5"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                            >
-                                <circle cx="7" cy="7" r="5"></circle>
-                                <line x1="11" y1="11" x2="15" y2="15"></line>
-                            </svg>
+                            <IconSearch />
                         </div>
                     </div>
                     <div style={{ position: "relative", flex: 1, display: "flex" }}>
@@ -826,19 +803,7 @@ export function GraphView({
                             }}
                             title="Search"
                         >
-                            <svg
-                                width="14"
-                                height="14"
-                                viewBox="0 0 16 16"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="1.5"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                            >
-                                <circle cx="7" cy="7" r="5"></circle>
-                                <line x1="11" y1="11" x2="15" y2="15"></line>
-                            </svg>
+                            <IconSearch />
                         </div>
                     </div>
                     <div style={{ position: "relative", flex: 1, display: "flex" }}>
@@ -871,19 +836,7 @@ export function GraphView({
                             }}
                             title="Search"
                         >
-                            <svg
-                                width="14"
-                                height="14"
-                                viewBox="0 0 16 16"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="1.5"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                            >
-                                <circle cx="7" cy="7" r="5"></circle>
-                                <line x1="11" y1="11" x2="15" y2="15"></line>
-                            </svg>
+                            <IconSearch />
                         </div>
                     </div>
                 </div>
@@ -1006,7 +959,7 @@ export function GraphView({
                                                                             >
                                                                                 {commit.verificationStatus === "failed" && (
                                                                                     <div className="warning-message-block">
-                                                                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M22.56 16.3L14.89 3.58a3.43 3.43 0 0 0-5.78 0L1.44 16.3a3 3 0 0 0-.05 3A3.37 3.37 0 0 0 4.33 21h15.34a3.37 3.37 0 0 0 2.94-1.66a3 3 0 0 0-.05-3.04M12 17a1 1 0 1 1 1-1a1 1 0 0 1-1 1m1-4a1 1 0 0 1-2 0V9a1 1 0 0 1 2 0Z" /></svg>
+                                                                                        <IconWarning />
                                                                                         <span>
                                                                                             There are duplicate submission information records in the current branch (
                                                                                             {currentBranch}
@@ -1044,21 +997,7 @@ export function GraphView({
                                                                                         handleFilesViewModeChange("list")}
                                                                                     title="List View"
                                                                                 >
-                                                                                    <svg
-                                                                                        width="14"
-                                                                                        height="14"
-                                                                                        viewBox="0 0 36 36"
-                                                                                        fill="currentColor"
-                                                                                    >
-                                                                                        <path d="M2 8h2v2H2z" />
-                                                                                        <path d="M7 10h24a1 1 0 0 0 0-2H7a1 1 0 0 0 0 2" />
-                                                                                        <path d="M2 14h2v2H2z" />
-                                                                                        <path d="M31 14H7a1 1 0 0 0 0 2h24a1 1 0 0 0 0-2" />
-                                                                                        <path d="M2 20h2v2H2z" />
-                                                                                        <path d="M31 20H7a1 1 0 0 0 0 2h24a1 1 0 0 0 0-2" />
-                                                                                        <path d="M2 26h2v2H2z" />
-                                                                                        <path d="M31 26H7a1 1 0 0 0 0 2h24a1 1 0 0 0 0-2" />
-                                                                                    </svg>
+                                                                                    <IconListView />
                                                                                 </button>
                                                                                 <button
                                                                                     className={`toggle-btn ${filesViewMode === "tree" ? "active" : ""}`}
@@ -1066,18 +1005,7 @@ export function GraphView({
                                                                                         handleFilesViewModeChange("tree")}
                                                                                     title="Tree View"
                                                                                 >
-                                                                                    <svg
-                                                                                        width="14"
-                                                                                        height="14"
-                                                                                        viewBox="0 0 36 36"
-                                                                                        fill="currentColor"
-                                                                                    >
-                                                                                        <rect width="6" height="6" x="10" y="26" rx="1" ry="1" />
-                                                                                        <path d="M15 16h-4a1 1 0 0 0-1 1v1.2H5.8V12H7a1 1 0 0 0 1-1V7a1 1 0 0 0-1-1H3a1 1 0 0 0-1 1v4a1 1 0 0 0 1 1h1.2v17.8H11a.8.8 0 1 0 0-1.6H5.8v-8.4H10V21a1 1 0 0 0 1 1h4a1 1 0 0 0 1-1v-4a1 1 0 0 0-1-1" />
-                                                                                        <path d="M33 8H10v2h23a1 1 0 0 0 0-2" />
-                                                                                        <path d="M33 18H18v2h15a1 1 0 0 0 0-2" />
-                                                                                        <path d="M33 28H18v2h15a1 1 0 0 0 0-2" />
-                                                                                    </svg>
+                                                                                    <IconTreeView />
                                                                                 </button>
                                                                             </div>
                                                                         </div>

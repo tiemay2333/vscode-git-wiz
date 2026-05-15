@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { vscode } from "../vscodeApi";
+import { IconBranch, IconChevronDown, IconChevronRight, IconFolder, IconStar, IconTag } from "../shared/Icons";
 
 export interface Branch {
     name: string;
@@ -108,106 +109,6 @@ function flattenVisible(nodes: TreeNode[], collapsed: Set<string>): Branch[] {
         }
     }
     return result;
-}
-
-// ── Icons ────────────────────────────────────────────────────────────────────
-
-function IconChevronRight() {
-    return (
-        <svg
-            width="12"
-            height="12"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-        >
-            <polyline points="9 18 15 12 9 6" />
-        </svg>
-    );
-}
-
-function IconChevronDown() {
-    return (
-        <svg
-            width="12"
-            height="12"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-        >
-            <polyline points="6 9 12 15 18 9" />
-        </svg>
-    );
-}
-
-function IconStar() {
-    return (
-        <svg
-            className="icon-star"
-            width="13"
-            height="13"
-            viewBox="0 0 24 24"
-            fill="currentColor"
-            stroke="currentColor"
-            strokeWidth="1"
-        >
-            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-        </svg>
-    );
-}
-
-function IconFolder() {
-    return (
-        <svg className="icon-folder" width="13" height="13" viewBox="0 0 24 24" fill="currentColor" strokeWidth="0">
-            <path d="M4 20q-.825 0-1.412-.587T2 18V6q0-.825.588-1.412T4 4h6l2 2h8q.825 0 1.413.588T22 8v10q0 .825-.587 1.413T20 20z" />
-        </svg>
-    );
-}
-
-function IconTag() {
-    return (
-        <svg
-            className="icon-tag"
-            width="13"
-            height="13"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-        >
-            <path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z" />
-            <line x1="7" y1="7" x2="7.01" y2="7" strokeWidth="3" />
-        </svg>
-    );
-}
-
-function IconBranch() {
-    return (
-        <svg
-            className="icon-branch"
-            width="13"
-            height="13"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-        >
-            <line x1="6" y1="3" x2="6" y2="15" />
-            <circle cx="18" cy="6" r="3" />
-            <circle cx="6" cy="18" r="3" />
-            <path d="M18 9a9 9 0 01-9 9" />
-        </svg>
-    );
 }
 
 function getBranchIcon(branch: Branch) {
