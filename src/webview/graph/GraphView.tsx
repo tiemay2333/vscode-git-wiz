@@ -6,6 +6,7 @@ import { SettingsForm } from "../settings/SettingsForm";
 import { FileTree } from "../shared/FileTreeView";
 import { IconListView, IconSearch, IconTreeView, IconWarning } from "../shared/Icons";
 import { vscode } from "../vscodeApi";
+import { t } from "../settings/i18n";
 import { CommitRow } from "./CommitRow";
 import { computeGraphLayout } from "./graphLayout";
 
@@ -95,6 +96,7 @@ interface Props {
     currentBranch?: string | null;
     showGraph?: boolean;
     searchDefaultMode?: "single" | "graph";
+    locale: string;
 }
 
 export function GraphView({
@@ -105,6 +107,7 @@ export function GraphView({
     filterFile: initialFilterFile,
     showGraph: initialShowGraph,
     searchDefaultMode = "single",
+    locale,
 }: Props) {
     const [commitFiles, setCommitFiles] = useState<
         Record<string, { status: string; path: string; insertions?: number; deletions?: number }[]>
@@ -961,14 +964,14 @@ export function GraphView({
                                                                                     <div className="warning-message-block">
                                                                                         <IconWarning />
                                                                                         <span>
-                                                                                            There are duplicate submission information records in the current branch (
+                                                                                            {t(locale, "duplicateCommitWarningPre")}
                                                                                             {currentBranch}
-                                                                                            ), but the corresponding change contents may not be consistent. Please verify based on code differences and operate with caution to avoid misjudgment or accidental merging.
+                                                                                            {t(locale, "duplicateCommitWarningPost")}
                                                                                         </span>
                                                                                     </div>
                                                                                 )}
                                                                                 <span className="inline-files-title">
-                                                                                    Files modified in
+                                                                                    {t(locale, "filesModifiedIn")}
                                                                                     {" "}
                                                                                     {commit.shortHash}
                                                                                     {" "}

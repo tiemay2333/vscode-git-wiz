@@ -611,6 +611,7 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider, vscode.
             showRemoteBranches,
             showGraph,
             searchDefaultMode,
+            vscode.env.language,
         );
         this._initialized = true;
         if (this._pendingRefresh) {
@@ -696,7 +697,7 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider, vscode.
 
             if (GitGraphViewProvider.currentPanel) {
                 const panelWebview = GitGraphViewProvider.currentPanel.webview;
-                panelWebview.html = getCommitDetailsHtml(panelWebview, data, this._extensionUri, detailsMode);
+                panelWebview.html = getCommitDetailsHtml(panelWebview, data, this._extensionUri, detailsMode, vscode.env.language);
             }
         }
 

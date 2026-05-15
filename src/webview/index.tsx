@@ -23,6 +23,7 @@ declare global {
         __SHOW_TAGS__?: boolean;
         __SHOW_GRAPH__?: boolean;
         __SEARCH_DEFAULT_MODE__?: "single" | "graph";
+        __LOCALE__: string;
     }
 }
 
@@ -107,6 +108,7 @@ function GraphLayout() {
                     currentBranch={window.__CURRENT_BRANCH__}
                     showGraph={window.__SHOW_GRAPH__}
                     searchDefaultMode={window.__SEARCH_DEFAULT_MODE__ ?? "single"}
+                    locale={window.__LOCALE__}
                 />
             </div>
         </div>

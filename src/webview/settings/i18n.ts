@@ -25,6 +25,9 @@ const zh: Record<string, string> = {
     noRemotes: "未配置远程仓库",
     addRemote: "+ 添加远程仓库",
     removeRemote: "移除",
+    duplicateCommitWarningPre: "当前分支 (",
+    duplicateCommitWarningPost: ") 已存在相同的提交信息，但修改的内容可能不一致。请结合代码差异仔细核对，谨慎操作。",
+    filesModifiedIn: "修改的文件",
 };
 
 const en: Record<string, string> = {
@@ -52,6 +55,9 @@ const en: Record<string, string> = {
     noRemotes: "No remotes configured",
     addRemote: "+ Add Remote",
     removeRemote: "Remove",
+    duplicateCommitWarningPre: "The current branch (",
+    duplicateCommitWarningPost: ") already has the same commit information, but the modified content may be inconsistent. Please carefully check against the code differences and operate with caution.",
+    filesModifiedIn: "Files modified in",
 };
 
 const localeMap: Record<Locale, Record<string, string>> = { zh, en };
