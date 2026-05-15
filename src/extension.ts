@@ -615,9 +615,10 @@ export function activate(context: vscode.ExtensionContext) {
             }
 
             try {
-                await gitService.checkoutBranch(newBranchName, { create: true });
-                vscode.window.showInformationMessage(`Created and switched to branch '${newBranchName}'`);
+                await gitService.checkoutBranch(newBranchName, { create: true, startPoint: sourceBranch });
+                vscode.window.showInformationMessage(`Created and switched to branch '${newBranchName}' from '${sourceBranch}'`);
                 graphProvider.refresh();
+                vscode.commands.executeCommand("git-wiz.refreshBranches");
             }
             catch (err: any) {
                 vscode.window.showErrorMessage(`Failed to create branch: ${err.message}`);

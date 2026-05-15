@@ -311,13 +311,15 @@ export class GitService {
         }
     }
 
-    async checkoutBranch(branchName: string, options?: { track?: boolean; create?: boolean }): Promise<void> {
+    async checkoutBranch(branchName: string, options?: { track?: boolean; create?: boolean; startPoint?: string }): Promise<void> {
         const args = ["checkout"];
         if (options?.create)
             args.push("-b");
         if (options?.track)
             args.push("--track");
         args.push(branchName);
+        if (options?.startPoint)
+            args.push(options.startPoint);
 
         const result = await this.runner.exec(args);
         if (result.exitCode !== 0) {

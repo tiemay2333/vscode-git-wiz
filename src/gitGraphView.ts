@@ -537,8 +537,8 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider, vscode.
         if (branchName) {
             try {
                 await vscode.window.withProgress({ location: vscode.ProgressLocation.Window, title: `Creating branch '${branchName}'...` }, async () => {
-                    await this._gitService.createBranch(branchName, commitHash);
-                    vscode.window.showInformationMessage(`Branch '${branchName}' created successfully`);
+                    await this._gitService.checkoutBranch(branchName, { create: true, startPoint: commitHash });
+                    vscode.window.showInformationMessage(`Branch '${branchName}' created and switched successfully`);
                     this.refresh();
                     vscode.commands.executeCommand("git-wiz.refreshBranches");
                 });
