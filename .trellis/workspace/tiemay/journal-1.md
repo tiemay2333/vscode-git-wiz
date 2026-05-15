@@ -373,3 +373,36 @@ Implemented warning icons and messages for commits that match by signature but f
 ### Next Steps
 
 - None - task complete
+
+
+## Session 12: Release v1.4.0 and cleanup
+
+**Date**: 2026-05-15
+**Task**: Release v1.4.0 and cleanup
+**Branch**: `main`
+
+### Summary
+
+Bumped version to 1.4.0, updated CHANGELOG.md with recent features and improvements, and removed development sections from READMEs. Archived bootstrap, joining, and release tasks to clean up the workspace.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `3d7189b` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
