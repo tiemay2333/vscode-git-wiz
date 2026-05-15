@@ -483,6 +483,30 @@ export class GitService {
         return "";
     }
 
+    async getCommitFilePatchIds(hash: string): Promise<Map<string, string>> {
+        const result = await this.runner.exec(["show", "--pretty=format:", hash]);
+        if (result.exitCode !== 0)
+            return new Map();
+
+        const diffs = result.stdout.split(/^diff --git /m).filter(Boolean);
+        const patchIds = new Map<string, string>();
+
+        for (const diff of diffs) {
+            const firstLine = diff.split("\n")[0];
+            const parts = firstLine.split(" ");
+            const bPath = parts[parts.length - 1];
+            const filePath = bPath.startsWith("b/") ? bPath.substring(2) : bPath;
+
+            const fullDiff = `diff --git ${diff}`;
+            const pidResult = await this.runner.exec(["patch-id", "--stable"], { stdin: fullDiff });
+            if (pidResult.exitCode === 0) {
+                const pid = pidResult.stdout.trim().split(" ")[0];
+                patchIds.set(filePath, pid);
+            }
+        }
+        return patchIds;
+    }
+
     async setGitConfig(key: string, value: string, scope: "local" | "global"): Promise<void> {
         const scopeArg = scope === "global" ? "--global" : "--local";
         await this.runner.exec(["config", scopeArg, key, value]);

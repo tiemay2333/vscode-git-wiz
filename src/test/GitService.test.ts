@@ -100,4 +100,40 @@ describe("gitService", () => {
         await service.revertCommit("hash123");
         expect(mockRunner.exec).toHaveBeenCalledWith(["revert", "hash123", "--no-edit"]);
     });
+
+    it("getCommitFilePatchIds parses git show output and returns per-file patch-ids", async () => {
+        const showOutput = `diff --git a/file1.ts b/file1.ts
+index 123..456 100644
+--- a/file1.ts
++++ b/file1.ts
+@@ -1 +1 @@
+-old
++new
+diff --git a/dir/file2.js b/dir/file2.js
+index 789..abc 100644
+--- a/dir/file2.js
++++ b/dir/file2.js
+@@ -1 +1 @@
+-foo
++bar
+`;
+        vi.mocked(mockRunner.exec).mockResolvedValueOnce({
+            stdout: showOutput,
+            stderr: "",
+            exitCode: 0,
+        } as ExecResult);
+
+        // Mock two patch-id calls
+        vi.mocked(mockRunner.exec)
+            .mockResolvedValueOnce({ stdout: "pid1 hash1", stderr: "", exitCode: 0 } as ExecResult)
+            .mockResolvedValueOnce({ stdout: "pid2 hash2", stderr: "", exitCode: 0 } as ExecResult);
+
+        const result = await service.getCommitFilePatchIds("some-hash");
+        expect(result.size).toBe(2);
+        expect(result.get("file1.ts")).toBe("pid1");
+        expect(result.get("dir/file2.js")).toBe("pid2");
+
+        expect(mockRunner.exec).toHaveBeenCalledWith(["show", "--pretty=format:", "some-hash"]);
+        expect(mockRunner.exec).toHaveBeenCalledWith(["patch-id", "--stable"], { stdin: "diff --git a/file1.ts b/file1.ts\nindex 123..456 100644\n--- a/file1.ts\n+++ b/file1.ts\n@@ -1 +1 @@\n-old\n+new\n" });
+    });
 });

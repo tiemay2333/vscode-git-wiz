@@ -5,6 +5,7 @@ export class AsyncHighlightVerifier {
     private _inProgress = 0;
     private readonly MAX_CONCURRENCY = 3;
     private _patchIdCache = new Map<string, string>();
+    private _filePatchIdCache = new Map<string, Map<string, string>>();
 
     constructor(
         private readonly _gitService: GitService,
@@ -21,6 +22,7 @@ export class AsyncHighlightVerifier {
     public reset() {
         this._queue = [];
         this._patchIdCache.clear();
+        this._filePatchIdCache.clear();
     }
 
     public dispose() {
@@ -56,11 +58,46 @@ export class AsyncHighlightVerifier {
         return pid;
     }
 
+    private async getFilePatchIds(hash: string): Promise<Map<string, string>> {
+        let pids = this._filePatchIdCache.get(hash);
+        if (pids === undefined) {
+            pids = await this._gitService.getCommitFilePatchIds(hash);
+            this._filePatchIdCache.set(hash, pids);
+        }
+        return pids;
+    }
+
     private async verify(hash: string, targets: string[]): Promise<"verified" | "failed"> {
         const sourcePid = await this.getPatchId(hash);
         for (const target of targets) {
             const targetPid = await this.getPatchId(target);
             if (sourcePid === targetPid && sourcePid !== "") {
+                return "verified";
+            }
+        }
+
+        // Tier 4: Partial File Matching (PFM) - Target ⊆ Source
+        // (Highlight Source if every file in Target exists in Source with matching content)
+        const sourceFilePids = await this.getFilePatchIds(hash);
+        if (sourceFilePids.size === 0)
+            return "failed";
+
+        for (const target of targets) {
+            const targetFilePids = await this.getFilePatchIds(target);
+
+            if (targetFilePids.size === 0 || targetFilePids.size > sourceFilePids.size)
+                continue;
+
+            let matches = true;
+            for (const [path, targetPid] of targetFilePids.entries()) {
+                const sourcePid = sourceFilePids.get(path);
+                if (sourcePid === undefined || sourcePid !== targetPid) {
+                    matches = false;
+                    break;
+                }
+            }
+
+            if (matches) {
                 return "verified";
             }
         }
