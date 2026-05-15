@@ -50,6 +50,11 @@ export function getCurrentBranchHashes(
 
     // Tier 2: signature match (cherry-pick candidates)
     for (const c of remaining) {
+        // Skip merge commits and system-generated records for signature matching
+        if (c.parents.length > 1 || c.message.toLowerCase().startsWith("merge ")) {
+            continue;
+        }
+
         const sig = getCommitSignature(c);
         const matches = branchSignatures.get(sig);
         if (matches) {

@@ -476,7 +476,7 @@ export class GitService {
         if (show.exitCode !== 0)
             return "";
 
-        const result = await this.runner.exec(["patch-id"], { stdin: show.stdout });
+        const result = await this.runner.exec(["patch-id", "--stable"], { stdin: show.stdout });
         if (result.exitCode === 0) {
             return result.stdout.trim().split(" ")[0];
         }

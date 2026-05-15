@@ -282,6 +282,33 @@ tr.row-search-match-author .author-cell {
     color: var(--vscode-textLink-foreground);
 }
 
+.warning-icon {
+    color: var(--vscode-list-warningForeground, #cca700);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.warning-message-block {
+    color: var(--vscode-list-warningForeground, #cca700);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    text-align: justify;
+    margin-top: 4px;
+    padding: 6px 10px;
+    background-color: var(--vscode-editorWarning-background, rgba(190, 190, 0, 0.05));
+    border-radius: 4px;
+    border: 1px solid var(--vscode-editorWarning-border, transparent);
+    width: fit-content;
+}
+
+.warning-message-block svg {
+    flex-shrink: 0;
+}
+
 /* Graph Layout */
 
 @keyframes spin {

@@ -907,11 +907,11 @@ export function GraphView({
                                         ? <span className="row-loading-spinner" style={{ margin: 0 }} />
                                         : searchGraphMode === "graph"
                                             ? (
-                                                    <>
-                                                        <span className="search-graph-toggle-dot" />
-                                                        Graph
-                                                    </>
-                                                )
+                                                <>
+                                                    <span className="search-graph-toggle-dot" />
+                                                    Graph
+                                                </>
+                                            )
                                             : "Single Track"}
                                 </span>
                             </button>
@@ -933,248 +933,258 @@ export function GraphView({
 
                 {searchLoading
                     ? (
-                            <div className="no-commits">
-                                <p>Searching...</p>
-                            </div>
-                        )
+                        <div className="no-commits">
+                            <p>Searching...</p>
+                        </div>
+                    )
                     : filteredCommits.length === 0
                         ? (
-                                <div className="no-commits">
-                                    <p>
-                                        {!activeSearch.query && !activeSearch.author && !activeSearch.from && !activeSearch.to
-                                            ? "No commits found in this repository"
-                                            : "No commits match the filters"}
-                                    </p>
-                                </div>
-                            )
+                            <div className="no-commits">
+                                <p>
+                                    {!activeSearch.query && !activeSearch.author && !activeSearch.from && !activeSearch.to
+                                        ? "No commits found in this repository"
+                                        : "No commits match the filters"}
+                                </p>
+                            </div>
+                        )
                         : (
-                                <div className="table-container" ref={containerRef}>
-                                    <table>
-                                        <tbody>
-                                            {graphNodes.map((node, index) => {
-                                                const commit = node.commit;
-                                                const isSelected = selectedIndices.has(index);
-                                                const isMenuOpen
-                                                    = singleMenu?.index === index || rangeMenu?.sortedIndices.includes(index);
-                                                const singleSelected = selectedIndices.size === 1 && isSelected;
-                                                const files = singleSelected ? commitFiles[commit.hash] : null;
-                                                const m = matchInfo[commit.hash];
+                            <div className="table-container" ref={containerRef}>
+                                <table>
+                                    <tbody>
+                                        {graphNodes.map((node, index) => {
+                                            const commit = node.commit;
+                                            const isSelected = selectedIndices.has(index);
+                                            const isMenuOpen
+                                                = singleMenu?.index === index || rangeMenu?.sortedIndices.includes(index);
+                                            const singleSelected = selectedIndices.size === 1 && isSelected;
+                                            const files = singleSelected ? commitFiles[commit.hash] : null;
+                                            const m = matchInfo[commit.hash];
 
-                                                return (
-                                                    <React.Fragment key={commit.hash}>
-                                                        <CommitRow
-                                                            graphWidth={graphWidth}
-                                                            graphNode={node}
-                                                            headCommitHash={headCommitHash}
-                                                            isSelected={isSelected}
-                                                            isMenuOpen={isMenuOpen}
-                                                            isLoading={loadingHash === commit.hash}
-                                                            isFirst={index === 0}
-                                                            isLast={index === filteredCommits.length - 1}
-                                                            isDimmed={highlightCurrent && !commit.isCurrentBranch}
-                                                            isMatchQuery={!!m?.q}
-                                                            isMatchHash={!!m?.h}
-                                                            isMatchAuthor={!!m?.a}
-                                                            isSearchMatch={!!(m?.q || m?.h || m?.a)}
-                                                            showTags={showTags}
-                                                            showRemoteBranches={showRemoteBranches}
-                                                            showGraph={showGraph}
-                                                            onClick={shiftKey => handleRowClick(index, shiftKey)}
-                                                            onContextMenu={e => handleContextMenu(e, index)}
-                                                        />
-                                                        {singleSelected && (
-                                                            <tr className="inline-files-row" onClick={e => e.stopPropagation()}>
-                                                                <td colSpan={showGraph ? 5 : 4}>
-                                                                    <div className="inline-files-container">
-                                                                        <div className="inline-files-header">
+                                            return (
+                                                <React.Fragment key={commit.hash}>
+                                                    <CommitRow
+                                                        graphWidth={graphWidth}
+                                                        graphNode={node}
+                                                        headCommitHash={headCommitHash}
+                                                        isSelected={isSelected}
+                                                        isMenuOpen={isMenuOpen}
+                                                        isLoading={loadingHash === commit.hash}
+                                                        isFirst={index === 0}
+                                                        isLast={index === filteredCommits.length - 1}
+                                                        isDimmed={highlightCurrent && !commit.isCurrentBranch}
+                                                        isMatchQuery={!!m?.q}
+                                                        isMatchHash={!!m?.h}
+                                                        isMatchAuthor={!!m?.a}
+                                                        isSearchMatch={!!(m?.q || m?.h || m?.a)}
+                                                        showTags={showTags}
+                                                        showRemoteBranches={showRemoteBranches}
+                                                        showGraph={showGraph}
+                                                        onClick={shiftKey => handleRowClick(index, shiftKey)}
+                                                        onContextMenu={e => handleContextMenu(e, index)}
+                                                    />
+                                                    {singleSelected && (
+                                                        <tr className="inline-files-row" onClick={e => e.stopPropagation()}>
+                                                            <td colSpan={showGraph ? 5 : 4}>
+                                                                <div className="inline-files-container">
+                                                                    <div className="inline-files-header">
+                                                                        <div
+                                                                            style={{
+                                                                                display: "flex",
+                                                                                alignItems: "center",
+                                                                                flex: 1,
+                                                                                minWidth: 0,
+                                                                            }}
+                                                                        >
                                                                             <div
                                                                                 style={{
                                                                                     display: "flex",
-                                                                                    alignItems: "center",
+                                                                                    flexDirection: "column",
+                                                                                    gap: "4px",
                                                                                     flex: 1,
                                                                                     minWidth: 0,
                                                                                 }}
                                                                             >
-                                                                                <div
+                                                                                {commit.verificationStatus === "failed" && (
+                                                                                    <div className="warning-message-block">
+                                                                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M22.56 16.3L14.89 3.58a3.43 3.43 0 0 0-5.78 0L1.44 16.3a3 3 0 0 0-.05 3A3.37 3.37 0 0 0 4.33 21h15.34a3.37 3.37 0 0 0 2.94-1.66a3 3 0 0 0-.05-3.04M12 17a1 1 0 1 1 1-1a1 1 0 0 1-1 1m1-4a1 1 0 0 1-2 0V9a1 1 0 0 1 2 0Z" /></svg>
+                                                                                        <span>
+                                                                                            There are duplicate submission information records in the current branch (
+                                                                                            {currentBranch}
+                                                                                            ), but the corresponding change contents may not be consistent. Please verify based on code differences and operate with caution to avoid misjudgment or accidental merging.
+                                                                                        </span>
+                                                                                    </div>
+                                                                                )}
+                                                                                <span className="inline-files-title">
+                                                                                    Files modified in
+                                                                                    {" "}
+                                                                                    {commit.shortHash}
+                                                                                    {" "}
+                                                                                    -
+                                                                                    {" "}
+                                                                                    {commit.message}
+                                                                                </span>
+                                                                                <span
                                                                                     style={{
-                                                                                        display: "flex",
-                                                                                        flexDirection: "column",
-                                                                                        gap: "4px",
-                                                                                        flex: 1,
-                                                                                        minWidth: 0,
+                                                                                        fontSize: "11px",
+                                                                                        opacity: 0.8,
+                                                                                        color: "var(--vscode-descriptionForeground)",
                                                                                     }}
                                                                                 >
-                                                                                    <span className="inline-files-title">
-                                                                                        Files modified in
-                                                                                        {" "}
-                                                                                        {commit.shortHash}
-                                                                                        {" "}
-                                                                                        -
-                                                                                        {" "}
-                                                                                        {commit.message}
-                                                                                    </span>
-                                                                                    <span
-                                                                                        style={{
-                                                                                            fontSize: "11px",
-                                                                                            opacity: 0.8,
-                                                                                            color: "var(--vscode-descriptionForeground)",
-                                                                                        }}
-                                                                                    >
-                                                                                        {commit.author}
-                                                                                        {" "}
-                                                                                        &lt;
-                                                                                        {commit.email}
-                                                                                        &gt;
-                                                                                    </span>
-                                                                                </div>
-                                                                                <div className="view-toggle">
-                                                                                    <button
-                                                                                        className={`toggle-btn ${filesViewMode === "list" ? "active" : ""}`}
-                                                                                        onClick={() =>
-                                                                                            handleFilesViewModeChange("list")}
-                                                                                        title="List View"
-                                                                                    >
-                                                                                        <svg
-                                                                                            width="14"
-                                                                                            height="14"
-                                                                                            viewBox="0 0 36 36"
-                                                                                            fill="currentColor"
-                                                                                        >
-                                                                                            <path d="M2 8h2v2H2z" />
-                                                                                            <path d="M7 10h24a1 1 0 0 0 0-2H7a1 1 0 0 0 0 2" />
-                                                                                            <path d="M2 14h2v2H2z" />
-                                                                                            <path d="M31 14H7a1 1 0 0 0 0 2h24a1 1 0 0 0 0-2" />
-                                                                                            <path d="M2 20h2v2H2z" />
-                                                                                            <path d="M31 20H7a1 1 0 0 0 0 2h24a1 1 0 0 0 0-2" />
-                                                                                            <path d="M2 26h2v2H2z" />
-                                                                                            <path d="M31 26H7a1 1 0 0 0 0 2h24a1 1 0 0 0 0-2" />
-                                                                                        </svg>
-                                                                                    </button>
-                                                                                    <button
-                                                                                        className={`toggle-btn ${filesViewMode === "tree" ? "active" : ""}`}
-                                                                                        onClick={() =>
-                                                                                            handleFilesViewModeChange("tree")}
-                                                                                        title="Tree View"
-                                                                                    >
-                                                                                        <svg
-                                                                                            width="14"
-                                                                                            height="14"
-                                                                                            viewBox="0 0 36 36"
-                                                                                            fill="currentColor"
-                                                                                        >
-                                                                                            <rect width="6" height="6" x="10" y="26" rx="1" ry="1" />
-                                                                                            <path d="M15 16h-4a1 1 0 0 0-1 1v1.2H5.8V12H7a1 1 0 0 0 1-1V7a1 1 0 0 0-1-1H3a1 1 0 0 0-1 1v4a1 1 0 0 0 1 1h1.2v17.8H11a.8.8 0 1 0 0-1.6H5.8v-8.4H10V21a1 1 0 0 0 1 1h4a1 1 0 0 0 1-1v-4a1 1 0 0 0-1-1" />
-                                                                                            <path d="M33 8H10v2h23a1 1 0 0 0 0-2" />
-                                                                                            <path d="M33 18H18v2h15a1 1 0 0 0 0-2" />
-                                                                                            <path d="M33 28H18v2h15a1 1 0 0 0 0-2" />
-                                                                                        </svg>
-                                                                                    </button>
-                                                                                </div>
+                                                                                    {commit.author}
+                                                                                    {" "}
+                                                                                    &lt;
+                                                                                    {commit.email}
+                                                                                    &gt;
+                                                                                </span>
                                                                             </div>
-                                                                            <button
-                                                                                className="close-pane-btn"
-                                                                                onClick={() => setSelectedIndices(new Set())}
-                                                                            >
-                                                                                &#x2715;
-                                                                            </button>
+                                                                            <div className="view-toggle">
+                                                                                <button
+                                                                                    className={`toggle-btn ${filesViewMode === "list" ? "active" : ""}`}
+                                                                                    onClick={() =>
+                                                                                        handleFilesViewModeChange("list")}
+                                                                                    title="List View"
+                                                                                >
+                                                                                    <svg
+                                                                                        width="14"
+                                                                                        height="14"
+                                                                                        viewBox="0 0 36 36"
+                                                                                        fill="currentColor"
+                                                                                    >
+                                                                                        <path d="M2 8h2v2H2z" />
+                                                                                        <path d="M7 10h24a1 1 0 0 0 0-2H7a1 1 0 0 0 0 2" />
+                                                                                        <path d="M2 14h2v2H2z" />
+                                                                                        <path d="M31 14H7a1 1 0 0 0 0 2h24a1 1 0 0 0 0-2" />
+                                                                                        <path d="M2 20h2v2H2z" />
+                                                                                        <path d="M31 20H7a1 1 0 0 0 0 2h24a1 1 0 0 0 0-2" />
+                                                                                        <path d="M2 26h2v2H2z" />
+                                                                                        <path d="M31 26H7a1 1 0 0 0 0 2h24a1 1 0 0 0 0-2" />
+                                                                                    </svg>
+                                                                                </button>
+                                                                                <button
+                                                                                    className={`toggle-btn ${filesViewMode === "tree" ? "active" : ""}`}
+                                                                                    onClick={() =>
+                                                                                        handleFilesViewModeChange("tree")}
+                                                                                    title="Tree View"
+                                                                                >
+                                                                                    <svg
+                                                                                        width="14"
+                                                                                        height="14"
+                                                                                        viewBox="0 0 36 36"
+                                                                                        fill="currentColor"
+                                                                                    >
+                                                                                        <rect width="6" height="6" x="10" y="26" rx="1" ry="1" />
+                                                                                        <path d="M15 16h-4a1 1 0 0 0-1 1v1.2H5.8V12H7a1 1 0 0 0 1-1V7a1 1 0 0 0-1-1H3a1 1 0 0 0-1 1v4a1 1 0 0 0 1 1h1.2v17.8H11a.8.8 0 1 0 0-1.6H5.8v-8.4H10V21a1 1 0 0 0 1 1h4a1 1 0 0 0 1-1v-4a1 1 0 0 0-1-1" />
+                                                                                        <path d="M33 8H10v2h23a1 1 0 0 0 0-2" />
+                                                                                        <path d="M33 18H18v2h15a1 1 0 0 0 0-2" />
+                                                                                        <path d="M33 28H18v2h15a1 1 0 0 0 0-2" />
+                                                                                    </svg>
+                                                                                </button>
+                                                                            </div>
                                                                         </div>
-                                                                        <div className="inline-files-content">
-                                                                            {files
-                                                                                ? (
-                                                                                        files.length > 0
-                                                                                            ? (
-                                                                                                    filesViewMode === "tree"
-                                                                                                        ? (
-                                                                                                                <FileTree
-                                                                                                                    items={files}
-                                                                                                                    renderLeaf={(path: string, name: string, item: FileTreeItem) => (
-                                                                                                                        <div
-                                                                                                                            className="file-tree-file"
-                                                                                                                            onClick={() =>
-                                                                                                                                vscode.postMessage({
-                                                                                                                                    command: "openDiff",
-                                                                                                                                    commitHash: commit.hash,
-                                                                                                                                    parentHash: commit.parents?.[0],
-                                                                                                                                    filePath: path,
-                                                                                                                                })}
-                                                                                                                        >
-                                                                                                                            <span className={`file-status file-status-${item.status?.toLowerCase()}`}>{item.status}</span>
-                                                                                                                            <span className={`file-name file-name-${item.status?.toLowerCase()}`}>{name}</span>
-                                                                                                                            {(item.insertions! > 0 || item.deletions! > 0) && (
-                                                                                                                                <span className="file-stats">
-                                                                                                                                    {item.insertions! > 0 && (
-                                                                                                                                        <span className="stat-added">
-                                                                                                                                            +
-                                                                                                                                            {item.insertions}
-                                                                                                                                        </span>
-                                                                                                                                    )}
-                                                                                                                                    {item.deletions! > 0 && (
-                                                                                                                                        <span className="stat-removed">
-                                                                                                                                            -
-                                                                                                                                            {item.deletions}
-                                                                                                                                        </span>
-                                                                                                                                    )}
-                                                                                                                                </span>
-                                                                                                                            )}
-                                                                                                                            <span
-                                                                                                                                className="open-file-btn"
-                                                                                                                                title="Open locally"
-                                                                                                                                onClick={(e) => {
-                                                                                                                                    e.stopPropagation();
-                                                                                                                                    vscode.postMessage({ command: "openFile", filePath: path });
-                                                                                                                                }}
-                                                                                                                            >
-                                                                                                                            </span>
-                                                                                                                        </div>
-                                                                                                                    )}
-                                                                                                                />
-                                                                                                            )
-                                                                                                        : (
-                                                                                                                <FileList
-                                                                                                                    files={files}
-                                                                                                                    onOpenDiff={path =>
-                                                                                                                        vscode.postMessage({
-                                                                                                                            command: "openDiff",
-                                                                                                                            commitHash: commit.hash,
-                                                                                                                            parentHash: commit.parents?.[0],
-                                                                                                                            filePath: path,
-                                                                                                                        })}
-                                                                                                                    onOpenFile={path =>
-                                                                                                                        vscode.postMessage({
-                                                                                                                            command: "openFile",
-                                                                                                                            filePath: path,
-                                                                                                                        })}
-                                                                                                                />
-                                                                                                            )
-                                                                                                )
-                                                                                            : (
-                                                                                                    <div className="no-files">No files changed</div>
-                                                                                                )
-                                                                                    )
-                                                                                : (
-                                                                                        <div className="loading-files">
-                                                                                            Loading files...
-                                                                                        </div>
-                                                                                    )}
-                                                                        </div>
+                                                                        <button
+                                                                            className="close-pane-btn"
+                                                                            onClick={() => setSelectedIndices(new Set())}
+                                                                        >
+                                                                            &#x2715;
+                                                                        </button>
                                                                     </div>
-                                                                </td>
-                                                            </tr>
-                                                        )}
-                                                    </React.Fragment>
-                                                );
-                                            })}
-                                        </tbody>
-                                    </table>
-                                    {(hasMore || isLoadingMore) && (
-                                        <div className="load-more-container">
-                                            <button className="load-more-btn" onClick={handleLoadMore} disabled={isLoadingMore}>
-                                                {isLoadingMore ? "Loading..." : "Load More"}
-                                            </button>
-                                        </div>
-                                    )}
-                                </div>
-                            )}
+                                                                    <div className="inline-files-content">
+                                                                        {files
+                                                                            ? (
+                                                                                files.length > 0
+                                                                                    ? (
+                                                                                        filesViewMode === "tree"
+                                                                                            ? (
+                                                                                                <FileTree
+                                                                                                    items={files}
+                                                                                                    renderLeaf={(path: string, name: string, item: FileTreeItem) => (
+                                                                                                        <div
+                                                                                                            className="file-tree-file"
+                                                                                                            onClick={() =>
+                                                                                                                vscode.postMessage({
+                                                                                                                    command: "openDiff",
+                                                                                                                    commitHash: commit.hash,
+                                                                                                                    parentHash: commit.parents?.[0],
+                                                                                                                    filePath: path,
+                                                                                                                })}
+                                                                                                        >
+                                                                                                            <span className={`file-status file-status-${item.status?.toLowerCase()}`}>{item.status}</span>
+                                                                                                            <span className={`file-name file-name-${item.status?.toLowerCase()}`}>{name}</span>
+                                                                                                            {(item.insertions! > 0 || item.deletions! > 0) && (
+                                                                                                                <span className="file-stats">
+                                                                                                                    {item.insertions! > 0 && (
+                                                                                                                        <span className="stat-added">
+                                                                                                                            +
+                                                                                                                            {item.insertions}
+                                                                                                                        </span>
+                                                                                                                    )}
+                                                                                                                    {item.deletions! > 0 && (
+                                                                                                                        <span className="stat-removed">
+                                                                                                                            -
+                                                                                                                            {item.deletions}
+                                                                                                                        </span>
+                                                                                                                    )}
+                                                                                                                </span>
+                                                                                                            )}
+                                                                                                            <span
+                                                                                                                className="open-file-btn"
+                                                                                                                title="Open locally"
+                                                                                                                onClick={(e) => {
+                                                                                                                    e.stopPropagation();
+                                                                                                                    vscode.postMessage({ command: "openFile", filePath: path });
+                                                                                                                }}
+                                                                                                            >
+                                                                                                            </span>
+                                                                                                        </div>
+                                                                                                    )}
+                                                                                                />
+                                                                                            )
+                                                                                            : (
+                                                                                                <FileList
+                                                                                                    files={files}
+                                                                                                    onOpenDiff={path =>
+                                                                                                        vscode.postMessage({
+                                                                                                            command: "openDiff",
+                                                                                                            commitHash: commit.hash,
+                                                                                                            parentHash: commit.parents?.[0],
+                                                                                                            filePath: path,
+                                                                                                        })}
+                                                                                                    onOpenFile={path =>
+                                                                                                        vscode.postMessage({
+                                                                                                            command: "openFile",
+                                                                                                            filePath: path,
+                                                                                                        })}
+                                                                                                />
+                                                                                            )
+                                                                                    )
+                                                                                    : (
+                                                                                        <div className="no-files">No files changed</div>
+                                                                                    )
+                                                                            )
+                                                                            : (
+                                                                                <div className="loading-files">
+                                                                                    Loading files...
+                                                                                </div>
+                                                                            )}
+                                                                    </div>
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+                                                    )}
+                                                </React.Fragment>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                                {(hasMore || isLoadingMore) && (
+                                    <div className="load-more-container">
+                                        <button className="load-more-btn" onClick={handleLoadMore} disabled={isLoadingMore}>
+                                            {isLoadingMore ? "Loading..." : "Load More"}
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        )}
             </div>
 
             {singleMenu && (
