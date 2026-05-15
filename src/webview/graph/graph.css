@@ -297,7 +297,7 @@ tr.row-search-match-author .author-cell {
     gap: 6px;
     font-size: 12px;
     text-align: justify;
-    margin-top: 4px;
+    margin-bottom: 4px;
     padding: 6px 10px;
     background-color: var(--vscode-editorWarning-background, rgba(190, 190, 0, 0.05));
     border-radius: 4px;

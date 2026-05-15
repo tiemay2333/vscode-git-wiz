@@ -960,16 +960,6 @@ export function GraphView({
                                                                                     minWidth: 0,
                                                                                 }}
                                                                             >
-                                                                                {commit.verificationStatus === "failed" && (
-                                                                                    <div className="warning-message-block">
-                                                                                        <IconWarning />
-                                                                                        <span>
-                                                                                            {t(locale, "duplicateCommitWarningPre")}
-                                                                                            {currentBranch}
-                                                                                            {t(locale, "duplicateCommitWarningPost")}
-                                                                                        </span>
-                                                                                    </div>
-                                                                                )}
                                                                                 <span className="inline-files-title">
                                                                                     {t(locale, "filesModifiedIn")}
                                                                                     {" "}
@@ -1020,6 +1010,16 @@ export function GraphView({
                                                                         </button>
                                                                     </div>
                                                                     <div className="inline-files-content">
+                                                                        {commit.verificationStatus === "failed" && (
+                                                                            <div className="warning-message-block">
+                                                                                <IconWarning />
+                                                                                <span>
+                                                                                    {t(locale, "duplicateCommitWarningPre")}
+                                                                                    {currentBranch}
+                                                                                    {t(locale, "duplicateCommitWarningPost")}
+                                                                                </span>
+                                                                            </div>
+                                                                        )}
                                                                         {files
                                                                             ? (
                                                                                 files.length > 0
