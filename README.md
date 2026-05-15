@@ -123,51 +123,6 @@ Settings available in VS Code settings (`Ctrl+,`), search for `git-wiz`:
 
 The same options can also be toggled from the **Settings** button (gear icon) in the graph view title bar.
 
-## Development
-
-```bash
-# Clone
-git clone https://github.com/tiemay2333/vscode-git-wiz.git
-
-# Install dependencies
-pnpm install
-
-# Compile
-pnpm run compile
-
-# Watch mode (extension host)
-pnpm run watch
-
-# Watch mode (webview, rebuilds on save)
-pnpm run watch:webview
-
-# Run tests
-pnpm test
-```
-
-### Project Structure
-
-```
-src/
-├── extension.ts              # Extension entry, command registrations
-├── gitGraphView.ts           # Webview provider, message handling
-├── gitOperations.ts          # Git operations (checkout, merge, rebase, etc.)
-├── gitParser.ts              # Git log output parser
-├── git/                      # Git runner and rebase scripts
-├── webview/
-│   ├── index.tsx             # Webview entry
-│   ├── graph/                # Commit graph view (React)
-│   │   ├── GraphView.tsx     # Main graph component
-│   │   ├── CommitRow.tsx     # Commit row with ref badges
-│   │   └── graphLayout.ts    # Branch path layout algorithm
-│   ├── branches/
-│   │   └── BranchPanel.tsx   # Branch tree panel
-│   └── settings/
-│       ├── SettingsForm.tsx  # Settings modal form
-│       └── i18n.ts           # Internationalization dictionary
-└── webviewContent.ts         # Webview HTML generator
-```
-
 ## License
 
 MIT

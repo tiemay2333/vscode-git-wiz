@@ -2,6 +2,16 @@
 
 All notable changes to Git Wiz are documented here.
 
+## [1.4.0] - 2026-05-15
+- **Features**:
+  - Enhance branch creation to support specifying start points.
+  - Implement partial file matching (PFM) for more accurate commit highlighting.
+  - Refactor SVG icons into dedicated components.
+  - Add project-wide specifications and UI guidelines.
+- **Improvements**:
+  - Add warning indicators for failed verification matches.
+  - Improve signature matching logic.
+
 ## [1.3.3] - 2026-05-13
 - Stability Improvement
 - Bug Fixes

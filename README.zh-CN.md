@@ -121,51 +121,6 @@
 
 以上选项也可通过提交图标题栏的**设置**按钮（齿轮图标）切换。
 
-## 开发
-
-```bash
-# 克隆仓库
-git clone https://github.com/tiemay2333/vscode-git-wiz.git
-
-# 安装依赖
-pnpm install
-
-# 编译
-pnpm run compile
-
-# 监听模式（扩展宿主）
-pnpm run watch
-
-# 监听模式（Webview，保存即重新构建）
-pnpm run watch:webview
-
-# 运行测试
-pnpm test
-```
-
-### 项目结构
-
-```
-src/
-├── extension.ts              # 扩展入口，命令注册
-├── gitGraphView.ts           # Webview 提供者，消息处理
-├── gitOperations.ts          # Git 操作（checkout, merge, rebase 等）
-├── gitParser.ts              # Git 日志输出解析器
-├── git/                      # Git 运行器和变基脚本
-├── webview/
-│   ├── index.tsx             # Webview 入口
-│   ├── graph/                # 提交图视图（React）
-│   │   ├── GraphView.tsx     # 主图组件
-│   │   ├── CommitRow.tsx     # 提交行（含引用徽章）
-│   │   └── graphLayout.ts    # 分支路径图布局算法
-│   ├── branches/
-│   │   └── BranchPanel.tsx   # 分支树面板
-│   └── settings/
-│       ├── SettingsForm.tsx  # 设置弹窗表单
-│       └── i18n.ts           # 国际化字典
-└── webviewContent.ts         # Webview HTML 生成器
-```
-
 ## 许可证
 
 MIT
