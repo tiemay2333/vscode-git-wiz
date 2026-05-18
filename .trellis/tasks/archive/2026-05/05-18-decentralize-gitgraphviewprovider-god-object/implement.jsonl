@@ -1,0 +1,2 @@
+{"file": ".trellis/spec/project/index.md", "reason": "General project structure and guidelines."}
+{"file": "src/gitGraphView.ts", "reason": "The God Object being refactored."}

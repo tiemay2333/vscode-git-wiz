@@ -1,0 +1,2 @@
+{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "General code quality check."}
+{"file": "src/gitGraphView.ts", "reason": "Ensure the provider is clean and delegation works."}
