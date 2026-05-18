@@ -472,3 +472,37 @@ Bumped version to 1.4.0, updated CHANGELOG.md with recent features and improveme
 ### Next Steps
 
 - None - task complete
+
+
+## Session 15: Architectural Deepening and Decentralization
+
+**Date**: 2026-05-18
+**Task**: Architectural Deepening and Decentralization
+**Branch**: `main`
+
+### Summary
+
+Completed two major architectural refactors: 1) Separated Domain and View models in GitCommit by extracting UI state into a Map. 2) Decentralized GitGraphViewProvider by extracting state into GraphState and delegating message handling to UIStateHandler and GitCommandHandler. Improved code modularity, locality, and testability.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `3512b0f` | (see git log) |
+| `5c592e3` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
