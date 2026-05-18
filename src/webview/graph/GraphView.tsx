@@ -113,6 +113,9 @@ export function GraphView({
         Record<string, { status: string; path: string; insertions?: number; deletions?: number }[]>
     >({});
     const [commits, setCommits] = useState(initialCommits);
+    const [commitUIStatus, setCommitUIStatus] = useState<Record<string, { isCurrentBranch?: boolean; verificationStatus?: "pending" | "verified" | "failed" }>>(
+        (window as any).__UI_STATUS__ || {},
+    );
     const [hasMore, setHasMore] = useState(initialHasMore);
     const [currentBranch, setCurrentBranch] = useState(initialCurrentBranch);
     const [filterBranch, setFilterBranch] = useState<string | null | undefined>(initialFilterBranch);
@@ -240,6 +243,9 @@ export function GraphView({
             const msg = event.data;
             if (msg.command === "appendCommits") {
                 setCommits(prev => [...prev, ...msg.commits]);
+                if (msg.uiStatus) {
+                    setCommitUIStatus(prev => ({ ...prev, ...msg.uiStatus }));
+                }
                 setHasMore(msg.hasMore);
                 setIsLoadingMore(false);
                 // Recompute matches for newly loaded commits in graph mode
@@ -281,6 +287,7 @@ export function GraphView({
                 });
 
                 setCommits(msg.commits);
+                setCommitUIStatus(msg.uiStatus || {});
                 setHasMore(msg.hasMore);
                 if (msg.currentBranch !== undefined) {
                     setCurrentBranch(msg.currentBranch);
@@ -373,17 +380,16 @@ export function GraphView({
                 }
             }
             else if (msg.command === "updateCommitHighlight") {
-                setCommits((prev) => {
-                    return prev.map((c) => {
-                        if (c.hash === msg.hash) {
-                            return {
-                                ...c,
-                                verificationStatus: msg.verificationStatus,
-                                isCurrentBranch: msg.verificationStatus === "verified" || msg.verificationStatus === "pending",
-                            };
-                        }
-                        return c;
-                    });
+                setCommitUIStatus((prev) => {
+                    const status = prev[msg.hash] || {};
+                    return {
+                        ...prev,
+                        [msg.hash]: {
+                            ...status,
+                            verificationStatus: msg.verificationStatus,
+                            isCurrentBranch: msg.verificationStatus === "verified" || msg.verificationStatus === "pending",
+                        },
+                    };
                 });
             }
             else if (msg.command === "showSettingsModal") {
@@ -909,6 +915,7 @@ export function GraphView({
                                     <tbody>
                                         {graphNodes.map((node, index) => {
                                             const commit = node.commit;
+                                            const status = commitUIStatus[commit.hash];
                                             const isSelected = selectedIndices.has(index);
                                             const isMenuOpen
                                                 = singleMenu?.index === index || rangeMenu?.sortedIndices.includes(index);
@@ -927,7 +934,7 @@ export function GraphView({
                                                         isLoading={loadingHash === commit.hash}
                                                         isFirst={index === 0}
                                                         isLast={index === filteredCommits.length - 1}
-                                                        isDimmed={highlightCurrent && !commit.isCurrentBranch}
+                                                        isDimmed={highlightCurrent && !status?.isCurrentBranch}
                                                         isMatchQuery={!!m?.q}
                                                         isMatchHash={!!m?.h}
                                                         isMatchAuthor={!!m?.a}
@@ -935,6 +942,7 @@ export function GraphView({
                                                         showTags={showTags}
                                                         showRemoteBranches={showRemoteBranches}
                                                         showGraph={showGraph}
+                                                        status={status}
                                                         onClick={shiftKey => handleRowClick(index, shiftKey)}
                                                         onContextMenu={e => handleContextMenu(e, index)}
                                                     />
@@ -1010,7 +1018,7 @@ export function GraphView({
                                                                         </button>
                                                                     </div>
                                                                     <div className="inline-files-content">
-                                                                        {commit.verificationStatus === "failed" && (
+                                                                        {status?.verificationStatus === "failed" && (
                                                                             <div className="warning-message-block">
                                                                                 <IconWarning />
                                                                                 <span>

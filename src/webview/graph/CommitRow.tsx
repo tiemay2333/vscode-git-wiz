@@ -35,6 +35,7 @@ interface Props {
     showTags?: boolean;
     showRemoteBranches?: boolean;
     showGraph?: boolean;
+    status?: { isCurrentBranch?: boolean; verificationStatus?: "pending" | "verified" | "failed" };
     onClick: (shiftKey: boolean) => void;
     onContextMenu: (e: React.MouseEvent) => void;
 }
@@ -122,6 +123,7 @@ export const CommitRow = React.memo(({
     isMatchQuery,
     isMatchHash,
     isMatchAuthor,
+    status,
     onClick,
     onContextMenu,
 }: Props) => {
@@ -140,7 +142,7 @@ export const CommitRow = React.memo(({
     const spinnerRef = React.useRef<HTMLSpanElement>(null);
 
     React.useEffect(() => {
-        if (commit.verificationStatus !== "pending")
+        if (status?.verificationStatus !== "pending")
             return;
 
         const target = spinnerRef.current;
@@ -170,9 +172,9 @@ export const CommitRow = React.memo(({
             observer.unobserve(target);
             observer.disconnect();
         };
-    }, [commit.verificationStatus, commit.hash]);
+    }, [status?.verificationStatus, commit.hash]);
 
-    const showSpinner = isLoading || commit.verificationStatus === "pending";
+    const showSpinner = isLoading || status?.verificationStatus === "pending";
 
     return (
         <tr
@@ -223,13 +225,13 @@ export const CommitRow = React.memo(({
             )}
             <td className="message-cell" title={commit.message}>
                 <RefBadges refs={commit.refs} showTags={showTags} showRemoteBranches={showRemoteBranches} />
-                {commit.verificationStatus === "failed" && (
+                {status?.verificationStatus === "failed" && (
                     <span className="warning-icon">
                         <IconWarning />
                     </span>
                 )}
                 <span className="message-text">{commit.message}</span>
-                {showSpinner && <span ref={spinnerRef} className="row-loading-spinner" title={commit.verificationStatus === "pending" ? "Verifying commit..." : "Loading files..."}></span>}
+                {showSpinner && <span ref={spinnerRef} className="row-loading-spinner" title={status?.verificationStatus === "pending" ? "Verifying commit..." : "Loading files..."}></span>}
             </td>
             <td className="hash-cell">{commit.shortHash}</td>
             <td className="author-cell">{commit.author}</td>

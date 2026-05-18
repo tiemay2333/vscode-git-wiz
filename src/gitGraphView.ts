@@ -39,6 +39,11 @@ export interface WebviewMessage {
     remoteName?: string;
 }
 
+export interface CommitUIStatus {
+    isCurrentBranch?: boolean;
+    verificationStatus?: "pending" | "verified" | "failed";
+}
+
 export class GitGraphViewProvider implements vscode.WebviewViewProvider, vscode.Disposable {
     public static readonly viewType = "gitLeanGraphView";
     private static currentPanel: vscode.WebviewPanel | undefined;
@@ -365,8 +370,9 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider, vscode.
         const currentBranch = await this._gitService.getCurrentBranch();
         const highlightCurrentBranch = this.getConfig("highlightCurrentBranch", false);
 
+        let uiStatus: Record<string, CommitUIStatus> = {};
         if (highlightCurrentBranch && currentBranch) {
-            await this.applyHighlight(commits, currentBranch);
+            uiStatus = await this.calculateUIStatus(commits, currentBranch);
         }
 
         this._loadedCount = commits.length;
@@ -374,6 +380,7 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider, vscode.
         webview.postMessage({
             command: "replaceCommits",
             commits,
+            uiStatus,
             hasMore: commits.length >= Math.max(PAGE_SIZE, this._loadedCount),
             filterBranch: this._filterBranch,
             filterFile: this._filterFile,
@@ -449,8 +456,9 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider, vscode.
             const showRemoteBranches = this.getConfig("showRemoteBranches", true);
             const showGraph = this.getConfig("showGraph", true);
 
+            let uiStatus: Record<string, CommitUIStatus> = {};
             if (highlightCurrentBranch && currentBranch) {
-                await this.applyHighlight(commits, currentBranch);
+                uiStatus = await this.calculateUIStatus(commits, currentBranch);
             }
 
             this.updateViewTitle(currentBranch);
@@ -460,6 +468,7 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider, vscode.
             const msg = {
                 command: "replaceCommits",
                 commits,
+                uiStatus,
                 hasMore,
                 filterBranch: this._filterBranch,
                 filterFile: this._filterFile,
@@ -549,8 +558,9 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider, vscode.
         const showGraph = this.getConfig("showGraph", true);
         const searchDefaultMode = this.getConfig("searchDefaultMode", "single");
 
+        let uiStatus: Record<string, CommitUIStatus> = {};
         if (highlightCurrentBranch && currentBranch) {
-            await this.applyHighlight(commits, currentBranch);
+            uiStatus = await this.calculateUIStatus(commits, currentBranch);
         }
 
         this.updateViewTitle(currentBranch);
@@ -573,6 +583,7 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider, vscode.
             showGraph,
             searchDefaultMode,
             vscode.env.language,
+            uiStatus,
         );
         this._initialized = true;
         if (this._pendingRefresh) {
@@ -595,16 +606,17 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider, vscode.
         const showRemoteBranches = this.getConfig("showRemoteBranches", true);
         const showGraph = this.getConfig("showGraph", true);
 
+        let uiStatus: Record<string, CommitUIStatus> = {};
         if (highlightCurrentBranch && currentBranch) {
-            await this.applyHighlight(commits, currentBranch);
+            uiStatus = await this.calculateUIStatus(commits, currentBranch);
         }
 
         this._loadedCount += commits.length;
         const hasMore = commits.length === PAGE_SIZE;
-        webview.postMessage({ command: "appendCommits", commits, hasMore, showTags, showRemoteBranches, showGraph });
+        webview.postMessage({ command: "appendCommits", commits, uiStatus, hasMore, showTags, showRemoteBranches, showGraph });
     }
 
-    private async applyHighlight(commits: GitCommit[], currentBranch: string): Promise<void> {
+    private async calculateUIStatus(commits: GitCommit[], currentBranch: string): Promise<Record<string, CommitUIStatus>> {
         const branchHashes = await this._gitService.getBranchCommits(currentBranch);
         const headHash = await this._gitService.getHeadHash(currentBranch);
 
@@ -620,20 +632,21 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider, vscode.
         }
 
         const result = getCurrentBranchHashes(commits, branchHashes, this._branchSignaturesCache.signatures);
+        const uiStatus: Record<string, CommitUIStatus> = {};
+
         for (const c of commits) {
             if (result.verified.has(c.hash)) {
-                c.isCurrentBranch = true;
-                c.verificationStatus = "verified";
+                uiStatus[c.hash] = { isCurrentBranch: true, verificationStatus: "verified" };
             }
             else if (result.pending.has(c.hash)) {
-                c.isCurrentBranch = true;
-                c.verificationStatus = "pending";
+                uiStatus[c.hash] = { isCurrentBranch: true, verificationStatus: "pending" };
             }
             else {
-                c.isCurrentBranch = false;
-                c.verificationStatus = undefined;
+                uiStatus[c.hash] = { isCurrentBranch: false };
             }
         }
+
+        return uiStatus;
     }
 
     private async getCommitFiles(commitHash: string, webview: vscode.Webview) {
