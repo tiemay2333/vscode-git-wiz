@@ -1,4 +1,4 @@
-import type { GitCommit } from "@/git/core/gitParser";
+import type { GitCommit } from "@/git/utils/gitParser";
 import { describe, expect, it } from "vitest";
 import { getCommitSignature, getCurrentBranchHashes } from "@/git/highlight/commitHighlight";
 

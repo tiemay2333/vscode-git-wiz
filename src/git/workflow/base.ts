@@ -1,5 +1,5 @@
-import { GitService } from "@/git/core/gitOperations";
-import { UIService } from "./uiservice";
+import type { UIService } from "./uiservice";
+import type { GitService } from "@/git/core/GitService";
 
 /**
  * WorkflowContext 包含了工作流执行时所需的所有依赖。

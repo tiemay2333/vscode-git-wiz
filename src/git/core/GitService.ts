@@ -1,13 +1,14 @@
+import type { GitCommit } from "../utils/gitParser";
 import type { GitRunner } from "./GitRunner";
-import type { GitCommit } from "./gitParser";
+import type { Branch } from "./RefManager";
+import { WorkflowScribe } from "@/git/core/WorkflowScribe";
+import { ConfigManager } from "./ConfigManager";
+import { FileInspector } from "./FileInspector";
 import { ChildProcessGitRunner } from "./GitRunner";
 import { LogEngine } from "./LogEngine";
-import { RefManager, Branch } from "./RefManager";
-import { WorkflowScribe } from "@/git/WorkflowScribe";
-import { FileInspector } from "./FileInspector";
-import { ConfigManager } from "./ConfigManager";
+import { RefManager } from "./RefManager";
 
-export type { GitCommit } from "./gitParser";
+export type { GitCommit } from "../utils/gitParser";
 export type { Branch } from "./RefManager";
 
 export interface GitServiceOptions {

@@ -1,4 +1,4 @@
-import type { GitCommit } from "@/git/core/gitParser";
+import type { GitCommit } from "@/git/utils/gitParser";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import * as vscode from "vscode";

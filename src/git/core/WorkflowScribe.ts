@@ -1,6 +1,6 @@
-import type { GitRunner } from "./core/GitRunner";
-import { makeMsgEditorScript, makeSeqEditorScript } from "./utils/rebaseScripts";
-import { runRebaseWithScripts } from "./utils/scriptedEditor";
+import type { GitRunner } from "./GitRunner";
+import { makeMsgEditorScript, makeSeqEditorScript } from "../utils/rebaseScripts";
+import { runRebaseWithScripts } from "../utils/scriptedEditor";
 
 export class WorkflowScribe {
     constructor(private readonly runner: GitRunner, private readonly cwd: string) { }
@@ -152,7 +152,8 @@ export class WorkflowScribe {
             args.push("--force-with-lease");
         if (options?.setUpstream) {
             args.push("-u", options.remote || "origin", options.setUpstream);
-        } else if (options?.remote) {
+        }
+        else if (options?.remote) {
             args.push(options.remote);
             if (options?.ref) {
                 args.push(options.ref);

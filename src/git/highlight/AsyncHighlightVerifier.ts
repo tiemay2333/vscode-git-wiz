@@ -1,4 +1,4 @@
-import type { GitService } from "@/git/core/gitOperations";
+import type { GitService } from "@/git/core/GitService";
 
 export class AsyncHighlightVerifier {
     private _queue: { hash: string; targets: string[] }[] = [];

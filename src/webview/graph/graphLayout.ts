@@ -1,4 +1,4 @@
-import type { GitCommit } from "@/git/core/gitParser";
+import type { GitCommit } from "@/git/utils/gitParser";
 import { COLORS } from "./CommitRow";
 
 export interface GraphNode {
@@ -22,14 +22,15 @@ export function computeGraphLayout(commits: GitCommit[]): GraphNode[] {
     const commitMap = new Map(commits.map(c => [c.hash, c]));
 
     // Find the commit that represents HEAD
-    let headCommit = commits.find(c => c.refs.some(r => r.match(/\bHEAD\b/)));
+    const headCommit = commits.find(c => c.refs.some(r => r.match(/\bHEAD\b/)));
     if (headCommit) {
         let curr: GitCommit | undefined = headCommit;
         while (curr) {
             headPath.add(curr.hash);
             if (curr.parents.length > 0) {
                 curr = commitMap.get(curr.parents[0]);
-            } else {
+            }
+            else {
                 curr = undefined;
             }
         }
@@ -68,13 +69,16 @@ export function computeGraphLayout(commits: GitCommit[]): GraphNode[] {
 
             // Check all active tracks to avoid same colors if possible, but prioritize avoiding direct neighbors
             if (trackIdx > 0 && activeTracks[trackIdx - 1]) {
-                if (activeTracks[trackIdx - 1]!.color % NUM_COLORS === proposedMod) conflict = true;
+                if (activeTracks[trackIdx - 1]!.color % NUM_COLORS === proposedMod)
+                    conflict = true;
             }
             if (trackIdx < activeTracks.length - 1 && activeTracks[trackIdx + 1]) {
-                if (activeTracks[trackIdx + 1]!.color % NUM_COLORS === proposedMod) conflict = true;
+                if (activeTracks[trackIdx + 1]!.color % NUM_COLORS === proposedMod)
+                    conflict = true;
             }
 
-            if (!conflict) break;
+            if (!conflict)
+                break;
             proposedColor++;
             if (proposedColor - nextColor > NUM_COLORS) {
                 // Fallback to nextColor if we can't find a perfect non-conflicting color (should be rare)
@@ -105,12 +109,15 @@ export function computeGraphLayout(commits: GitCommit[]): GraphNode[] {
             cIdx = 0;
             if (cTopIndices.includes(0)) {
                 commitColor = activeTracks[0]!.color;
-            } else if (cTopIndices.length > 0) {
+            }
+            else if (cTopIndices.length > 0) {
                 commitColor = activeTracks[Math.min(...cTopIndices)]!.color;
-            } else {
+            }
+            else {
                 commitColor = getAvailableColor(0);
             }
-        } else if (cTopIndices.length === 0) {
+        }
+        else if (cTopIndices.length === 0) {
             cIdx = findAvailableTrack(false);
             commitColor = getAvailableColor(cIdx);
         }
@@ -164,8 +171,8 @@ export function computeGraphLayout(commits: GitCommit[]): GraphNode[] {
 
             for (let p = 1; p < commit.parents.length; p++) {
                 const parentHash = commit.parents[p];
-                let pt = findAvailableTrack(false);
-                let pColor = getAvailableColor(pt);
+                const pt = findAvailableTrack(false);
+                const pColor = getAvailableColor(pt);
                 activeTracks[pt] = { hash: parentHash, color: pColor };
 
                 lines.push({

@@ -1,12 +1,12 @@
-import type { GitCommit } from "@/git/core/gitParser";
 import type { Branch } from "./branches/BranchPanel";
 import type { CommitDetailsData } from "./commitDetails/CommitDetailsView";
+import type { GitCommit } from "@/git/utils/gitParser";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
+import { vscode } from "@/webview/vscodeApi";
 import { BranchPanel } from "./branches/BranchPanel";
 import { CommitDetailsView } from "./commitDetails/CommitDetailsView";
 import { GraphView } from "./graph/GraphView";
-import { vscode } from "@/webview/vscodeApi";
 
 declare global {
     interface Window {

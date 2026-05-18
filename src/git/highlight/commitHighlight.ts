@@ -1,4 +1,4 @@
-import type { GitCommit } from "@/git/core/gitParser";
+import type { GitCommit } from "@/git/utils/gitParser";
 
 /**
  * Shared signature generation for cherry-pick detection.

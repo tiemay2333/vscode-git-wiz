@@ -1,9 +1,9 @@
+import type { BaseWorkflow, WorkflowContext } from "./base";
+import type { UIService } from "./uiservice";
+import type { GitService } from "@/git/core/GitService";
 import * as vscode from "vscode";
-import { GitService } from "@/git/core/gitOperations";
-import { BaseWorkflow, WorkflowContext } from "./base";
-import { UIService } from "./uiservice";
-import { VSCodeUIService } from "./vscode-ui";
 import { t } from "@/locale/i18n";
+import { VSCodeUIService } from "./vscode-ui";
 
 /**
  * GitWorkflowEngine 负责调度和执行工作流。
@@ -16,7 +16,7 @@ export class GitWorkflowEngine {
     constructor(
         private readonly _git: GitService,
         private readonly _refresh: () => void,
-        ui?: UIService
+        ui?: UIService,
     ) {
         this._ui = ui ?? new VSCodeUIService();
     }
@@ -36,16 +36,18 @@ export class GitWorkflowEngine {
             git: this._git,
             ui: this._ui,
             refresh: this._refresh,
-            locale
+            locale,
         };
 
         try {
             return await workflow.run(context);
-        } catch (error: any) {
+        }
+        catch (error: any) {
             const errorMsg = error.message || t(locale, "operationFailed", { error: workflow.label });
             this._ui.notify(errorMsg, "error");
             return undefined;
-        } finally {
+        }
+        finally {
             this._isLocked = false;
         }
     }

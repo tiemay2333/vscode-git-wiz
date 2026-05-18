@@ -1,22 +1,18 @@
-import type { GitCommit } from "@/git/core/gitOperations";
+import type { GitCommit } from "@/git/core/GitService";
+import type { BaseWorkflow } from "@/git/workflow/base";
 import * as vscode from "vscode";
+import { GitCommandHandler } from "@/commands/gitCommandHandler";
 import { FileHandler } from "@/core/fileHandler";
+import { GraphState } from "@/core/graphState";
+import { SettingsHandler } from "@/core/settingsHandler";
+import { UIStateHandler } from "@/core/uiStateHandler";
+import { GitService } from "@/git/core/GitService";
 import { AsyncHighlightVerifier } from "@/git/highlight/AsyncHighlightVerifier";
 import { getCurrentBranchHashes } from "@/git/highlight/commitHighlight";
-import { GitCommandHandler } from "@/commands/gitCommandHandler";
-import { GitService } from "@/git/core/gitOperations";
-import { SettingsHandler } from "@/core/settingsHandler";
-import { getCommitDetailsHtml, getHtmlForWebview } from "./webviewContent";
-import { t } from "@/locale/i18n";
-import { GraphState } from "@/core/graphState";
-import { UIStateHandler } from "@/core/uiStateHandler";
-
 import { GitWorkflowEngine } from "@/git/workflow/engine";
-import { DeleteBranchWorkflow } from "@/git/workflow/impl/DeleteBranchWorkflow";
-import { PushTagWorkflow } from "@/git/workflow/impl/PushTagWorkflow";
-import { CreateBranchWorkflow } from "@/git/workflow/impl/CreateBranchWorkflow";
-import { CreateTagWorkflow } from "@/git/workflow/impl/CreateTagWorkflow";
-import { BaseWorkflow } from "@/git/workflow/base";
+
+import { t } from "@/locale/i18n";
+import { getCommitDetailsHtml, getHtmlForWebview } from "./webviewContent";
 
 const PAGE_SIZE = 200;
 
@@ -77,9 +73,7 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider, vscode.
             this.postToWebview({ command: "updateCommitHighlight", hash, verificationStatus: status });
         });
         this._gitCommandHandler = new GitCommandHandler(
-            this._gitService,
             this._workflowEngine,
-            () => this.refresh(),
             branch => this.filterByBranch(branch),
         );
         this._uiStateHandler = new UIStateHandler(

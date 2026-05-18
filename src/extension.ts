@@ -1,21 +1,20 @@
 import * as vscode from "vscode";
-import { GitGraphViewProvider } from "./views/gitGraphView";
-import { GitService } from "./git/core/gitOperations";
-import { DeleteBranchWorkflow } from "./git/workflow/impl/DeleteBranchWorkflow";
+import { GitService } from "./git/core/GitService";
+import { CheckoutBranchWorkflow } from "./git/workflow/impl/CheckoutBranchWorkflow";
 import { CherryPickWorkflow } from "./git/workflow/impl/CherryPickWorkflow";
-import { RevertWorkflow } from "./git/workflow/impl/RevertWorkflow";
-import { ResetWorkflow } from "./git/workflow/impl/ResetWorkflow";
+import { CreateBranchWorkflow } from "./git/workflow/impl/CreateBranchWorkflow";
+import { DeleteBranchWorkflow } from "./git/workflow/impl/DeleteBranchWorkflow";
 import { DeleteRemoteBranchWorkflow } from "./git/workflow/impl/DeleteRemoteBranchWorkflow";
-import { t } from "./locale/i18n";
 import { FetchWorkflow } from "./git/workflow/impl/FetchWorkflow";
+import { MergeBranchWorkflow } from "./git/workflow/impl/MergeBranchWorkflow";
 import { PullWorkflow } from "./git/workflow/impl/PullWorkflow";
+import { PushTagWorkflow } from "./git/workflow/impl/PushTagWorkflow";
 import { PushWorkflow } from "./git/workflow/impl/PushWorkflow";
 import { RebaseBranchWorkflow } from "./git/workflow/impl/RebaseBranchWorkflow";
-import { MergeBranchWorkflow } from "./git/workflow/impl/MergeBranchWorkflow";
-import { CreateBranchWorkflow } from "./git/workflow/impl/CreateBranchWorkflow";
-import { CreateTagWorkflow } from "./git/workflow/impl/CreateTagWorkflow";
-import { PushTagWorkflow } from "./git/workflow/impl/PushTagWorkflow";
-import { CheckoutBranchWorkflow } from "./git/workflow/impl/CheckoutBranchWorkflow";
+import { ResetWorkflow } from "./git/workflow/impl/ResetWorkflow";
+import { RevertWorkflow } from "./git/workflow/impl/RevertWorkflow";
+import { t } from "./locale/i18n";
+import { GitGraphViewProvider } from "./views/gitGraphView";
 
 export function activate(context: vscode.ExtensionContext) {
     const statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
@@ -204,7 +203,8 @@ export function activate(context: vscode.ExtensionContext) {
             const btnCancel = t(vscode.env.language, "cancel");
             const confirm = await vscode.window.showWarningMessage(
                 t(vscode.env.language, "pushForceConfirm"),
-                btnPush, btnCancel
+                btnPush,
+                btnCancel,
             );
             if (confirm === btnPush) {
                 await graphProvider.executeWorkflow(new PushWorkflow({ force: true }));
@@ -316,7 +316,8 @@ export function activate(context: vscode.ExtensionContext) {
             const btnCancel = t(vscode.env.language, "cancel");
             const confirm = await vscode.window.showWarningMessage(
                 t(vscode.env.language, "tagDeleteConfirm", { name: tagName }),
-                btnDelete, btnCancel
+                btnDelete,
+                btnCancel,
             );
             if (confirm === btnDelete) {
                 await vscode.window.withProgress(
@@ -344,4 +345,4 @@ export function activate(context: vscode.ExtensionContext) {
     );
 }
 
-export function deactivate() {}
+export function deactivate() { }
