@@ -406,3 +406,36 @@ Bumped version to 1.4.0, updated CHANGELOG.md with recent features and improveme
 ### Next Steps
 
 - None - task complete
+
+
+## Session 13: 实现 Git 工作流引擎
+
+**Date**: 2026-05-18
+**Task**: 实现 Git 工作流引擎
+**Branch**: `main`
+
+### Summary
+
+完成了 Git Workflow Engine 的架构改进。引入了 UIService 接口以解耦 VSCode UI，实现了带有并发锁的引擎框架，并迁移了‘删除分支’和‘Cherry-pick’工作流。消除了 extension.ts 和 GitCommandHandler 之间的逻辑重复，提高了代码的局部性和可测试性。
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `cfb48a0` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
