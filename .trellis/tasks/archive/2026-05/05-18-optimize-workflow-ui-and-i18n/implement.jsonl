@@ -1,0 +1,3 @@
+{"file": ".trellis/spec/project/index.md", "reason": "项目范围规范"}
+{"file": ".trellis/spec/frontend/type-safety.md", "reason": "类型安全指南"}
+{"file": "src/webview/settings/i18n.ts", "reason": "现有的 i18n 实现"}
