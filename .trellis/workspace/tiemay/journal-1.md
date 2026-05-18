@@ -539,3 +539,36 @@ Refactored GitService into a domain-oriented Facade by extracting logic into Log
 ### Next Steps
 
 - None - task complete
+
+
+## Session 17: Project Structure Reorganization
+
+**Date**: 2026-05-18
+**Task**: Project Structure Reorganization
+**Branch**: `main`
+
+### Summary
+
+Completed a comprehensive reorganization of the codebase. Moved files into feature-based subdirectories (commands, core, git/core, git/highlight, git/utils, locale, views). Fixed all relative import paths across the project, including tests and webview components. Updated tsconfig.json to support DOM/JSX for all files and resolve alias discrepancies. Verified build and tests are passing.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `e07aad9` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete

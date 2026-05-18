@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 16
+- **Total Sessions**: 17
 - **Last Active**: 2026-05-18
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~541 | Active |
+| `journal-1.md` | ~574 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 17 | 2026-05-18 | Project Structure Reorganization | `e07aad9` | `main` |
 | 16 | 2026-05-18 | GitService Domain-Oriented Refactor | `b41dcf9` | `main` |
 | 15 | 2026-05-18 | Architectural Deepening and Decentralization | `3512b0f`, `5c592e3` | `main` |
 | 14 | 2026-05-18 | UI 优化与国际化升级 | `a7a83ab` | `main` |
