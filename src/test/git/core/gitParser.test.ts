@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseGitLogOutput } from "../gitParser";
+import { parseGitLogOutput } from "@/git/core/gitParser";
 
 describe("parseGitLogOutput", () => {
     it("returns empty array for empty input", () => {

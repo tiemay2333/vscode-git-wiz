@@ -1,4 +1,4 @@
-import { GitService } from "../../gitOperations";
+import { GitService } from "@/git/core/gitOperations";
 import { UIService } from "./uiservice";
 
 /**

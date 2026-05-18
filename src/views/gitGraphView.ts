@@ -1,22 +1,22 @@
-import type { GitCommit } from "./gitOperations";
+import type { GitCommit } from "@/git/core/gitOperations";
 import * as vscode from "vscode";
-import { FileHandler } from "./fileHandler";
-import { AsyncHighlightVerifier } from "./git/AsyncHighlightVerifier";
-import { getCurrentBranchHashes } from "./git/commitHighlight";
-import { GitCommandHandler } from "./gitCommandHandler";
-import { GitService } from "./gitOperations";
-import { SettingsHandler } from "./settingsHandler";
+import { FileHandler } from "@/core/fileHandler";
+import { AsyncHighlightVerifier } from "@/git/highlight/AsyncHighlightVerifier";
+import { getCurrentBranchHashes } from "@/git/highlight/commitHighlight";
+import { GitCommandHandler } from "@/commands/gitCommandHandler";
+import { GitService } from "@/git/core/gitOperations";
+import { SettingsHandler } from "@/core/settingsHandler";
 import { getCommitDetailsHtml, getHtmlForWebview } from "./webviewContent";
-import { t } from "./i18n";
-import { GraphState } from "./graphState";
-import { UIStateHandler } from "./uiStateHandler";
+import { t } from "@/locale/i18n";
+import { GraphState } from "@/core/graphState";
+import { UIStateHandler } from "@/core/uiStateHandler";
 
-import { GitWorkflowEngine } from "./git/workflow/engine";
-import { DeleteBranchWorkflow } from "./git/workflow/impl/DeleteBranchWorkflow";
-import { PushTagWorkflow } from "./git/workflow/impl/PushTagWorkflow";
-import { CreateBranchWorkflow } from "./git/workflow/impl/CreateBranchWorkflow";
-import { CreateTagWorkflow } from "./git/workflow/impl/CreateTagWorkflow";
-import { BaseWorkflow } from "./git/workflow/base";
+import { GitWorkflowEngine } from "@/git/workflow/engine";
+import { DeleteBranchWorkflow } from "@/git/workflow/impl/DeleteBranchWorkflow";
+import { PushTagWorkflow } from "@/git/workflow/impl/PushTagWorkflow";
+import { CreateBranchWorkflow } from "@/git/workflow/impl/CreateBranchWorkflow";
+import { CreateTagWorkflow } from "@/git/workflow/impl/CreateTagWorkflow";
+import { BaseWorkflow } from "@/git/workflow/base";
 
 const PAGE_SIZE = 200;
 

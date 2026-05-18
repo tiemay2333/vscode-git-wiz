@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { vscode } from "../vscodeApi";
-import { IconBranch, IconChevronDown, IconChevronRight, IconFolder, IconStar, IconTag } from "../shared/Icons";
+import { vscode } from "@/webview/vscodeApi";
+import { IconBranch, IconChevronDown, IconChevronRight, IconFolder, IconStar, IconTag } from "@/webview/shared/Icons";
 
 export interface Branch {
     name: string;

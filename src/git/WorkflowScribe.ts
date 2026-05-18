@@ -1,6 +1,6 @@
-import type { GitRunner } from "./GitRunner";
-import { makeMsgEditorScript, makeSeqEditorScript } from "./rebaseScripts";
-import { runRebaseWithScripts } from "./scriptedEditor";
+import type { GitRunner } from "./core/GitRunner";
+import { makeMsgEditorScript, makeSeqEditorScript } from "./utils/rebaseScripts";
+import { runRebaseWithScripts } from "./utils/scriptedEditor";
 
 export class WorkflowScribe {
     constructor(private readonly runner: GitRunner, private readonly cwd: string) { }

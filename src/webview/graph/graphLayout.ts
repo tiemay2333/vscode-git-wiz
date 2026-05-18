@@ -1,4 +1,4 @@
-import type { GitCommit } from "../../gitParser";
+import type { GitCommit } from "@/git/core/gitParser";
 import { COLORS } from "./CommitRow";
 
 export interface GraphNode {

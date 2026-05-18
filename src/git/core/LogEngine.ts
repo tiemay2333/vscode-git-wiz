@@ -1,7 +1,7 @@
 import type { GitRunner } from "./GitRunner";
-import type { GitCommit } from "../gitParser";
-import { parseGitLogOutput } from "../gitParser";
-import { createSignature } from "./commitHighlight";
+import type { GitCommit } from "./gitParser";
+import { parseGitLogOutput } from "./gitParser";
+import { createSignature } from "@/git/highlight/commitHighlight";
 
 export class LogEngine {
     constructor(private readonly runner: GitRunner) { }

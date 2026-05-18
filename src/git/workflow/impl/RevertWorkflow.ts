@@ -1,5 +1,5 @@
-import { t } from "../../../i18n";
-import { BaseWorkflow, WorkflowContext } from "../base";
+import { t } from "@/locale/i18n";
+import { BaseWorkflow, WorkflowContext } from "@/git/workflow/base";
 
 export class RevertWorkflow extends BaseWorkflow {
     readonly id = "revert";

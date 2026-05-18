@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { makeMsgEditorScript, makeSeqEditorScript } from "../git/rebaseScripts";
+import { makeMsgEditorScript, makeSeqEditorScript } from "@/git/utils/rebaseScripts";
 
 describe("makeMsgEditorScript", () => {
     it("writes the message to process.argv[2]", () => {

@@ -1,5 +1,5 @@
-import type { WebviewMessage } from "./gitGraphView";
-import type { GitService } from "./gitOperations";
+import type { WebviewMessage } from "@/views/gitGraphView";
+import type { GitService } from "@/git/core/gitOperations";
 import * as vscode from "vscode";
 
 export class SettingsHandler implements vscode.Disposable {

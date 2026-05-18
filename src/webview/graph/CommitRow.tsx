@@ -1,7 +1,7 @@
 import type { GraphNode } from "./graphLayout";
 import React from "react";
-import { IconWarning } from "../shared/Icons";
-import { vscode } from "../vscodeApi";
+import { IconWarning } from "@/webview/shared/Icons";
+import { vscode } from "@/webview/vscodeApi";
 
 export const COLORS = [
     "#3d9fd4", // blue

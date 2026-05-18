@@ -1,9 +1,9 @@
 import * as vscode from "vscode";
-import { GitService } from "../../gitOperations";
+import { GitService } from "@/git/core/gitOperations";
 import { BaseWorkflow, WorkflowContext } from "./base";
 import { UIService } from "./uiservice";
 import { VSCodeUIService } from "./vscode-ui";
-import { t } from "../../i18n";
+import { t } from "@/locale/i18n";
 
 /**
  * GitWorkflowEngine 负责调度和执行工作流。

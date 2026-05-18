@@ -1,6 +1,6 @@
-import type { ExecResult, GitRunner } from "../git/GitRunner";
+import type { ExecResult, GitRunner } from "@/git/core/GitRunner";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { GitService } from "../gitOperations";
+import { GitService } from "@/git/core/gitOperations";
 
 describe("gitService", () => {
     const mockRunner: GitRunner = {

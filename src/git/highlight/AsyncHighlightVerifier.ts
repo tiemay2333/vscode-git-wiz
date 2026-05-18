@@ -1,4 +1,4 @@
-import type { GitService } from "../gitOperations";
+import type { GitService } from "@/git/core/gitOperations";
 
 export class AsyncHighlightVerifier {
     private _queue: { hash: string; targets: string[] }[] = [];
@@ -50,20 +50,22 @@ export class AsyncHighlightVerifier {
     }
 
     private async getPatchId(hash: string): Promise<string> {
-        let pid = this._patchIdCache.get(hash);
-        if (pid === undefined) {
-            pid = await this._gitService.getPatchId(hash);
-            this._patchIdCache.set(hash, pid);
+        const cached = this._patchIdCache.get(hash);
+        if (cached !== undefined) {
+            return cached;
         }
+        const pid = await this._gitService.getPatchId(hash);
+        this._patchIdCache.set(hash, pid);
         return pid;
     }
 
     private async getFilePatchIds(hash: string): Promise<Map<string, string>> {
-        let pids = this._filePatchIdCache.get(hash);
-        if (pids === undefined) {
-            pids = await this._gitService.getCommitFilePatchIds(hash);
-            this._filePatchIdCache.set(hash, pids);
+        const cached = this._filePatchIdCache.get(hash);
+        if (cached !== undefined) {
+            return cached;
         }
+        const pids = await this._gitService.getCommitFilePatchIds(hash);
+        this._filePatchIdCache.set(hash, pids);
         return pids;
     }
 

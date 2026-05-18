@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
-import { vscode } from "../vscodeApi";
-import { t } from "../../i18n";
+import { vscode } from "@/webview/vscodeApi";
+import { t } from "@/locale/i18n";
 
 export interface SettingsData {
     highlightCurrentBranch: boolean;

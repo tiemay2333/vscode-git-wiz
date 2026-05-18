@@ -1,12 +1,12 @@
 import * as vscode from "vscode";
-import { GitGraphViewProvider } from "./gitGraphView";
-import { GitService } from "./gitOperations";
+import { GitGraphViewProvider } from "./views/gitGraphView";
+import { GitService } from "./git/core/gitOperations";
 import { DeleteBranchWorkflow } from "./git/workflow/impl/DeleteBranchWorkflow";
 import { CherryPickWorkflow } from "./git/workflow/impl/CherryPickWorkflow";
 import { RevertWorkflow } from "./git/workflow/impl/RevertWorkflow";
 import { ResetWorkflow } from "./git/workflow/impl/ResetWorkflow";
 import { DeleteRemoteBranchWorkflow } from "./git/workflow/impl/DeleteRemoteBranchWorkflow";
-import { t } from "./i18n";
+import { t } from "./locale/i18n";
 import { FetchWorkflow } from "./git/workflow/impl/FetchWorkflow";
 import { PullWorkflow } from "./git/workflow/impl/PullWorkflow";
 import { PushWorkflow } from "./git/workflow/impl/PushWorkflow";

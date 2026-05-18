@@ -1,9 +1,9 @@
-import type { GitCommit } from "./gitParser";
+import type { GitCommit } from "@/git/core/gitParser";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import * as vscode from "vscode";
 
-const CSS_DIR = path.resolve(__dirname, "webview");
+const CSS_DIR = path.resolve(__dirname, "..", "webview");
 
 function readCSS(subdir: string): string {
     try {

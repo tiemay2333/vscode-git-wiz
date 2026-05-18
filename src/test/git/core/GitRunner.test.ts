@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ChildProcessGitRunner } from "../git/GitRunner";
+import { ChildProcessGitRunner } from "@/git/core/GitRunner";
 
 describe("childProcessGitRunner", () => {
     const runner = new ChildProcessGitRunner();

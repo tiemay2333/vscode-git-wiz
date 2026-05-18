@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from "react";
-import { FileTree } from "../shared/FileTreeView";
-import { IconList, IconTree } from "../shared/Icons";
-import { vscode } from "../vscodeApi";
+import { FileTree } from "@/webview/shared/FileTreeView";
+import { IconList, IconTree } from "@/webview/shared/Icons";
+import { vscode } from "@/webview/vscodeApi";
 
 interface FileDiff {
     filePath: string;

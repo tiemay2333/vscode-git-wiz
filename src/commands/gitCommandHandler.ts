@@ -1,17 +1,17 @@
-import type { WebviewMessage } from "./gitGraphView";
-import type { GitService } from "./gitOperations";
+import type { WebviewMessage } from "@/views/gitGraphView";
+import type { GitService } from "@/git/core/gitOperations";
 import * as vscode from "vscode";
-import { GitWorkflowEngine } from "./git/workflow/engine";
-import { t } from "./i18n";
-import { CherryPickWorkflow } from "./git/workflow/impl/CherryPickWorkflow";
-import { RevertWorkflow } from "./git/workflow/impl/RevertWorkflow";
-import { ResetWorkflow } from "./git/workflow/impl/ResetWorkflow";
-import { DropWorkflow } from "./git/workflow/impl/DropWorkflow";
-import { SquashWorkflow } from "./git/workflow/impl/SquashWorkflow";
-import { PushTagWorkflow } from "./git/workflow/impl/PushTagWorkflow";
-import { DeleteBranchWorkflow } from "./git/workflow/impl/DeleteBranchWorkflow";
-import { CreateTagWorkflow } from "./git/workflow/impl/CreateTagWorkflow";
-import { CreateBranchWorkflow } from "./git/workflow/impl/CreateBranchWorkflow";
+import { GitWorkflowEngine } from "@/git/workflow/engine";
+import { t } from "@/locale/i18n";
+import { CherryPickWorkflow } from "@/git/workflow/impl/CherryPickWorkflow";
+import { RevertWorkflow } from "@/git/workflow/impl/RevertWorkflow";
+import { ResetWorkflow } from "@/git/workflow/impl/ResetWorkflow";
+import { DropWorkflow } from "@/git/workflow/impl/DropWorkflow";
+import { SquashWorkflow } from "@/git/workflow/impl/SquashWorkflow";
+import { PushTagWorkflow } from "@/git/workflow/impl/PushTagWorkflow";
+import { DeleteBranchWorkflow } from "@/git/workflow/impl/DeleteBranchWorkflow";
+import { CreateTagWorkflow } from "@/git/workflow/impl/CreateTagWorkflow";
+import { CreateBranchWorkflow } from "@/git/workflow/impl/CreateBranchWorkflow";
 
 export class GitCommandHandler implements vscode.Disposable {
     constructor(

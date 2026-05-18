@@ -1,12 +1,12 @@
-import type { GitCommit } from "../../gitParser";
-import type { SettingsData } from "../settings/SettingsForm";
-import type { FileTreeItem } from "../shared/FileTreeView";
+import type { GitCommit } from "@/git/core/gitParser";
+import type { SettingsData } from "@/webview/settings/SettingsForm";
+import type { FileTreeItem } from "@/webview/shared/FileTreeView";
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { SettingsForm } from "../settings/SettingsForm";
-import { FileTree } from "../shared/FileTreeView";
-import { IconListView, IconSearch, IconTreeView, IconWarning } from "../shared/Icons";
-import { vscode } from "../vscodeApi";
-import { t } from "../../i18n";
+import { SettingsForm } from "@/webview/settings/SettingsForm";
+import { FileTree } from "@/webview/shared/FileTreeView";
+import { IconListView, IconSearch, IconTreeView, IconWarning } from "@/webview/shared/Icons";
+import { vscode } from "@/webview/vscodeApi";
+import { t } from "@/locale/i18n";
 import { CommitRow } from "./CommitRow";
 import { computeGraphLayout } from "./graphLayout";
 

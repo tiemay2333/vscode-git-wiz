@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { AsyncHighlightVerifier } from "../git/AsyncHighlightVerifier";
-import { GitService } from "../gitOperations";
+import { AsyncHighlightVerifier } from "@/git/highlight/AsyncHighlightVerifier";
+import { GitService } from "@/git/core/gitOperations";
 
 describe("AsyncHighlightVerifier", () => {
     let mockGitService: any;

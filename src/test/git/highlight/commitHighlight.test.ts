@@ -1,6 +1,6 @@
-import type { GitCommit } from "../gitParser";
+import type { GitCommit } from "@/git/core/gitParser";
 import { describe, expect, it } from "vitest";
-import { getCommitSignature, getCurrentBranchHashes } from "../git/commitHighlight";
+import { getCommitSignature, getCurrentBranchHashes } from "@/git/highlight/commitHighlight";
 
 function makeCommit(hash: string, email?: string, timestamp?: number, message?: string): GitCommit {
     return {

@@ -204,7 +204,7 @@
     },
     "scripts": {
         "vscode:prepublish": "pnpm run compile",
-        "compile": "tsc -p ./ && pnpm run bundle-webview && node scripts/copy-css.js",
+        "compile": "tsc -p ./ && python3 scripts/fix-aliases.py && pnpm run bundle-webview && node scripts/copy-css.js",
         "bundle-webview": "esbuild src/webview/index.tsx --bundle --outfile=out/webview/index.js --format=iife --target=es2020 --jsx=automatic --minify",
         "watch": "tsc -watch -p ./",
         "watch:webview": "esbuild src/webview/index.tsx --bundle --outfile=out/webview/index.js --format=iife --target=es2020 --jsx=automatic --watch",

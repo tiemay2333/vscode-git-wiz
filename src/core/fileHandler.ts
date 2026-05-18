@@ -1,4 +1,4 @@
-import type { WebviewMessage } from "./gitGraphView";
+import type { WebviewMessage } from "@/views/gitGraphView";
 import * as vscode from "vscode";
 
 export class FileHandler implements vscode.Disposable {
