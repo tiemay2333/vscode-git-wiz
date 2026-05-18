@@ -8,6 +8,10 @@ import { GitService } from "./gitOperations";
 import { SettingsHandler } from "./settingsHandler";
 import { getCommitDetailsHtml, getHtmlForWebview } from "./webviewContent";
 
+import { GitWorkflowEngine } from "./git/workflow/engine";
+import { DeleteBranchWorkflow } from "./git/workflow/impl/DeleteBranchWorkflow";
+import { BaseWorkflow } from "./git/workflow/base";
+
 const PAGE_SIZE = 200;
 
 export interface WebviewMessage {
@@ -53,15 +57,18 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider, vscode.
     private readonly _gitCommandHandler: GitCommandHandler;
     private readonly _settingsHandler: SettingsHandler;
     private readonly _fileHandler: FileHandler;
+    private readonly _workflowEngine: GitWorkflowEngine;
 
     constructor(private readonly _extensionUri: vscode.Uri) {
         const cwd = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || "";
         this._gitService = new GitService({ cwd });
+        this._workflowEngine = new GitWorkflowEngine(this._gitService, () => this.refresh());
         this._verifier = new AsyncHighlightVerifier(this._gitService, (hash, status) => {
             this.postToWebview({ command: "updateCommitHighlight", hash, verificationStatus: status });
         });
         this._gitCommandHandler = new GitCommandHandler(
             this._gitService,
+            this._workflowEngine,
             () => this.refresh(),
             tagName => this.pushTag(tagName),
         );
@@ -269,6 +276,10 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider, vscode.
                 vscode.commands.executeCommand("git-wiz.checkoutBranch", { branchName: msg.branchName, isRemote: msg.isRemote });
                 break;
             case "deleteBranch":
+                if (msg.branchName) {
+                    this._workflowEngine.execute(new DeleteBranchWorkflow(msg.branchName));
+                }
+                break;
             case "deleteRemoteBranch":
             case "rebaseBranch":
             case "mergeBranch":
@@ -465,6 +476,10 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider, vscode.
                 this.refresh(this._pendingResetScroll);
             }
         }
+    }
+
+    public async executeWorkflow<T>(workflow: BaseWorkflow<T>): Promise<T | undefined> {
+        return await this._workflowEngine.execute(workflow);
     }
 
     public dispose() {
@@ -715,19 +730,6 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider, vscode.
     }
 
     // Delegated public methods for extension.ts commands
-    public async cherryPickCommit(commitHash: string) {
-        return vscode.window.withProgress({ location: vscode.ProgressLocation.Window, title: `Cherry-picking commit ${commitHash.substring(0, 7)}...` }, async () => {
-            try {
-                await this._gitService.cherryPickCommit(commitHash);
-                vscode.window.showInformationMessage("Commit cherry-picked successfully");
-                this.refresh();
-            }
-            catch (e: any) {
-                vscode.window.showErrorMessage(e.message || "Cherry-pick failed");
-            }
-        });
-    }
-
     public async copyCommitHash(commitHash: string) {
         await vscode.env.clipboard.writeText(commitHash);
         vscode.window.showInformationMessage("Commit hash copied to clipboard");

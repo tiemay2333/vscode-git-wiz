@@ -1,10 +1,13 @@
 import type { WebviewMessage } from "./gitGraphView";
 import type { GitService } from "./gitOperations";
 import * as vscode from "vscode";
+import { GitWorkflowEngine } from "./git/workflow/engine";
+import { CherryPickWorkflow } from "./git/workflow/impl/CherryPickWorkflow";
 
 export class GitCommandHandler implements vscode.Disposable {
     constructor(
         private readonly _gitService: GitService,
+        private readonly _workflowEngine: GitWorkflowEngine,
         private readonly _refresh: () => void,
         private readonly _pushTag: (tagName: string) => Promise<void>,
     ) { }
@@ -17,7 +20,7 @@ export class GitCommandHandler implements vscode.Disposable {
         try {
             switch (cmd) {
                 case "cherryPick":
-                    await this._cherryPick(msg.commitHash!);
+                    await this._workflowEngine.execute(new CherryPickWorkflow([msg.commitHash!]));
                     break;
                 case "copyHash":
                     await vscode.env.clipboard.writeText(msg.commitHash!);
@@ -40,7 +43,7 @@ export class GitCommandHandler implements vscode.Disposable {
                     await this._squashCommits(msg.hashes!, msg.parentHash!);
                     break;
                 case "cherryPickRange":
-                    await this._cherryPickRange(msg.hashes!);
+                    await this._workflowEngine.execute(new CherryPickWorkflow(msg.hashes!));
                     break;
                 case "revertCommits":
                     await this._revertCommits(msg.hashes!);
@@ -56,17 +59,6 @@ export class GitCommandHandler implements vscode.Disposable {
         catch (e: any) {
             vscode.window.showErrorMessage(e.message || "Operation failed");
         }
-    }
-
-    private async _cherryPick(commitHash: string): Promise<void> {
-        await vscode.window.withProgress({
-            location: vscode.ProgressLocation.Window,
-            title: `Cherry-picking commit ${commitHash.substring(0, 7)}...`,
-        }, async () => {
-            await this._gitService.cherryPickCommit(commitHash);
-            vscode.window.showInformationMessage("Commit cherry-picked successfully");
-            this._refresh();
-        });
     }
 
     private async _revertCommit(commitHash: string): Promise<void> {
@@ -146,17 +138,6 @@ export class GitCommandHandler implements vscode.Disposable {
         }, async () => {
             await this._gitService.squashCommits(hashes, parentHash, newMessage);
             vscode.window.showInformationMessage(`Squashed ${hashes.length} commits successfully`);
-            this._refresh();
-        });
-    }
-
-    private async _cherryPickRange(hashes: string[]): Promise<void> {
-        await vscode.window.withProgress({
-            location: vscode.ProgressLocation.Window,
-            title: `Cherry-picking ${hashes.length} commits...`,
-        }, async () => {
-            await this._gitService.cherryPickRange(hashes);
-            vscode.window.showInformationMessage(`Cherry-picked ${hashes.length} commits successfully`);
             this._refresh();
         });
     }

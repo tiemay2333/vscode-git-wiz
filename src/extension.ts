@@ -1,6 +1,8 @@
 import * as vscode from "vscode";
 import { GitGraphViewProvider } from "./gitGraphView";
 import { GitService } from "./gitOperations";
+import { DeleteBranchWorkflow } from "./git/workflow/impl/DeleteBranchWorkflow";
+import { CherryPickWorkflow } from "./git/workflow/impl/CherryPickWorkflow";
 
 export function activate(context: vscode.ExtensionContext) {
     const statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
@@ -81,8 +83,8 @@ export function activate(context: vscode.ExtensionContext) {
     );
 
     context.subscriptions.push(
-        vscode.commands.registerCommand("git-wiz.cherryPick", (commitHash: string) => {
-            graphProvider.cherryPickCommit(commitHash);
+        vscode.commands.registerCommand("git-wiz.cherryPick", async (commitHash: string) => {
+            await graphProvider.executeWorkflow(new CherryPickWorkflow([commitHash]));
         }),
     );
 
@@ -169,85 +171,9 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(
         vscode.commands.registerCommand("git-wiz.deleteBranch", async (branchTreeItem: { branchName: string }) => {
             const branchName = branchTreeItem.branchName;
-            if (!branchName)
-                return;
-
-            const upstream = await gitService.getUpstream(branchName);
-
-            let confirm: string | undefined;
-            if (upstream) {
-                confirm = await vscode.window.showWarningMessage(
-                    `Are you sure you want to delete branch '${branchName}'? It has a remote tracking branch '${upstream}'.`,
-                    "Delete Both",
-                    "Delete Local",
-                    "Cancel",
-                );
+            if (branchName) {
+                await graphProvider.executeWorkflow(new DeleteBranchWorkflow(branchName));
             }
-            else {
-                confirm = await vscode.window.showWarningMessage(
-                    `Are you sure you want to delete branch '${branchName}'?`,
-                    "Yes",
-                    "No",
-                );
-            }
-
-            if (!["Yes", "Delete Local", "Delete Both"].includes(confirm || "")) {
-                return;
-            }
-
-            const doDeleteRemote = confirm === "Delete Both";
-
-            await vscode.window.withProgress(
-                { location: vscode.ProgressLocation.Window, title: `Deleting branch '${branchName}'...` },
-                async () => {
-                    try {
-                        await gitService.deleteBranch(branchName, false);
-                    }
-                    catch (err: any) {
-                        if (err.message.includes("not fully merged")) {
-                            const forceConfirm = await vscode.window.showWarningMessage(
-                                `Branch '${branchName}' is not fully merged. Force delete anyway?`,
-                                "Force Delete",
-                                "Cancel",
-                            );
-                            if (forceConfirm !== "Force Delete") {
-                                return;
-                            }
-                            try {
-                                await gitService.deleteBranch(branchName, true);
-                            }
-                            catch (err2: any) {
-                                vscode.window.showErrorMessage(err2.message);
-                                return;
-                            }
-                        }
-                        else {
-                            vscode.window.showErrorMessage(err.message);
-                            return;
-                        }
-                    }
-
-                    if (doDeleteRemote && upstream) {
-                        try {
-                            const firstSlash = upstream.indexOf("/");
-                            if (firstSlash !== -1) {
-                                const remoteName = upstream.substring(0, firstSlash);
-                                const remoteBranch = upstream.substring(firstSlash + 1);
-                                await gitService.deleteRemoteBranch(remoteName, remoteBranch);
-                                vscode.window.showInformationMessage(`Deleted branch '${branchName}' and its remote tracking branch '${upstream}'`);
-                            }
-                        }
-                        catch (err: any) {
-                            vscode.window.showErrorMessage(`Deleted local branch, but failed to delete remote branch: ${err.message}`);
-                        }
-                    }
-                    else {
-                        vscode.window.showInformationMessage(`Deleted branch '${branchName}'`);
-                    }
-
-                    graphProvider.refresh();
-                },
-            );
         }),
     );
 
