@@ -506,3 +506,36 @@ Completed two major architectural refactors: 1) Separated Domain and View models
 ### Next Steps
 
 - None - task complete
+
+
+## Session 16: GitService Domain-Oriented Refactor
+
+**Date**: 2026-05-18
+**Task**: GitService Domain-Oriented Refactor
+**Branch**: `main`
+
+### Summary
+
+Refactored GitService into a domain-oriented Facade by extracting logic into LogEngine, RefManager, WorkflowScribe, FileInspector, and ConfigManager. Improved modularity and testability while preserving the existing public API.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `b41dcf9` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
