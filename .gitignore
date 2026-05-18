@@ -39,6 +39,7 @@ Thumbs.db
 .github/
 .gemini/
 .agents/
+.opencode/
 
 *.sh
 
