@@ -1,0 +1,2 @@
+{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "General code quality and forbidden patterns check."}
+{"file": ".trellis/spec/frontend/type-safety.md", "reason": "Ensure the new CommitUIStatus type follows safety standards."}
