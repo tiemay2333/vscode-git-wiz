@@ -17,7 +17,7 @@ export class VSCodeUIService implements UIService {
 
     async showProgress<T>(title: string, task: (progress: vscode.Progress<{ message?: string; increment?: number }>) => Promise<T>): Promise<T> {
         return await vscode.window.withProgress({
-            location: vscode.ProgressLocation.Notification,
+            location: vscode.ProgressLocation.Window,
             title,
             cancellable: false
         }, (progress) => task(progress));

@@ -1,49 +1,56 @@
+import { t } from "../../../i18n";
 import { BaseWorkflow, WorkflowContext } from "../base";
 
 export class DeleteBranchWorkflow extends BaseWorkflow {
     readonly id = "delete-branch";
-    readonly label = "删除分支";
+    readonly label = "Delete Branch"; // Use English as base label for internal tracking
 
     constructor(private readonly _branchName: string) {
         super();
     }
 
     async run(context: WorkflowContext): Promise<void> {
-        const { git, ui, refresh } = context;
+        const { git, ui, refresh, locale } = context;
 
         if (!this._branchName) return;
 
         const upstream = await git.getUpstream(this._branchName);
 
+        const btnDeleteBoth = t(locale, "deleteBoth");
+        const btnDeleteLocal = t(locale, "deleteLocalOnly");
+        const btnCancel = t(locale, "cancel");
+        const btnConfirm = t(locale, "confirm");
+        const btnForceDelete = t(locale, "forceDelete");
+
         let confirm: string | undefined;
         if (upstream) {
             confirm = await ui.confirm(
-                `确定要删除分支 "${this._branchName}" 吗？它有一个远程跟踪分支 "${upstream}"。`,
-                ["删除两者", "仅删除本地", "取消"]
+                t(locale, "deleteBranchUpstreamConfirm", { name: this._branchName, upstream }),
+                [btnDeleteBoth, btnDeleteLocal, btnCancel]
             );
         } else {
             confirm = await ui.confirm(
-                `确定要删除分支 "${this._branchName}" 吗？`,
-                ["确定", "取消"]
+                t(locale, "deleteBranchConfirm", { name: this._branchName }),
+                [btnConfirm, btnCancel]
             );
         }
 
-        if (!["确定", "仅删除本地", "删除两者"].includes(confirm || "")) {
+        if (![btnConfirm, btnDeleteLocal, btnDeleteBoth].includes(confirm || "")) {
             return;
         }
 
-        const doDeleteRemote = confirm === "删除两者";
+        const doDeleteRemote = confirm === btnDeleteBoth;
 
-        await ui.showProgress(`正在删除分支 "${this._branchName}"...`, async () => {
+        await ui.showProgress(t(locale, "workingOn", { action: t(locale, "deleteBranch") + ` "${this._branchName}"` }), async () => {
             try {
                 await git.deleteBranch(this._branchName, false);
             } catch (err: any) {
                 if (err.message.includes("not fully merged")) {
                     const forceConfirm = await ui.confirm(
-                        `分支 "${this._branchName}" 尚未完全合并。是否强制删除？`,
-                        ["强制删除", "取消"]
+                        t(locale, "forceDeleteConfirm", { name: this._branchName }),
+                        [btnForceDelete, btnCancel]
                     );
-                    if (forceConfirm !== "强制删除") {
+                    if (forceConfirm !== btnForceDelete) {
                         return;
                     }
                     await git.deleteBranch(this._branchName, true);
@@ -59,13 +66,13 @@ export class DeleteBranchWorkflow extends BaseWorkflow {
                         const remoteName = upstream.substring(0, firstSlash);
                         const remoteBranch = upstream.substring(firstSlash + 1);
                         await git.deleteRemoteBranch(remoteName, remoteBranch);
-                        ui.notify(`已删除本地分支 "${this._branchName}" 及其远程跟踪分支 "${upstream}"`, "info");
+                        ui.notify(t(locale, "deleteBranchAllSuccess", { name: this._branchName, upstream }), "info");
                     }
                 } catch (err: any) {
-                    ui.notify(`已删除本地分支，但删除远程分支失败: ${err.message}`, "error");
+                    ui.notify(t(locale, "deleteRemoteBranchFailed", { error: err.message }), "error");
                 }
             } else {
-                ui.notify(`已删除分支 "${this._branchName}"`, "info");
+                ui.notify(t(locale, "deleteBranchSuccess", { name: this._branchName }), "info");
             }
 
             refresh();

@@ -7,9 +7,13 @@ import { GitCommandHandler } from "./gitCommandHandler";
 import { GitService } from "./gitOperations";
 import { SettingsHandler } from "./settingsHandler";
 import { getCommitDetailsHtml, getHtmlForWebview } from "./webviewContent";
+import { t } from "./i18n";
 
 import { GitWorkflowEngine } from "./git/workflow/engine";
 import { DeleteBranchWorkflow } from "./git/workflow/impl/DeleteBranchWorkflow";
+import { PushTagWorkflow } from "./git/workflow/impl/PushTagWorkflow";
+import { CreateBranchWorkflow } from "./git/workflow/impl/CreateBranchWorkflow";
+import { CreateTagWorkflow } from "./git/workflow/impl/CreateTagWorkflow";
 import { BaseWorkflow } from "./git/workflow/base";
 
 const PAGE_SIZE = 200;
@@ -495,73 +499,15 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider, vscode.
     }
 
     public async createNewTag(commitHash: string) {
-        const tagName = await vscode.window.showInputBox({
-            prompt: "Enter new tag name",
-            placeHolder: "e.g. v1.0.0",
-        });
-        if (tagName) {
-            try {
-                await vscode.window.withProgress({ location: vscode.ProgressLocation.Window, title: `Creating tag '${tagName}'...` }, async () => {
-                    await this._gitService.createTag(tagName, commitHash);
-                    const action = await vscode.window.showInformationMessage(`Tag '${tagName}' created successfully`, "Push Tag");
-                    this.refresh();
-                    if (action === "Push Tag") {
-                        await this.pushTag(tagName);
-                    }
-                });
-            }
-            catch (e: any) {
-                vscode.window.showErrorMessage(e.message || "Failed to create tag");
-            }
-        }
+        await this._workflowEngine.execute(new CreateTagWorkflow(commitHash));
     }
 
     public async pushTag(tagName: string) {
-        try {
-            const remotes = await this._gitService.getUniqueRemotes();
-            if (remotes.length === 0) {
-                vscode.window.showErrorMessage("No remotes found. Cannot push tag.");
-                return;
-            }
-
-            let targetRemote = remotes.find(r => r.name === "origin")?.name || remotes[0].name;
-            if (remotes.length > 1) {
-                const picked = await vscode.window.showQuickPick(remotes.map(r => r.name), {
-                    placeHolder: "Select a remote to push the tag to",
-                });
-                if (!picked)
-                    return;
-                targetRemote = picked;
-            }
-
-            await vscode.window.withProgress({ location: vscode.ProgressLocation.Window, title: `Pushing tag '${tagName}' to '${targetRemote}'...` }, async () => {
-                await this._gitService.push({ force: false, setUpstream: undefined }); // Wait, push needs tag support. Let's fix GitService push.
-                // Actually I'll use a specific push method for tags in GitService.
-            });
-        }
-        catch (e: any) {
-            vscode.window.showErrorMessage(e.message || "Failed to push tag");
-        }
+        await this._workflowEngine.execute(new PushTagWorkflow(tagName));
     }
 
     public async createBranchFromCommit(commitHash: string, providedBranchName?: string) {
-        const branchName = providedBranchName || await vscode.window.showInputBox({
-            prompt: "Enter new branch name",
-            placeHolder: "e.g. feature/new-branch",
-        });
-        if (branchName) {
-            try {
-                await vscode.window.withProgress({ location: vscode.ProgressLocation.Window, title: `Creating branch '${branchName}'...` }, async () => {
-                    await this._gitService.checkoutBranch(branchName, { create: true, startPoint: commitHash });
-                    vscode.window.showInformationMessage(`Branch '${branchName}' created and switched successfully`);
-                    this.refresh();
-                    vscode.commands.executeCommand("git-wiz.refreshBranches");
-                });
-            }
-            catch (e: any) {
-                vscode.window.showErrorMessage(e.message || "Failed to create branch");
-            }
-        }
+        await this._workflowEngine.execute(new CreateBranchWorkflow(commitHash, providedBranchName));
     }
 
     public async showSettings() {
@@ -732,51 +678,11 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider, vscode.
     // Delegated public methods for extension.ts commands
     public async copyCommitHash(commitHash: string) {
         await vscode.env.clipboard.writeText(commitHash);
-        vscode.window.showInformationMessage("Commit hash copied to clipboard");
+        vscode.window.showInformationMessage(t(vscode.env.language, "copyHashSuccess"));
     }
 
     public async copyCommitMessage(commitHash: string, commitMessage: string) {
         await vscode.env.clipboard.writeText(commitMessage);
-        vscode.window.showInformationMessage("Commit message copied to clipboard");
-    }
-
-    public async revertCommit(commitHash: string) {
-        const confirm = await vscode.window.showWarningMessage(`Are you sure you want to revert commit ${commitHash.substring(0, 7)}?`, "Yes", "No");
-        if (confirm === "Yes") {
-            return vscode.window.withProgress({ location: vscode.ProgressLocation.Window, title: `Reverting commit ${commitHash.substring(0, 7)}...` }, async () => {
-                try {
-                    await this._gitService.revertCommit(commitHash);
-                    vscode.window.showInformationMessage("Commit reverted successfully");
-                    this.refresh();
-                }
-                catch (e: any) {
-                    vscode.window.showErrorMessage(e.message || "Revert failed");
-                }
-            });
-        }
-    }
-
-    public async resetToCommit(commitHash: string) {
-        const items: (vscode.QuickPickItem & { value: string })[] = [
-            { label: "Soft", description: "Keep changes staged", value: "--soft" },
-            { label: "Mixed", description: "Keep changes unstaged", value: "--mixed" },
-            { label: "Hard", description: "Discard all changes", value: "--hard" },
-        ];
-        const resetType = await vscode.window.showQuickPick(items, { placeHolder: "Select reset type" });
-        if (resetType) {
-            const confirm = await vscode.window.showWarningMessage(`Are you sure you want to reset to commit ${commitHash.substring(0, 7)} (${resetType.label})?`, "Yes", "No");
-            if (confirm === "Yes") {
-                return vscode.window.withProgress({ location: vscode.ProgressLocation.Window, title: `Resetting to commit ${commitHash.substring(0, 7)} (${resetType.label})...` }, async () => {
-                    try {
-                        await this._gitService.resetToCommit(commitHash, resetType.value);
-                        vscode.window.showInformationMessage(`Reset to commit ${commitHash.substring(0, 7)} successfully`);
-                        this.refresh();
-                    }
-                    catch (e: any) {
-                        vscode.window.showErrorMessage(e.message || "Reset failed");
-                    }
-                });
-            }
-        }
+        vscode.window.showInformationMessage(t(vscode.env.language, "copyMessageSuccess"));
     }
 }

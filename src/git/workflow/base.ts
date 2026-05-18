@@ -8,6 +8,7 @@ export interface WorkflowContext {
     git: GitService;
     ui: UIService;
     refresh: () => void;
+    locale: string;
 }
 
 /**

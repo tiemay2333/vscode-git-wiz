@@ -6,7 +6,7 @@ import { SettingsForm } from "../settings/SettingsForm";
 import { FileTree } from "../shared/FileTreeView";
 import { IconListView, IconSearch, IconTreeView, IconWarning } from "../shared/Icons";
 import { vscode } from "../vscodeApi";
-import { t } from "../settings/i18n";
+import { t } from "../../i18n";
 import { CommitRow } from "./CommitRow";
 import { computeGraphLayout } from "./graphLayout";
 

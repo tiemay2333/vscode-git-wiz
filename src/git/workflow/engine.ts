@@ -1,7 +1,9 @@
+import * as vscode from "vscode";
 import { GitService } from "../../gitOperations";
 import { BaseWorkflow, WorkflowContext } from "./base";
 import { UIService } from "./uiservice";
 import { VSCodeUIService } from "./vscode-ui";
+import { t } from "../../i18n";
 
 /**
  * GitWorkflowEngine 负责调度和执行工作流。
@@ -23,8 +25,9 @@ export class GitWorkflowEngine {
      * 执行指定的工作流。
      */
     async execute<T>(workflow: BaseWorkflow<T>): Promise<T | undefined> {
+        const locale = vscode.env.language;
         if (this._isLocked) {
-            this._ui.notify("另一个 Git 操作正在进行中，请稍后再试。", "warning");
+            this._ui.notify(t(locale, "lockedWarning"), "warning");
             return undefined;
         }
 
@@ -32,13 +35,15 @@ export class GitWorkflowEngine {
         const context: WorkflowContext = {
             git: this._git,
             ui: this._ui,
-            refresh: this._refresh
+            refresh: this._refresh,
+            locale
         };
 
         try {
             return await workflow.run(context);
         } catch (error: any) {
-            this._ui.notify(error.message || `工作流 "${workflow.label}" 执行失败`, "error");
+            const errorMsg = error.message || t(locale, "operationFailed", { error: workflow.label });
+            this._ui.notify(errorMsg, "error");
             return undefined;
         } finally {
             this._isLocked = false;

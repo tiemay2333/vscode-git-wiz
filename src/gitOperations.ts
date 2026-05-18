@@ -347,15 +347,30 @@ export class GitService {
         }
     }
 
-    async push(options?: { force?: boolean; setUpstream?: string }): Promise<void> {
+    async push(options?: { force?: boolean; setUpstream?: string; tags?: boolean; remote?: string; ref?: string }): Promise<void> {
         const args = ["push"];
         if (options?.force)
             args.push("--force-with-lease");
         if (options?.setUpstream) {
-            args.push("-u", "origin", options.setUpstream);
+            args.push("-u", options.remote || "origin", options.setUpstream);
+        } else if (options?.remote) {
+            args.push(options.remote);
+            if (options?.ref) {
+                args.push(options.ref);
+            }
+        }
+        if (options?.tags) {
+            args.push("--tags");
         }
 
         const result = await this.runner.exec(args);
+        if (result.exitCode !== 0) {
+            throw new Error(result.stderr || result.stdout);
+        }
+    }
+
+    async pushTag(remote: string, tagName: string): Promise<void> {
+        const result = await this.runner.exec(["push", remote, tagName]);
         if (result.exitCode !== 0) {
             throw new Error(result.stderr || result.stdout);
         }

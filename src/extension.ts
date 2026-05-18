@@ -3,6 +3,19 @@ import { GitGraphViewProvider } from "./gitGraphView";
 import { GitService } from "./gitOperations";
 import { DeleteBranchWorkflow } from "./git/workflow/impl/DeleteBranchWorkflow";
 import { CherryPickWorkflow } from "./git/workflow/impl/CherryPickWorkflow";
+import { RevertWorkflow } from "./git/workflow/impl/RevertWorkflow";
+import { ResetWorkflow } from "./git/workflow/impl/ResetWorkflow";
+import { DeleteRemoteBranchWorkflow } from "./git/workflow/impl/DeleteRemoteBranchWorkflow";
+import { t } from "./i18n";
+import { FetchWorkflow } from "./git/workflow/impl/FetchWorkflow";
+import { PullWorkflow } from "./git/workflow/impl/PullWorkflow";
+import { PushWorkflow } from "./git/workflow/impl/PushWorkflow";
+import { RebaseBranchWorkflow } from "./git/workflow/impl/RebaseBranchWorkflow";
+import { MergeBranchWorkflow } from "./git/workflow/impl/MergeBranchWorkflow";
+import { CreateBranchWorkflow } from "./git/workflow/impl/CreateBranchWorkflow";
+import { CreateTagWorkflow } from "./git/workflow/impl/CreateTagWorkflow";
+import { PushTagWorkflow } from "./git/workflow/impl/PushTagWorkflow";
+import { CheckoutBranchWorkflow } from "./git/workflow/impl/CheckoutBranchWorkflow";
 
 export function activate(context: vscode.ExtensionContext) {
     const statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
@@ -95,14 +108,14 @@ export function activate(context: vscode.ExtensionContext) {
     );
 
     context.subscriptions.push(
-        vscode.commands.registerCommand("git-wiz.revertCommit", (commitHash: string) => {
-            graphProvider.revertCommit(commitHash);
+        vscode.commands.registerCommand("git-wiz.revertCommit", async (commitHash: string) => {
+            await graphProvider.executeWorkflow(new RevertWorkflow([commitHash]));
         }),
     );
 
     context.subscriptions.push(
-        vscode.commands.registerCommand("git-wiz.resetToCommit", (commitHash: string) => {
-            graphProvider.resetToCommit(commitHash);
+        vscode.commands.registerCommand("git-wiz.resetToCommit", async (commitHash: string) => {
+            await graphProvider.executeWorkflow(new ResetWorkflow(commitHash));
         }),
     );
 
@@ -110,24 +123,9 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.commands.registerCommand("git-wiz.checkoutBranch", async (item: string | { branchName: string; isRemote?: boolean }) => {
             const branchName = typeof item === "string" ? item : item.branchName;
             const isRemote = typeof item === "object" ? item.isRemote : branchName.includes("/");
-            if (!branchName)
-                return;
-
-            try {
-                await gitService.checkoutBranch(branchName, { track: isRemote });
-                vscode.window.showInformationMessage(`Switched to branch '${branchName}'`);
+            if (branchName) {
+                await graphProvider.executeWorkflow(new CheckoutBranchWorkflow(branchName, { track: isRemote }));
             }
-            catch {
-                // Fallback: simple checkout if --track fails
-                try {
-                    await gitService.checkoutBranch(branchName);
-                    vscode.window.showInformationMessage(`Switched to tracking branch '${branchName}'`);
-                }
-                catch (fallbackErr: any) {
-                    vscode.window.showErrorMessage(`Failed to checkout branch: ${fallbackErr.message}`);
-                }
-            }
-            graphProvider.refresh();
         }),
     );
 
@@ -142,29 +140,7 @@ export function activate(context: vscode.ExtensionContext) {
                 return;
 
             const remote = parts[0];
-            const localBranchName = parts.slice(1).join("/");
-
-            await vscode.window.withProgress({
-                location: vscode.ProgressLocation.Window,
-                title: `Fetching ${remote} and tracking ${branchName}...`,
-                cancellable: false,
-            }, async () => {
-                try {
-                    await gitService.fetch({ remote });
-                    await gitService.checkoutBranch(branchName, { track: true });
-                    vscode.window.showInformationMessage(`Checked out and tracking '${branchName}'`);
-                }
-                catch (err: any) {
-                    try {
-                        await gitService.checkoutBranch(localBranchName);
-                        vscode.window.showInformationMessage(`Switched to existing branch '${localBranchName}'`);
-                    }
-                    catch {
-                        vscode.window.showErrorMessage(`Failed to checkout remote branch: ${err.message}`);
-                    }
-                }
-                graphProvider.refresh();
-            });
+            await graphProvider.executeWorkflow(new CheckoutBranchWorkflow(branchName, { remote }));
         }),
     );
 
@@ -180,42 +156,9 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(
         vscode.commands.registerCommand("git-wiz.deleteRemoteBranch", async (item: string | { branchName: string }) => {
             const fullName = typeof item === "string" ? item : item.branchName;
-            if (!fullName) {
-                return;
+            if (fullName) {
+                await graphProvider.executeWorkflow(new DeleteRemoteBranchWorkflow(fullName));
             }
-
-            const firstSlash = fullName.indexOf("/");
-            if (firstSlash === -1) {
-                vscode.window.showErrorMessage(`Invalid remote branch name: ${fullName}`);
-                return;
-            }
-
-            const remote = fullName.substring(0, firstSlash);
-            const branch = fullName.substring(firstSlash + 1);
-
-            const confirm = await vscode.window.showWarningMessage(
-                `Are you sure you want to delete remote branch '${branch}' from '${remote}'?`,
-                { modal: true },
-                "Delete Remote Branch",
-            );
-
-            if (confirm !== "Delete Remote Branch") {
-                return;
-            }
-
-            await vscode.window.withProgress(
-                { location: vscode.ProgressLocation.Window, title: `Deleting remote branch '${branch}'...` },
-                async () => {
-                    try {
-                        await gitService.deleteRemoteBranch(remote, branch);
-                        vscode.window.showInformationMessage(`Deleted remote branch '${branch}' from '${remote}'`);
-                        graphProvider.refresh();
-                    }
-                    catch (err: any) {
-                        vscode.window.showErrorMessage(`Failed to delete remote branch: ${err.message}`);
-                    }
-                },
-            );
         }),
     );
 
@@ -238,116 +181,34 @@ export function activate(context: vscode.ExtensionContext) {
     );
 
     context.subscriptions.push(
-        vscode.commands.registerCommand("git-wiz.fetch", () => {
-            vscode.window.withProgress(
-                { location: vscode.ProgressLocation.Window, title: "Fetching..." },
-                async () => {
-                    try {
-                        await gitService.fetch({ all: true });
-                        vscode.window.showInformationMessage("Fetch successful");
-                        graphProvider.refresh();
-                    }
-                    catch (err: any) {
-                        vscode.window.showErrorMessage(`Fetch failed: ${err.message}`);
-                    }
-                },
-            );
+        vscode.commands.registerCommand("git-wiz.fetch", async () => {
+            await graphProvider.executeWorkflow(new FetchWorkflow({ all: true }));
         }),
     );
 
     context.subscriptions.push(
-        vscode.commands.registerCommand("git-wiz.pull", () => {
-            vscode.window.withProgress(
-                { location: vscode.ProgressLocation.Window, title: "Pulling..." },
-                async () => {
-                    try {
-                        await gitService.pull();
-                        vscode.window.showInformationMessage("Pull successful");
-                        graphProvider.refresh();
-                    }
-                    catch (err: any) {
-                        vscode.window.showErrorMessage(`Pull failed: ${err.message}`);
-                    }
-                },
-            );
+        vscode.commands.registerCommand("git-wiz.pull", async () => {
+            await graphProvider.executeWorkflow(new PullWorkflow());
         }),
     );
 
     context.subscriptions.push(
-        vscode.commands.registerCommand("git-wiz.push", () => {
-            vscode.window.withProgress(
-                { location: vscode.ProgressLocation.Window, title: "Pushing..." },
-                async () => {
-                    try {
-                        await gitService.push();
-                        vscode.window.showInformationMessage("Push successful");
-                        graphProvider.refresh();
-                    }
-                    catch (err: any) {
-                        if (err.message.includes("has no upstream branch")) {
-                            const branch = await gitService.getCurrentBranch();
-                            if (!branch) {
-                                vscode.window.showErrorMessage(`Push failed: ${err.message}`);
-                                return;
-                            }
-                            try {
-                                await gitService.push({ setUpstream: branch });
-                                vscode.window.showInformationMessage("Push successful (set upstream to origin)");
-                                graphProvider.refresh();
-                            }
-                            catch (pushErr: any) {
-                                vscode.window.showErrorMessage(`Push failed: ${pushErr.message}`);
-                            }
-                        }
-                        else {
-                            vscode.window.showErrorMessage(`Push failed: ${err.message}`);
-                        }
-                    }
-                },
-            );
+        vscode.commands.registerCommand("git-wiz.push", async () => {
+            await graphProvider.executeWorkflow(new PushWorkflow());
         }),
     );
 
     context.subscriptions.push(
         vscode.commands.registerCommand("git-wiz.pushForce", async () => {
+            const btnPush = t(vscode.env.language, "pushForceConfirm");
+            const btnCancel = t(vscode.env.language, "cancel");
             const confirm = await vscode.window.showWarningMessage(
-                "Force push will overwrite remote history. Are you sure?",
-                "Force Push",
-                "Cancel",
+                t(vscode.env.language, "pushForceConfirm"),
+                btnPush, btnCancel
             );
-            if (confirm !== "Force Push") {
-                return;
+            if (confirm === btnPush) {
+                await graphProvider.executeWorkflow(new PushWorkflow({ force: true }));
             }
-            vscode.window.withProgress(
-                { location: vscode.ProgressLocation.Window, title: "Force Pushing..." },
-                async () => {
-                    try {
-                        await gitService.push({ force: true });
-                        vscode.window.showInformationMessage("Force push successful");
-                        graphProvider.refresh();
-                    }
-                    catch (err: any) {
-                        if (err.message.includes("has no upstream branch")) {
-                            const branch = await gitService.getCurrentBranch();
-                            if (!branch) {
-                                vscode.window.showErrorMessage(`Force push failed: ${err.message}`);
-                                return;
-                            }
-                            try {
-                                await gitService.push({ force: true, setUpstream: branch });
-                                vscode.window.showInformationMessage("Force push successful (set upstream to origin)");
-                                graphProvider.refresh();
-                            }
-                            catch (pushErr: any) {
-                                vscode.window.showErrorMessage(`Force push failed: ${pushErr.message}`);
-                            }
-                        }
-                        else {
-                            vscode.window.showErrorMessage(`Force push failed: ${err.message}`);
-                        }
-                    }
-                },
-            );
         }),
     );
 
@@ -355,17 +216,7 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.commands.registerCommand("git-wiz.rebaseBranch", async (branchTreeItem: { branchName: string }) => {
             const targetBranch = branchTreeItem.branchName;
             if (targetBranch) {
-                try {
-                    await vscode.window.withProgress({ location: vscode.ProgressLocation.Window, title: `Rebasing onto '${targetBranch}'...` }, async () => {
-                        await gitService.rebaseBranch(targetBranch);
-                        vscode.window.showInformationMessage(`Rebased onto '${targetBranch}' successfully`);
-                        graphProvider.refresh();
-                    });
-                }
-                catch (err: any) {
-                    vscode.window.showErrorMessage(err.message);
-                    graphProvider.refresh();
-                }
+                await graphProvider.executeWorkflow(new RebaseBranchWorkflow(targetBranch));
             }
         }),
     );
@@ -374,31 +225,7 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.commands.registerCommand("git-wiz.mergeBranch", async (branchTreeItem: { branchName: string }) => {
             const sourceBranch = branchTreeItem.branchName;
             if (sourceBranch) {
-                try {
-                    await vscode.window.withProgress({ location: vscode.ProgressLocation.Window, title: `Merging '${sourceBranch}'...` }, async () => {
-                        const result = await gitService.mergeBranch(sourceBranch);
-                        if (!result.success) {
-                            if (result.isConflict) {
-                                const choice = await vscode.window.showErrorMessage(`Merge failed with conflicts: ${result.error}`, "Abort Merge", "Close");
-                                if (choice === "Abort Merge") {
-                                    await gitService.abortMerge();
-                                    vscode.window.showInformationMessage("Merge aborted");
-                                }
-                            }
-                            else {
-                                vscode.window.showErrorMessage(`Merge failed: ${result.error}`);
-                            }
-                        }
-                        else {
-                            vscode.window.showInformationMessage(`Merged '${sourceBranch}' successfully`);
-                        }
-                        graphProvider.refresh();
-                    });
-                }
-                catch (err: any) {
-                    vscode.window.showErrorMessage(err.message);
-                    graphProvider.refresh();
-                }
+                await graphProvider.executeWorkflow(new MergeBranchWorkflow(sourceBranch));
             }
         }),
     );
@@ -479,39 +306,30 @@ export function activate(context: vscode.ExtensionContext) {
 
     context.subscriptions.push(
         vscode.commands.registerCommand("git-wiz.createBranchFromTag", async (tagName: string) => {
-            const branchName = await vscode.window.showInputBox({
-                prompt: `Enter new branch name for tag '${tagName}'`,
-                placeHolder: "e.g. feature/new-branch",
-            });
-            if (branchName) {
-                if (graphProvider) {
-                    await graphProvider.createBranchFromCommit(tagName, branchName);
-                }
-            }
+            await graphProvider.executeWorkflow(new CreateBranchWorkflow(tagName));
         }),
         vscode.commands.registerCommand("git-wiz.pushTag", async (tagName: string) => {
-            if (graphProvider) {
-                await graphProvider.pushTag(tagName);
-            }
+            await graphProvider.executeWorkflow(new PushTagWorkflow(tagName));
         }),
         vscode.commands.registerCommand("git-wiz.deleteTag", async (tagName: string) => {
+            const btnDelete = t(vscode.env.language, "confirm");
+            const btnCancel = t(vscode.env.language, "cancel");
             const confirm = await vscode.window.showWarningMessage(
-                `Are you sure you want to delete tag '${tagName}'?`,
-                "Delete",
-                "Cancel",
+                t(vscode.env.language, "tagDeleteConfirm", { name: tagName }),
+                btnDelete, btnCancel
             );
-            if (confirm === "Delete") {
+            if (confirm === btnDelete) {
                 await vscode.window.withProgress(
-                    { location: vscode.ProgressLocation.Window, title: `Deleting tag '${tagName}'...` },
+                    { location: vscode.ProgressLocation.Window, title: t(vscode.env.language, "tagDeleteTitle", { name: tagName }) },
                     async () => {
                         try {
                             await gitService.deleteTag(tagName);
-                            vscode.window.showInformationMessage(`Tag '${tagName}' deleted successfully`);
+                            vscode.window.showInformationMessage(t(vscode.env.language, "tagDeleteSuccess", { name: tagName }));
                             vscode.commands.executeCommand("git-wiz.refreshBranches");
                             graphProvider.refresh();
                         }
                         catch (err: any) {
-                            vscode.window.showErrorMessage(`Failed to delete tag: ${err.message}`);
+                            vscode.window.showErrorMessage(err.message);
                         }
                     },
                 );
@@ -519,35 +337,8 @@ export function activate(context: vscode.ExtensionContext) {
         }),
         vscode.commands.registerCommand("git-wiz.createBranch", async (branchTreeItem: { branchName: string }) => {
             const sourceBranch = branchTreeItem.branchName;
-            if (!sourceBranch) {
-                return;
-            }
-            const newBranchName = await vscode.window.showInputBox({
-                prompt: `Create new branch from '${sourceBranch}'`,
-                placeHolder: "New branch name",
-                validateInput: (value) => {
-                    if (!value || !value.trim()) {
-                        return "Branch name cannot be empty";
-                    }
-                    if (/[\s~^:?*[\\]|\.\./.test(value)) {
-                        return "Invalid branch name";
-                    }
-                    return null;
-                },
-            });
-
-            if (!newBranchName) {
-                return;
-            }
-
-            try {
-                await gitService.checkoutBranch(newBranchName, { create: true, startPoint: sourceBranch });
-                vscode.window.showInformationMessage(`Created and switched to branch '${newBranchName}' from '${sourceBranch}'`);
-                graphProvider.refresh();
-                vscode.commands.executeCommand("git-wiz.refreshBranches");
-            }
-            catch (err: any) {
-                vscode.window.showErrorMessage(`Failed to create branch: ${err.message}`);
+            if (sourceBranch) {
+                await graphProvider.executeWorkflow(new CreateBranchWorkflow(sourceBranch));
             }
         }),
     );
