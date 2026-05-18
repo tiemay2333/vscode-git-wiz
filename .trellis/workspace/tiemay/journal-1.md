@@ -439,3 +439,36 @@ Bumped version to 1.4.0, updated CHANGELOG.md with recent features and improveme
 ### Next Steps
 
 - None - task complete
+
+
+## Session 14: UI 优化与国际化升级
+
+**Date**: 2026-05-18
+**Task**: UI 优化与国际化升级
+**Branch**: `main`
+
+### Summary
+
+完成了 UI 体验优化和全局国际化支持。将所有 Git 操作的进度显示移至 VSCode 状态栏，实现了统一且不遮挡编辑器的加载状态。升级了 i18n 系统，支持全局复用和占位符变量替换，完成了所有后端工作流（Checkout, Revert, Push, etc.）的文案本地化。重构并新增了多个工作流类，大幅简化了 extension.ts 的逻辑。
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `a7a83ab` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
