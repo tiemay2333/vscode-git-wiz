@@ -31,5 +31,11 @@ Managed by Trellis. Edits outside this block are preserved; edits inside may be 
 
 <!-- TRELLIS:END -->
 
-Scaffolded Module Instructions:
-- src/git/GEMINI.md — Git highlighting tiers and PFM logic.
+# Specification
+
+**Language and Thinking**: All cognitive processing, internal reasoning, and final outputs must be
+conducted exclusively in Chinese. Technical nomenclature may remain in English where standard.
+**Task Archiving Policy**: Automatic archiving of tasks is strictly forbidden. Agents must not
+move any task, log, or issue to a "Done", "Resolved", or "Archived" state before the user has
+performed a manual submission (Commit/Submit). The task must remain in an active state until
+human intervention is confirmed.
