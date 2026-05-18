@@ -1,0 +1,2 @@
+{"file": ".trellis/spec/project/index.md", "reason": "General project standards."}
+{"file": "src/gitOperations.ts", "reason": "The main service being refactored."}
