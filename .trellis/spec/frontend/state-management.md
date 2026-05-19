@@ -43,9 +43,40 @@
 
 ---
 
+## Signal-Driven Initialization
+
+To prevent race conditions where the extension host sends data messages (`replaceCommits`, etc.) before the webview is ready to listen, the project uses a **Signal-Driven Initialization** contract:
+
+1.  **Extension Host**: Calls `updateWebview` (sets `webview.html` with bootstrapped data). `_initialized` is set to `false`.
+2.  **Webview**: Renders initial data. In a `useEffect` (on mount), it sends `{ command: "ready" }`.
+3.  **Extension Host**: Receives `ready` message, sets `_initialized = true`, and executes any queued `_pendingRefresh`.
+
+### Wrong vs Correct
+
+#### Wrong
+Setting `_initialized = true` immediately after setting `webview.html` synchronously. The webview takes time to load and start scripts; messages sent in the interim are lost.
+
+#### Correct
+Wait for the `ready` signal from the webview.
+
+```typescript
+// src/views/gitGraphView.ts
+async handleMessage(message: WebviewMessage) {
+    if (message.command === "ready") {
+        this._initialized = true;
+        if (this._pendingRefresh) {
+            this.refresh();
+        }
+        return;
+    }
+}
+```
+
+---
+
 ## Common Mistakes
 
 - **Stale data after git operations**: After any git mutation (cherry-pick, rebase, merge, etc.), `this.onRefresh()` must be called to re-query and push updated state.
 - **Debounced refresh**: `debouncedRefresh()` (500ms) on file system watcher prevents cascading refreshes when `.git/**` changes rapidly.
-- **Initialization race**: The `_initialized` flag + `_pendingRefresh` pattern prevents refreshes before the webview is ready.
+- **Initialization race**: The `_initialized` flag + `ready` signal pattern prevents refreshes before the webview is ready.
 - **Search and pagination don't mix well**: When search filters are active, `_searchFilters` is set and subsequent `loadMoreCommits` includes the filter. Clear filters to see all commits again.

@@ -33,6 +33,7 @@
 - **Precise Git Watcher**: Avoid watching all of `.git/**`. Instead, watch specific paths: `.git/HEAD`, `.git/refs/heads/**`, `.git/refs/remotes/**`, `.git/refs/tags/**`, and `.git/packed-refs`.
 - **Debounced refresh**: 500ms cooldown for filesystem watchers.
 - **Resource Cleanup**: All `FileSystemWatcher` instances and timers MUST be added to `context.subscriptions` or explicitly disposed of in a `dispose()` method.
+- **Webview Ready Signal**: Webviews must send a `ready` message upon mounting. The extension host must wait for this signal before sending any state updates (`replaceCommits`, `appendCommits`, etc.) to ensure messages are not lost during the initial load or re-render of the webview context.
 - **Refresh Concurrency**: The `refresh()` method should implement a concurrency guard (e.g., `_refreshInProgress`) to prevent overlapping Git operations from multiple rapid events.
 - **Handler-based message routing**: When a `WebviewViewProvider` or `WebviewPanel` grows a large `handleMessage` method, extract command groups into dedicated handler classes. Each handler receives only what it needs (service, callbacks), never the provider itself. All handlers implement `vscode.Disposable` so the provider can chain `dispose()` through them.
 
