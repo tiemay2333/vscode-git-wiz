@@ -1,8 +1,9 @@
 import type { GitService } from "@/git/core/GitService";
 
 export class AsyncHighlightVerifier {
-    private _queue: { hash: string; targets: string[] }[] = [];
+    private _queue: { hash: string; targets: string[]; generation: number }[] = [];
     private _inProgress = 0;
+    private _generation = 0;
     private readonly MAX_CONCURRENCY = 3;
     private _patchIdCache = new Map<string, string>();
     private _filePatchIdCache = new Map<string, Map<string, string>>();
@@ -15,11 +16,12 @@ export class AsyncHighlightVerifier {
     public queueVerification(hash: string, targets: string[]) {
         if (this._queue.some(q => q.hash === hash))
             return;
-        this._queue.push({ hash, targets });
+        this._queue.push({ hash, targets, generation: this._generation });
         this.processQueue();
     }
 
     public reset() {
+        this._generation++;
         this._queue = [];
         this._patchIdCache.clear();
         this._filePatchIdCache.clear();
@@ -38,10 +40,14 @@ export class AsyncHighlightVerifier {
 
         try {
             const status = await this.verify(item.hash, item.targets);
-            this._onUpdate(item.hash, status);
+            if (item.generation === this._generation) {
+                this._onUpdate(item.hash, status);
+            }
         }
         catch {
-            this._onUpdate(item.hash, "failed");
+            if (item.generation === this._generation) {
+                this._onUpdate(item.hash, "failed");
+            }
         }
         finally {
             this._inProgress--;

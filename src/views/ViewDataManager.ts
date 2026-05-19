@@ -63,6 +63,7 @@ export class ViewDataManager implements vscode.Disposable {
     }
 
     public refreshAll() {
+        this._verifier.reset();
         if (this._refreshTimer) {
             clearTimeout(this._refreshTimer);
         }
