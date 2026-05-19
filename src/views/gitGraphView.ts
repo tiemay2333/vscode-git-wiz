@@ -82,7 +82,6 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider, vscode.
             webview => this.updateWebview(webview),
             webview => this.loadMoreCommits(webview),
             webview => this.requestUnfilteredCommits(webview),
-            () => { this._initialized = true; },
         );
         this._settingsHandler = new SettingsHandler(
             this._gitService,
@@ -171,17 +170,21 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider, vscode.
         webviewView.webview.onDidReceiveMessage(message => this.handleMessage(message, webviewView.webview));
 
         this.updateWebview(webviewView.webview);
-        this._initialized = true;
-        if (this._pendingRefresh) {
-            const reset = this._pendingResetScroll;
-            this._pendingRefresh = false;
-            this._pendingResetScroll = false;
-            this.refresh(reset);
-        }
     }
 
     private async handleMessage(message: WebviewMessage, webview: vscode.Webview) {
         const cmd = message.command;
+
+        if (cmd === "ready") {
+            this._initialized = true;
+            if (this._pendingRefresh) {
+                const reset = this._pendingResetScroll;
+                this._pendingRefresh = false;
+                this._pendingResetScroll = false;
+                this.refresh(reset);
+            }
+            return;
+        }
 
         // Special case: reverify commit highlight
         if (cmd === "reverifyCommit" && message.commitHash) {
@@ -457,50 +460,61 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider, vscode.
     }
 
     private async updateWebview(webview: vscode.Webview) {
-        this._initialized = false;
-        this._state.loadedCount = 0;
-        const countToLoad = Math.max(PAGE_SIZE, this._state.loadedCount);
-        const commits = await this._gitService.getGitLog(this._state.filterBranch, 0, countToLoad, this._state.searchFilters, this._state.filterFile);
-        const currentBranch = await this._gitService.getCurrentBranch();
-        const branches = await this._gitService.getBranches();
-        const filesViewMode = this.getConfig<"tree" | "list">("filesViewMode", "list");
-        const highlightCurrentBranch = this.getConfig("highlightCurrentBranch", false);
-        const showTags = this.getConfig("showTags", true);
-        const showRemoteBranches = this.getConfig("showRemoteBranches", true);
-        const showGraph = this.getConfig("showGraph", true);
-        const searchDefaultMode = this.getConfig("searchDefaultMode", "single");
-
-        let uiStatus: Record<string, CommitUIStatus> = {};
-        if (highlightCurrentBranch && currentBranch) {
-            uiStatus = await this.calculateUIStatus(commits, currentBranch);
+        if (this._refreshing) {
+            this._pendingRefresh = true;
+            return;
         }
 
-        this.updateViewTitle(currentBranch);
+        this._refreshing = true;
+        this._initialized = false;
+        try {
+            this._state.loadedCount = 0;
+            const countToLoad = Math.max(PAGE_SIZE, this._state.loadedCount);
+            const commits = await this._gitService.getGitLog(this._state.filterBranch, 0, countToLoad, this._state.searchFilters, this._state.filterFile);
+            const currentBranch = await this._gitService.getCurrentBranch();
+            const branches = await this._gitService.getBranches();
+            const filesViewMode = this.getConfig<"tree" | "list">("filesViewMode", "list");
+            const highlightCurrentBranch = this.getConfig("highlightCurrentBranch", false);
+            const showTags = this.getConfig("showTags", true);
+            const showRemoteBranches = this.getConfig("showRemoteBranches", true);
+            const showGraph = this.getConfig("showGraph", true);
+            const searchDefaultMode = this.getConfig("searchDefaultMode", "single");
 
-        this._state.loadedCount = commits.length;
-        const hasMore = commits.length >= countToLoad;
-        webview.html = getHtmlForWebview(
-            webview,
-            commits,
-            branches,
-            hasMore,
-            this._state.filterBranch,
-            currentBranch,
-            this._extensionUri,
-            filesViewMode,
-            this._state.filterFile,
-            highlightCurrentBranch,
-            showTags,
-            showRemoteBranches,
-            showGraph,
-            searchDefaultMode,
-            vscode.env.language,
-            uiStatus,
-        );
-        this._initialized = true;
-        if (this._pendingRefresh) {
-            this._pendingRefresh = false;
-            this.refresh();
+            let uiStatus: Record<string, CommitUIStatus> = {};
+            if (highlightCurrentBranch && currentBranch) {
+                uiStatus = await this.calculateUIStatus(commits, currentBranch);
+            }
+
+            this.updateViewTitle(currentBranch);
+
+            this._state.loadedCount = commits.length;
+            const hasMore = commits.length >= countToLoad;
+            webview.html = getHtmlForWebview(
+                webview,
+                commits,
+                branches,
+                hasMore,
+                this._state.filterBranch,
+                currentBranch,
+                this._extensionUri,
+                filesViewMode,
+                this._state.filterFile,
+                highlightCurrentBranch,
+                showTags,
+                showRemoteBranches,
+                showGraph,
+                searchDefaultMode,
+                vscode.env.language,
+                uiStatus,
+            );
+        }
+        finally {
+            this._refreshing = false;
+            // Note: _initialized will be set to true when the webview sends 'ready'
+            if (this._pendingRefresh) {
+                this._pendingRefresh = false;
+                this.refresh(this._pendingResetScroll);
+            }
         }
     }
 

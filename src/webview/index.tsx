@@ -115,15 +115,23 @@ function GraphLayout() {
     );
 }
 
+function App() {
+    useEffect(() => {
+        vscode.postMessage({ command: "ready" });
+    }, []);
+
+    if (window.__VIEW__ === "graph") {
+        return <GraphLayout />;
+    }
+    else if (window.__VIEW__ === "commitDetails") {
+        return <CommitDetailsView data={window.__COMMIT_DETAILS__} />;
+    }
+    else if (window.__VIEW__ === "branches") {
+        return <BranchPanel branches={window.__BRANCHES__} />;
+    }
+    return null;
+}
+
 const root = document.getElementById("root")!;
 const r = createRoot(root);
-
-if (window.__VIEW__ === "graph") {
-    r.render(<GraphLayout />);
-}
-else if (window.__VIEW__ === "commitDetails") {
-    r.render(<CommitDetailsView data={window.__COMMIT_DETAILS__} />);
-}
-else if (window.__VIEW__ === "branches") {
-    r.render(<BranchPanel branches={window.__BRANCHES__} />);
-}
+r.render(<App />);

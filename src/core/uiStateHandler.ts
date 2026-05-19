@@ -1,5 +1,5 @@
-import type { WebviewMessage } from "@/views/gitGraphView";
 import type { GraphState } from "./graphState";
+import type { WebviewMessage } from "@/views/gitGraphView";
 import * as vscode from "vscode";
 
 export class UIStateHandler implements vscode.Disposable {
@@ -9,7 +9,6 @@ export class UIStateHandler implements vscode.Disposable {
         private readonly _updateWebview: (webview: vscode.Webview) => Promise<void>,
         private readonly _loadMoreCommits: (webview: vscode.Webview) => Promise<void>,
         private readonly _requestUnfilteredCommits: (webview: vscode.Webview) => Promise<void>,
-        private readonly _onInitialized: () => void,
     ) { }
 
     dispose(): void {
@@ -20,7 +19,6 @@ export class UIStateHandler implements vscode.Disposable {
         switch (cmd) {
             case "search":
                 this._state.searchFilters = msg.filters;
-                this._onInitialized();
                 await this._refresh(true);
                 break;
             case "refresh":
