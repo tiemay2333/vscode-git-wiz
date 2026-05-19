@@ -639,3 +639,36 @@ Replaced VS Code status bar progress with a top-aligned infinite scrolling progr
 ### Next Steps
 
 - None - task complete
+
+
+## Session 20: 优化 AsyncHighlightVerifier 缓存管理
+
+**Date**: 2026-05-19
+**Task**: 优化 AsyncHighlightVerifier 缓存管理
+**Branch**: `dev`
+
+### Summary
+
+修复了 AsyncHighlightVerifier 在 Git 状态变更时缓存陈旧的问题。在 ViewDataManager.refreshAll 中引入了立即重置逻辑，并在验证器中添加了 generation 计数器以处理异步竞态条件。
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `5bb9b6b` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
