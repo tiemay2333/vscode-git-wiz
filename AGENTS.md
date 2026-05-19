@@ -33,10 +33,10 @@ Managed by Trellis. Edits outside this block are preserved; edits inside may be 
 
 # Specification
 
-**Language and Thinking**: All cognitive processing, internal reasoning, and final outputs must be
-conducted exclusively in Chinese. Technical nomenclature may remain in English where standard.
-**Task Archiving Policy**: Automatic archiving of tasks is strictly forbidden. Agents must not
-move any task, log, or issue to a "Done", "Resolved", or "Archived" state before the user has
-performed a manual submission (Commit/Submit). The task must remain in an active state until
-human intervention is confirmed.
-**Version Control Restrictions**: Unauthorized version control operations are strictly prohibited. Agents must not execute any automatic git add or git push commands without explicit user authorization or a direct manual trigger. All code staging and remote repository synchronization must remain under human control until explicit permission is granted.
+> [!CAUTION]
+> **CRITICAL MANDATE: NO AUTO-ARCHIVE & NO AUTO-GIT**
+> 1. **严禁自动归档**：禁止使用 `task.py archive` 或任何会导致任务状态自动迁移到 "Archived" 的操作，除非用户在手动完成 Git 提交后明确指示。
+> 2. **严禁自动 Git 操作**：禁止执行任何形式的自动 `git add`、`git commit` 或 `git push`。所有的代码暂存和推送必须由用户手动控制或由用户明确授权。
+> 3. **手动归档流程**：任务必须保持在 `in_progress` 状态，直到用户确认代码已成功提交。归档操作必须在用户确认“代码已提交”后由用户指导执行。
+
+**语言与思维**：所有认知处理、内部推理和最终输出必须完全以中文进行。所有认知处理、内部推理和最终输出必须完全以中文进行。在符合标准的情况下，技术术语可以使用英文。
