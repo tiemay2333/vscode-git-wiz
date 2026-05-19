@@ -7,6 +7,7 @@ import { vscode } from "@/webview/vscodeApi";
 import { BranchPanel } from "./branches/BranchPanel";
 import { CommitDetailsView } from "./commitDetails/CommitDetailsView";
 import { GraphView } from "./graph/GraphView";
+import { ProgressBar } from "./shared/ProgressBar";
 
 declare global {
     interface Window {
@@ -116,20 +117,40 @@ function GraphLayout() {
 }
 
 function App() {
+    const [loading, setLoading] = useState(false);
+
     useEffect(() => {
+        const handler = (event: MessageEvent) => {
+            const message = event.data;
+            if (message.command === "setLoading") {
+                setLoading(!!message.visible);
+            }
+        };
+
+        window.addEventListener("message", handler);
         vscode.postMessage({ command: "ready" });
+
+        return () => window.removeEventListener("message", handler);
     }, []);
 
+    let content = null;
+
     if (window.__VIEW__ === "graph") {
-        return <GraphLayout />;
+        content = <GraphLayout />;
     }
     else if (window.__VIEW__ === "commitDetails") {
-        return <CommitDetailsView data={window.__COMMIT_DETAILS__} />;
+        content = <CommitDetailsView data={window.__COMMIT_DETAILS__} />;
     }
     else if (window.__VIEW__ === "branches") {
-        return <BranchPanel branches={window.__BRANCHES__} />;
+        content = <BranchPanel branches={window.__BRANCHES__} />;
     }
-    return null;
+
+    return (
+        <>
+            <ProgressBar visible={loading} />
+            {content}
+        </>
+    );
 }
 
 const root = document.getElementById("root")!;

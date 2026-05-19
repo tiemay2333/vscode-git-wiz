@@ -1,26 +1,33 @@
+import type { UIService } from "./uiservice";
 import * as vscode from "vscode";
-import { UIService } from "./uiservice";
 
 /**
  * VSCodeUIService 是 UIService 的 VSCode 实现。
  */
 export class VSCodeUIService implements UIService {
+    constructor(private readonly _onProgressChange?: (visible: boolean) => void) { }
+
     async confirm(message: string, options?: string[] | { modal?: boolean; detail?: string }, ...items: string[]): Promise<string | undefined> {
         if (Array.isArray(options)) {
             return await vscode.window.showWarningMessage(message, ...options);
-        } else if (options && typeof options === "object") {
+        }
+        else if (options && typeof options === "object") {
             return await vscode.window.showWarningMessage(message, options, ...items);
-        } else {
+        }
+        else {
             return await vscode.window.showWarningMessage(message, ...items);
         }
     }
 
     async showProgress<T>(title: string, task: (progress: vscode.Progress<{ message?: string; increment?: number }>) => Promise<T>): Promise<T> {
-        return await vscode.window.withProgress({
-            location: vscode.ProgressLocation.Window,
-            title,
-            cancellable: false
-        }, (progress) => task(progress));
+        this._onProgressChange?.(true);
+        try {
+            // We pass a dummy progress object since we don't use it for now
+            return await task({ report: () => { } });
+        }
+        finally {
+            this._onProgressChange?.(false);
+        }
     }
 
     notify(message: string, type: "info" | "warning" | "error"): void {

@@ -10,6 +10,7 @@ import { GitService } from "@/git/core/GitService";
 import { AsyncHighlightVerifier } from "@/git/highlight/AsyncHighlightVerifier";
 import { getCurrentBranchHashes } from "@/git/highlight/commitHighlight";
 import { GitWorkflowEngine } from "@/git/workflow/engine";
+import { VSCodeUIService } from "@/git/workflow/vscode-ui";
 
 import { t } from "@/locale/i18n";
 import { getCommitDetailsHtml, getHtmlForWebview } from "./webviewContent";
@@ -68,7 +69,8 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider, vscode.
         const cwd = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || "";
         this._gitService = new GitService({ cwd });
         this._state = new GraphState();
-        this._workflowEngine = new GitWorkflowEngine(this._gitService, () => this.refresh());
+        const uiService = new VSCodeUIService(visible => this.setLoading(visible));
+        this._workflowEngine = new GitWorkflowEngine(this._gitService, () => this.refresh(), uiService);
         this._verifier = new AsyncHighlightVerifier(this._gitService, (hash, status) => {
             this.postToWebview({ command: "updateCommitHighlight", hash, verificationStatus: status });
         });
@@ -573,6 +575,10 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider, vscode.
         }
 
         return uiStatus;
+    }
+
+    public setLoading(visible: boolean) {
+        this.postToWebview({ command: "setLoading", visible });
     }
 
     private async getCommitFiles(commitHash: string, webview: vscode.Webview) {
