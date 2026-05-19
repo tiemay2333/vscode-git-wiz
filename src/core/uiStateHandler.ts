@@ -1,5 +1,5 @@
 import type { GraphState } from "./graphState";
-import type { WebviewMessage } from "@/views/gitGraphView";
+import type { WebviewMessage } from "@/views/GitGraphViewProvider";
 import * as vscode from "vscode";
 
 export class UIStateHandler implements vscode.Disposable {

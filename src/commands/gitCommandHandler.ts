@@ -1,5 +1,5 @@
 import type { GitWorkflowEngine } from "@/git/workflow/engine";
-import type { WebviewMessage } from "@/views/gitGraphView";
+import type { WebviewMessage } from "@/views/GitGraphViewProvider";
 import * as vscode from "vscode";
 import { CherryPickWorkflow } from "@/git/workflow/impl/CherryPickWorkflow";
 import { CreateBranchWorkflow } from "@/git/workflow/impl/CreateBranchWorkflow";

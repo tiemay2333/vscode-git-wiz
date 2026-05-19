@@ -1,5 +1,4 @@
 import * as vscode from "vscode";
-import { GitService } from "./git/core/GitService";
 import { CheckoutBranchWorkflow } from "./git/workflow/impl/CheckoutBranchWorkflow";
 import { CherryPickWorkflow } from "./git/workflow/impl/CherryPickWorkflow";
 import { CreateBranchWorkflow } from "./git/workflow/impl/CreateBranchWorkflow";
@@ -14,7 +13,8 @@ import { RebaseBranchWorkflow } from "./git/workflow/impl/RebaseBranchWorkflow";
 import { ResetWorkflow } from "./git/workflow/impl/ResetWorkflow";
 import { RevertWorkflow } from "./git/workflow/impl/RevertWorkflow";
 import { t } from "./locale/i18n";
-import { GitGraphViewProvider } from "./views/gitGraphView";
+import { GitGraphViewProvider } from "./views/GitGraphViewProvider";
+import { ViewDataManager } from "./views/ViewDataManager";
 
 export function activate(context: vscode.ExtensionContext) {
     const statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
@@ -45,8 +45,9 @@ export function activate(context: vscode.ExtensionContext) {
     const graphProvider = new GitGraphViewProvider(context.extensionUri);
     context.subscriptions.push(graphProvider);
 
-    const cwd = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || "";
-    const gitService = new GitService({ cwd });
+    const dataManager = ViewDataManager.getInstance();
+    context.subscriptions.push(dataManager);
+    const gitService = dataManager.gitService;
 
     const provider = new (class implements vscode.TextDocumentContentProvider {
         async provideTextDocumentContent(uri: vscode.Uri): Promise<string> {
@@ -57,7 +58,7 @@ export function activate(context: vscode.ExtensionContext) {
                 if (!hash) {
                     return "";
                 }
-                const service = new GitService({ cwd });
+                const service = ViewDataManager.getInstance().gitService;
                 return await service.getFileContentAtRev(hash, fileParam || uri.path.substring(1));
             }
             catch {
