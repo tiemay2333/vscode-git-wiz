@@ -672,3 +672,36 @@ Replaced VS Code status bar progress with a top-aligned infinite scrolling progr
 ### Next Steps
 
 - None - task complete
+
+
+## Session 21: 修复 GitGraphViewProvider 竞态条件
+
+**Date**: 2026-05-19
+**Task**: 修复 GitGraphViewProvider 竞态条件
+**Branch**: `dev`
+
+### Summary
+
+修复了 GitGraphViewProvider 中的多处竞态条件。引入了异步消息队列序列化 Webview 请求，实现了原子化的签名缓存加载锁，并修正了刷新请求中的状态合并逻辑，确保高频操作下视图状态的一致性。
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `555c8c0` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete

@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 20
+- **Total Sessions**: 21
 - **Last Active**: 2026-05-19
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~674 | Active |
+| `journal-1.md` | ~707 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 21 | 2026-05-19 | 修复 GitGraphViewProvider 竞态条件 | `555c8c0` | `dev` |
 | 20 | 2026-05-19 | 优化 AsyncHighlightVerifier 缓存管理 | `5bb9b6b` | `dev` |
 | 19 | 2026-05-19 | Optimize loading UI with top progress bar | `ae6ab1c` | `dev` |
 | 18 | 2026-05-19 | Fix Webview Refresh Race | `5359d1c`, `9dfa8c8` | `dev` |
