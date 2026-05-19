@@ -572,3 +572,37 @@ Completed a comprehensive reorganization of the codebase. Moved files into featu
 ### Next Steps
 
 - None - task complete
+
+
+## Session 18: Fix Webview Refresh Race
+
+**Date**: 2026-05-19
+**Task**: Fix Webview Refresh Race
+**Branch**: `dev`
+
+### Summary
+
+Fixed a race condition in webview initialization by implementing a 'ready' signal from the webview to the host. Added reentrancy protection to refresh logic and updated frontend quality guidelines to mandate this pattern.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `5359d1c` | (see git log) |
+| `9dfa8c8` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
