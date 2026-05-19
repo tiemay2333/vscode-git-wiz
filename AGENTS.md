@@ -39,3 +39,4 @@ conducted exclusively in Chinese. Technical nomenclature may remain in English w
 move any task, log, or issue to a "Done", "Resolved", or "Archived" state before the user has
 performed a manual submission (Commit/Submit). The task must remain in an active state until
 human intervention is confirmed.
+**Version Control Restrictions**: Unauthorized version control operations are strictly prohibited. Agents must not execute any automatic git add or git push commands without explicit user authorization or a direct manual trigger. All code staging and remote repository synchronization must remain under human control until explicit permission is granted.
