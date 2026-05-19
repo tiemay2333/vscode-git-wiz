@@ -51,6 +51,8 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider, vscode.
     private _pendingRefresh = false;
     private _refreshing = false;
     private _pendingResetScroll = false;
+    private _messageQueue: Promise<void> = Promise.resolve();
+    private _signaturesLoadingPromise: Promise<void> | null = null;
     private _branchSignaturesCache: { branch: string; headHash: string; signatures: Map<string, string[]> } | null = null;
     private _settingsScope: "local" | "global" = "global";
     private readonly _gitCommandHandler: GitCommandHandler;
@@ -167,6 +169,7 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider, vscode.
     private async handleMessage(message: WebviewMessage, webview: vscode.Webview) {
         const cmd = message.command;
 
+        // 立即处理同步状态，不入队
         if (cmd === "ready") {
             this._initialized = true;
             if (this._pendingRefresh) {
@@ -178,44 +181,54 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider, vscode.
             return;
         }
 
-        // Special case: reverify commit highlight
-        if (cmd === "reverifyCommit" && message.commitHash) {
-            await this._reverifyCommit(message.commitHash);
-            return;
-        }
+        // 使用队列序列化所有异步操作
+        this._messageQueue = this._messageQueue.then(async () => {
+            try {
+                // Special case: reverify commit highlight
+                if (cmd === "reverifyCommit" && message.commitHash) {
+                    await this._reverifyCommit(message.commitHash);
+                    return;
+                }
 
-        // Git operations — delegate to GitCommandHandler
-        if (cmd === "cherryPick"
-            || cmd === "copyHash" || cmd === "copyCommitMessage"
-            || cmd === "revertCommit" || cmd === "resetToCommit"
-            || cmd === "dropCommit" || cmd === "squashCommits" || cmd === "cherryPickRange"
-            || cmd === "revertCommits" || cmd === "dropCommits" || cmd === "pushTag"
-            || cmd === "newTag" || cmd === "createBranch" || cmd === "selectBranch"
-            || cmd === "deleteMultipleBranches" || cmd === "createBranchFromTag"
-            || cmd === "deleteTag" || cmd === "checkoutBranch" || cmd === "deleteBranch"
-            || cmd === "deleteRemoteBranch" || cmd === "rebaseBranch" || cmd === "mergeBranch") {
-            await this._gitCommandHandler.handle(cmd, message);
-            return;
-        }
-        // Settings & configuration — delegate to SettingsHandler
-        if (cmd === "saveFilesViewMode" || cmd === "saveCommitDetailsViewMode"
-            || cmd === "settingsUpdateSetting" || cmd === "settingsSetGitConfig"
-            || cmd === "settingsGetGitConfig" || cmd === "settingsAddRemote"
-            || cmd === "settingsRemoveRemote") {
-            await this._settingsHandler.handle(cmd, message, webview);
-            return;
-        }
-        // File & diff operations
-        if (cmd === "getCommitFiles") {
-            await this.getCommitFiles(message.commitHash!, webview);
-            return;
-        }
-        if (cmd === "openDiff" || cmd === "openFile") {
-            this._fileHandler.handle(cmd, message);
-            return;
-        }
-        // UI state management — delegate to UIStateHandler
-        await this._uiStateHandler.handle(cmd, message, webview);
+                // Git operations — delegate to GitCommandHandler
+                if (cmd === "cherryPick"
+                    || cmd === "copyHash" || cmd === "copyCommitMessage"
+                    || cmd === "revertCommit" || cmd === "resetToCommit"
+                    || cmd === "dropCommit" || cmd === "squashCommits" || cmd === "cherryPickRange"
+                    || cmd === "revertCommits" || cmd === "dropCommits" || cmd === "pushTag"
+                    || cmd === "newTag" || cmd === "createBranch" || cmd === "selectBranch"
+                    || cmd === "deleteMultipleBranches" || cmd === "createBranchFromTag"
+                    || cmd === "deleteTag" || cmd === "checkoutBranch" || cmd === "deleteBranch"
+                    || cmd === "deleteRemoteBranch" || cmd === "rebaseBranch" || cmd === "mergeBranch") {
+                    await this._gitCommandHandler.handle(cmd, message);
+                    return;
+                }
+                // Settings & configuration — delegate to SettingsHandler
+                if (cmd === "saveFilesViewMode" || cmd === "saveCommitDetailsViewMode"
+                    || cmd === "settingsUpdateSetting" || cmd === "settingsSetGitConfig"
+                    || cmd === "settingsGetGitConfig" || cmd === "settingsAddRemote"
+                    || cmd === "settingsRemoveRemote") {
+                    await this._settingsHandler.handle(cmd, message, webview);
+                    return;
+                }
+                // File & diff operations
+                if (cmd === "getCommitFiles") {
+                    await this.getCommitFiles(message.commitHash!, webview);
+                    return;
+                }
+                if (cmd === "openDiff" || cmd === "openFile") {
+                    this._fileHandler.handle(cmd, message);
+                    return;
+                }
+                // UI state management — delegate to UIStateHandler
+                await this._uiStateHandler.handle(cmd, message, webview);
+            }
+            catch (error) {
+                console.error(`Error handling webview message ${cmd}:`, error);
+            }
+        });
+
+        await this._messageQueue;
     }
 
     private async _reverifyCommit(commitHash: string): Promise<void> {
@@ -229,20 +242,10 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider, vscode.
             return;
 
         const branchHashes = await this._dataManager.gitService.getBranchCommits(currentBranch);
-        const headHash = await this._dataManager.gitService.getHeadHash(currentBranch);
 
-        if (!this._branchSignaturesCache
-            || this._branchSignaturesCache.branch !== currentBranch
-            || (headHash && this._branchSignaturesCache.headHash !== headHash)) {
-            const signatures = await this._dataManager.gitService.getBranchCommitSignatures(currentBranch);
-            this._branchSignaturesCache = {
-                branch: currentBranch,
-                headHash: headHash || "",
-                signatures,
-            };
-        }
+        await this.ensureSignaturesLoaded(currentBranch);
 
-        const result = getCurrentBranchHashes([commit], branchHashes, this._branchSignaturesCache.signatures);
+        const result = getCurrentBranchHashes([commit], branchHashes, this._branchSignaturesCache!.signatures);
         if (result.pending.has(commit.hash)) {
             const targets = result.pending.get(commit.hash)!;
             this._dataManager.verifier.queueVerification(commit.hash, targets);
@@ -287,38 +290,40 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider, vscode.
     }
 
     private updateViewTitle(_currentBranch: string | null) {
+        let title = "Tree";
+        if (this._state.filterFile) {
+            title += ` - ${this._state.filterFile}`;
+        }
+        else if (this._state.filterBranch) {
+            title += ` - ${this._state.filterBranch}`;
+            if (_currentBranch && this._state.filterBranch !== _currentBranch) {
+                title += ` (HEAD on ${_currentBranch})`;
+            }
+        }
+        else {
+            title += " - All Branches";
+            if (_currentBranch) {
+                title += ` (HEAD on ${_currentBranch})`;
+            }
+        }
+
         if (GitGraphViewProvider.currentPanel) {
-            let title = "Tree";
-            if (this._state.filterFile) {
-                title += ` - ${this._state.filterFile}`;
-            }
-            else if (this._state.filterBranch) {
-                title += ` - ${this._state.filterBranch}`;
-                if (_currentBranch && this._state.filterBranch !== _currentBranch) {
-                    title += ` (HEAD on ${_currentBranch})`;
-                }
-            }
-            else {
-                title += " - All Branches";
-                if (_currentBranch) {
-                    title += ` (HEAD on ${_currentBranch})`;
-                }
-            }
             GitGraphViewProvider.currentPanel.title = title;
+        }
+        if (this._view) {
+            this._view.title = title;
         }
     }
 
     public async refresh(resetScroll: boolean = false) {
         if (!this._initialized) {
             this._pendingRefresh = true;
-            if (resetScroll)
-                this._pendingResetScroll = true;
+            this._pendingResetScroll = this._pendingResetScroll || resetScroll;
             return;
         }
         if (this._refreshing) {
             this._pendingRefresh = true;
-            if (resetScroll)
-                this._pendingResetScroll = true;
+            this._pendingResetScroll = this._pendingResetScroll || resetScroll;
             return;
         }
 
@@ -328,6 +333,7 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider, vscode.
         this._refreshing = true;
         try {
             this._branchSignaturesCache = null;
+            this._signaturesLoadingPromise = null;
             const countToLoad = Math.max(PAGE_SIZE, this._state.loadedCount);
             const commits = await this._dataManager.gitService.getGitLog(this._state.filterBranch, 0, countToLoad, this._state.searchFilters, this._state.filterFile);
             const currentBranch = await this._dataManager.gitService.getCurrentBranch();
@@ -366,8 +372,10 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider, vscode.
         finally {
             this._refreshing = false;
             if (this._pendingRefresh) {
+                const reset = this._pendingResetScroll;
                 this._pendingRefresh = false;
-                this.refresh(this._pendingResetScroll);
+                this._pendingResetScroll = false;
+                this.refresh(reset);
             }
         }
     }
@@ -493,19 +501,41 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider, vscode.
         webview.postMessage({ command: "appendCommits", commits, uiStatus, hasMore, showTags, showRemoteBranches, showGraph });
     }
 
+    private async ensureSignaturesLoaded(currentBranch: string): Promise<void> {
+        while (true) {
+            const headHash = await this._dataManager.gitService.getHeadHash(currentBranch);
+            if (this._branchSignaturesCache
+                && this._branchSignaturesCache.branch === currentBranch
+                && (!headHash || this._branchSignaturesCache.headHash === headHash)) {
+                break;
+            }
+
+            if (!this._signaturesLoadingPromise) {
+                this._signaturesLoadingPromise = (async () => {
+                    try {
+                        const signatures = await this._dataManager.gitService.getBranchCommitSignatures(currentBranch);
+                        this._branchSignaturesCache = {
+                            branch: currentBranch,
+                            headHash: headHash || "",
+                            signatures,
+                        };
+                    }
+                    finally {
+                        this._signaturesLoadingPromise = null;
+                    }
+                })();
+            }
+            await this._signaturesLoadingPromise;
+        }
+    }
+
     private async calculateUIStatus(commits: GitCommit[], currentBranch: string): Promise<Record<string, CommitUIStatus>> {
         const branchHashes = await this._dataManager.gitService.getBranchCommits(currentBranch);
-        const headHash = await this._dataManager.gitService.getHeadHash(currentBranch);
 
-        if (!this._branchSignaturesCache
-            || this._branchSignaturesCache.branch !== currentBranch
-            || (headHash && this._branchSignaturesCache.headHash !== headHash)) {
-            const signatures = await this._dataManager.gitService.getBranchCommitSignatures(currentBranch);
-            this._branchSignaturesCache = {
-                branch: currentBranch,
-                headHash: headHash || "",
-                signatures,
-            };
+        await this.ensureSignaturesLoaded(currentBranch);
+
+        if (!this._branchSignaturesCache) {
+            return {};
         }
 
         const result = getCurrentBranchHashes(commits, branchHashes, this._branchSignaturesCache.signatures);
