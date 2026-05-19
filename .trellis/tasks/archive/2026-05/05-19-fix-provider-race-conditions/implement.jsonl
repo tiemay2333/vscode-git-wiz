@@ -1,0 +1,4 @@
+{"_example": "Fill with {\"file\": \"<path>\", \"reason\": \"<why>\"}. Put spec/research files only — no code paths. Run `python3 .trellis/scripts/get_context.py --mode packages` to list available specs. Delete this line once real entries are added."}
+{"file": "src/views/GitGraphViewProvider.ts", "reason": "修改的核心文件"}
+{"file": "src/views/ViewDataManager.ts", "reason": "检查单例交互"}
+{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "确保异步处理符合质量规范"}
