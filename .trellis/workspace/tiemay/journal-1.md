@@ -705,3 +705,40 @@ Replaced VS Code status bar progress with a top-aligned infinite scrolling progr
 ### Next Steps
 
 - None - task complete
+
+
+## Session 22: Optimize Git Refresh Stability
+
+**Date**: 2026-05-20
+**Task**: Optimize Git Refresh Stability
+**Branch**: `dev`
+
+### Summary
+
+Implemented lock-aware refresh logic in ViewDataManager to handle complex Git operations gracefully. Added watchers for `.git/index.lock`, `MERGE_HEAD`, `CHERRY_PICK_HEAD`, `REVERT_HEAD`, and rebase directories. Refreshes are deferred while `index.lock` exists and triggered immediately upon its release.
+
+### Main Changes
+
+- Added `_isLocked` and `_pendingRefresh` state to `ViewDataManager`.
+- Implemented `checkInitialLockState` to detect locks at startup.
+- Expanded `FileSystemWatcher` to cover all critical Git status files.
+- Modified `refreshAll` to respect the repository lock state.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| (pending) | feat: implement lock-aware git refresh stability |
+
+### Testing
+
+- [OK] Verified no compilation errors with `tsc`.
+- [OK] Logic verified via static analysis: `index.lock` creation sets lock, deletion releases and triggers pending refresh.
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
