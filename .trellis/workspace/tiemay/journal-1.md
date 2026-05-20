@@ -775,3 +775,36 @@ Implemented lock-aware refresh logic in ViewDataManager to handle complex Git op
 ### Next Steps
 
 - None - task complete
+
+
+## Session 23: Multi-instance ViewDataManager Transition
+
+**Date**: 2026-05-20
+**Task**: Multi-instance ViewDataManager Transition
+**Branch**: `dev`
+
+### Summary
+
+Refactored ViewDataManager from a global singleton into a controlled multi-instance architecture keyed by repository path, resolving state conflicts for multi-root workspaces.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `6e621ab` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
