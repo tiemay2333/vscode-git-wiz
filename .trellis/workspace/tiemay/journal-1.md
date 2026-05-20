@@ -841,3 +841,36 @@ Implemented manual repository switching in the sidebar via QuickPick, supporting
 ### Next Steps
 
 - None - task complete
+
+
+## Session 25: Internationalize SettingsHandler and add remote removal confirmation
+
+**Date**: 2026-05-20
+**Task**: Internationalize SettingsHandler and add remote removal confirmation
+**Branch**: `dev`
+
+### Summary
+
+Internationalized notification messages and input prompts in SettingsHandler.ts. Added a modal confirmation dialog when removing a remote in SettingsForm.tsx to prevent accidental deletion.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `ccea610` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
