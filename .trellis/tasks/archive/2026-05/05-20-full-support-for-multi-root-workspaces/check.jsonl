@@ -1,0 +1,5 @@
+{"file": ".trellis/tasks/05-20-full-support-for-multi-root-workspaces/prd.md"}
+{"file": "src/extension.ts"}
+{"file": "src/views/ViewDataManager.ts"}
+{"file": "src/views/GitGraphViewProvider.ts"}
+{"file": "package.json"}
