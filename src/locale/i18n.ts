@@ -24,11 +24,12 @@ const zh: Record<string, string> = {
     remotes: "远程仓库",
     noRemotes: "未配置远程仓库",
     addRemote: "+ 添加远程仓库",
+    fetchRemote: "抓取",
     removeRemote: "移除",
     duplicateCommitWarningPre: "当前分支 (",
     duplicateCommitWarningPost: ") 已存在相同的提交信息，但修改的内容可能不一致。请结合代码差异仔细核对，谨慎操作。",
     filesModifiedIn: "修改的文件",
-    
+
     // Workflow related
     workingOn: "正在执行 {action}...",
     operationFailed: "操作失败: {error}",
@@ -53,7 +54,7 @@ const zh: Record<string, string> = {
     lockedWarning: "另一个 Git 操作正在进行中，请稍后再试。",
     copyHashSuccess: "提交哈希已复制到剪贴板",
     copyMessageSuccess: "提交信息已复制到剪贴板",
-    
+
     // Additional Workflows
     revertConfirm: "确定要还原提交 {hash} 吗？",
     revertTitle: "正在还原提交 {hash}...",
@@ -61,7 +62,7 @@ const zh: Record<string, string> = {
     revertMultiConfirm: "确定要还原 {count} 个提交吗？这将创建 {count} 个新的还原提交。",
     revertMultiTitle: "正在还原 {count} 个提交...",
     revertMultiSuccess: "成功还原了 {count} 个提交",
-    
+
     resetTitle: "正在重置到提交 {hash} ({type})...",
     resetSuccess: "成功重置到提交 {hash}",
     resetConfirm: "确定要重置到提交 {hash} ({type}) 吗？",
@@ -73,26 +74,26 @@ const zh: Record<string, string> = {
     resetMixedDesc: "保留工作区，清空暂存区",
     resetHard: "硬重置 (Hard)",
     resetHardDesc: "清空工作区和暂存区",
-    
+
     dropConfirm: "确定要永久删除提交 {hash} 吗？此操作无法撤销。",
     dropTitle: "正在删除提交 {hash}...",
     dropSuccess: "成功删除了提交 {hash}",
     dropMultiConfirm: "确定要永久删除 {count} 个提交吗？此操作无法撤销。",
     dropMultiTitle: "正在删除 {count} 个提交...",
     dropMultiSuccess: "成功删除了 {count} 个提交",
-    
+
     squashTitle: "正在合并 {count} 个提交...",
     squashSuccess: "成功合并了 {count} 个提交",
     squashPrompt: "将 {count} 个提交合并为一个",
     squashPlaceholder: "新提交信息",
     squashEmptyError: "提交信息不能为空",
-    
+
     checkoutTitle: "正在切换到分支 \"{name}\"...",
     checkoutSuccess: "已切换到分支 \"{name}\"",
     checkoutRemoteTitle: "正在抓取 {remote} 并跟踪 {name}...",
     checkoutRemoteSuccess: "已切换并跟踪分支 \"{name}\"",
     checkoutExistingSuccess: "已切换到现有分支 \"{name}\"",
-    
+
     fetchTitle: "正在抓取...",
     fetchSuccess: "抓取成功",
     pullTitle: "正在拉取...",
@@ -103,11 +104,11 @@ const zh: Record<string, string> = {
     pushForceConfirm: "强制推送将覆盖远程历史。确定要继续吗？",
     pushForceTitle: "正在强制推送...",
     pushForceSuccess: "强制推送成功",
-    
+
     deleteRemoteConfirm: "确定要从 \"{remote}\" 删除远程分支 \"{branch}\" 吗？",
     deleteRemoteTitle: "正在删除远程分支 \"{branch}\"...",
     deleteRemoteSuccess: "已从 \"{remote}\" 删除远程分支 \"{branch}\"",
-    
+
     tagCreatePrompt: "输入新标签名称",
     tagCreateTitle: "正在创建标签 \"{name}\"...",
     tagCreateSuccess: "标签 \"{name}\" 创建成功",
@@ -115,22 +116,31 @@ const zh: Record<string, string> = {
     tagDeleteConfirm: "确定要删除标签 \"{name}\" 吗？",
     tagDeleteTitle: "正在删除标签 \"{name}\"...",
     tagDeleteSuccess: "标签 \"{name}\" 删除成功",
-    
+
     branchCreateTitle: "正在从 \"{source}\" 创建并切换到分支 \"{name}\"...",
     branchCreateSuccess: "已从 \"{source}\" 创建并切换到分支 \"{name}\"",
     branchCreatePrompt: "从 \"{source}\" 创建新分支",
     branchCreatePlaceholder: "新分支名称",
     branchCreateEmptyError: "分支名称不能为空",
     branchCreateInvalidError: "无效的分支名称",
-    
+
     mergeTitle: "正在合并 \"{name}\"...",
     mergeSuccess: "成功合并了 \"{name}\"",
     mergeConflictError: "合并冲突: {error}",
     mergeAbort: "中止合并",
     mergeAborted: "合并已中止",
-    
+
     rebaseTitle: "正在变基到 \"{name}\"...",
     rebaseSuccess: "变基到 \"{name}\" 成功",
+    remoteNamePrompt: "远程名称",
+    remoteNamePlaceholder: "origin",
+    remoteUrlPrompt: "远程 \"{name}\" 的 URL",
+    remoteUrlPlaceholder: "https://github.com/user/repo.git",
+    addRemoteError: "添加远程仓库 \"{name}\" 失败: {error}",
+    fetchRemoteSuccess: "从 {name} 抓取成功",
+    fetchRemoteError: "从 {name} 抓取失败: {error}",
+    removeRemoteConfirm: "确定要移除远程仓库 \"{name}\" 吗？",
+    removeRemoteError: "移除远程仓库失败: {error}",
 };
 
 const en: Record<string, string> = {
@@ -157,6 +167,7 @@ const en: Record<string, string> = {
     remotes: "Remotes",
     noRemotes: "No remotes configured",
     addRemote: "+ Add Remote",
+    fetchRemote: "Fetch",
     removeRemote: "Remove",
     duplicateCommitWarningPre: "The current branch (",
     duplicateCommitWarningPost: ") already has the same commit information, but the modified content may be inconsistent. Please carefully check against the code differences and operate with caution.",
@@ -264,6 +275,15 @@ const en: Record<string, string> = {
 
     rebaseTitle: "Rebasing onto \"{name}\"...",
     rebaseSuccess: "Rebased onto \"{name}\" successfully",
+    remoteNamePrompt: "Remote name",
+    remoteNamePlaceholder: "origin",
+    remoteUrlPrompt: "Remote URL for \"{name}\"",
+    remoteUrlPlaceholder: "https://github.com/user/repo.git",
+    addRemoteError: "Failed to add remote \"{name}\": {error}",
+    fetchRemoteSuccess: "Successfully fetched from {name}",
+    fetchRemoteError: "Failed to fetch from {name}: {error}",
+    removeRemoteConfirm: "Are you sure you want to remove remote \"{name}\"?",
+    removeRemoteError: "Failed to remove remote: {error}",
 };
 
 const localeMap: Record<Locale, Record<string, string>> = { zh, en };
@@ -271,12 +291,12 @@ const localeMap: Record<Locale, Record<string, string>> = { zh, en };
 export function t(locale: string, key: string, variables?: Record<string, string | number>): string {
     const lang = locale.startsWith("zh") ? "zh" : "en";
     let text = localeMap[lang]?.[key] ?? en[key] ?? key;
-    
+
     if (variables) {
         Object.entries(variables).forEach(([name, value]) => {
             text = text.replace(new RegExp(`\\{${name}\\}`, "g"), String(value));
         });
     }
-    
+
     return text;
 }

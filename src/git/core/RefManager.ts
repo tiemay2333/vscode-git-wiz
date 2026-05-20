@@ -96,6 +96,21 @@ export class RefManager {
 
     async addRemote(name: string, url: string): Promise<void> {
         await this.runner.exec(["remote", "add", name, url]);
+        // 自动拉取新添加的远程仓库，不阻塞 addRemote 的结果
+        this.fetchRemote(name).catch((err) => {
+            console.error(`[RefManager] Auto-fetch failed for remote ${name}:`, err);
+        });
+    }
+
+    async fetchRemote(remoteName?: string): Promise<void> {
+        const args = ["fetch"];
+        if (remoteName) {
+            args.push(remoteName);
+        }
+        const result = await this.runner.exec(args);
+        if (result.exitCode !== 0) {
+            throw new Error(result.stderr || `Failed to fetch ${remoteName || "all"} with exit code ${result.exitCode}`);
+        }
     }
 
     async removeRemote(name: string): Promise<void> {

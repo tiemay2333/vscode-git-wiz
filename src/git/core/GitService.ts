@@ -71,6 +71,10 @@ export class GitService {
         return this.refManager.addRemote(name, url);
     }
 
+    async fetchRemote(remoteName?: string): Promise<void> {
+        return this.refManager.fetchRemote(remoteName);
+    }
+
     async removeRemote(name: string): Promise<void> {
         return this.refManager.removeRemote(name);
     }

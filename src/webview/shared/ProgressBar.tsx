@@ -20,7 +20,7 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({ visible }) => {
                     left: 0;
                     width: 100%;
                     height: 2px;
-                    z-index: 9999;
+                    z-index: 99999;
                     pointer-events: none;
                 }
                 .progress-bar-line {

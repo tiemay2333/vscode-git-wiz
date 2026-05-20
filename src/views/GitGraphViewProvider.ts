@@ -48,6 +48,7 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider, vscode.
     private _disposables: vscode.Disposable[] = [];
     private _dataManager: ViewDataManager;
     private _initialized = false;
+    private _loadingCount = 0;
     private _pendingRefresh = false;
     private _refreshing = false;
     private _pendingResetScroll = false;
@@ -80,6 +81,7 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider, vscode.
             this._dataManager.gitService,
             () => this._dataManager.gitService.getUniqueRemotes(),
             (scope) => { this._settingsScope = scope; },
+            visible => this.setLoading(visible),
         );
         this._fileHandler = new FileHandler();
 
@@ -117,6 +119,7 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider, vscode.
             this._dataManager.gitService,
             () => this._dataManager.gitService.getUniqueRemotes(),
             (scope) => { this._settingsScope = scope; },
+            visible => this.setLoading(visible),
         );
 
         this.subscribeToEvents();
@@ -243,7 +246,7 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider, vscode.
                 if (cmd === "saveFilesViewMode" || cmd === "saveCommitDetailsViewMode"
                     || cmd === "settingsUpdateSetting" || cmd === "settingsSetGitConfig"
                     || cmd === "settingsGetGitConfig" || cmd === "settingsAddRemote"
-                    || cmd === "settingsRemoveRemote") {
+                    || cmd === "settingsRemoveRemote" || cmd === "settingsFetchRemote") {
                     await this._settingsHandler.handle(cmd, message, webview);
                     return;
                 }
@@ -593,7 +596,17 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider, vscode.
     }
 
     public setLoading(visible: boolean) {
-        this.postToWebview({ command: "setLoading", visible });
+        const oldCount = this._loadingCount;
+        if (visible) {
+            this._loadingCount++;
+        }
+        else {
+            this._loadingCount = Math.max(0, this._loadingCount - 1);
+        }
+
+        if ((oldCount === 0 && this._loadingCount > 0) || (oldCount > 0 && this._loadingCount === 0)) {
+            this.postToWebview({ command: "setLoading", visible: this._loadingCount > 0 });
+        }
     }
 
     private async getCommitFiles(commitHash: string, webview: vscode.Webview) {

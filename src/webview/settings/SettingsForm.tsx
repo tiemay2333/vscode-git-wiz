@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
-import { vscode } from "@/webview/vscodeApi";
 import { t } from "@/locale/i18n";
+import { IconFetchRemote } from "@/webview/shared/Icons";
+import { vscode } from "@/webview/vscodeApi";
 
 export interface SettingsData {
     highlightCurrentBranch: boolean;
@@ -83,6 +84,10 @@ export function SettingsForm({ data }: { data: SettingsData }) {
 
     const removeRemote = useCallback((name: string) => {
         vscode.postMessage({ command: "settingsRemoveRemote", remoteName: name });
+    }, []);
+
+    const fetchRemote = useCallback((name: string) => {
+        vscode.postMessage({ command: "settingsFetchRemote", remoteName: name });
     }, []);
 
     // Listen for extension responses
@@ -300,6 +305,32 @@ export function SettingsForm({ data }: { data: SettingsData }) {
                     <span style={{ flex: 1, fontSize: "12px", color: "var(--vscode-descriptionForeground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                         {r.url}
                     </span>
+                    <button
+                        title={`${t(locale, "fetchRemote")} ${r.name}`}
+                        onClick={() => fetchRemote(r.name)}
+                        style={{
+                            background: "none",
+                            border: "none",
+                            color: "var(--vscode-descriptionForeground)",
+                            cursor: "pointer",
+                            fontSize: 14,
+                            padding: "2px 6px",
+                            borderRadius: 3,
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                        }}
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.color = "var(--vscode-foreground)";
+                            e.currentTarget.style.background = "var(--vscode-toolbar-hoverBackground)";
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.color = "var(--vscode-descriptionForeground)";
+                            e.currentTarget.style.background = "none";
+                        }}
+                    >
+                        <IconFetchRemote />
+                    </button>
                     <button
                         title={`${t(locale, "removeRemote")} ${r.name}`}
                         onClick={() => removeRemote(r.name)}
