@@ -874,3 +874,36 @@ Internationalized notification messages and input prompts in SettingsHandler.ts.
 ### Next Steps
 
 - None - task complete
+
+
+## Session 26: 修复 Switch Repository 按钮无响应并同步 Git 扩展
+
+**Date**: 2026-05-20
+**Task**: 修复 Switch Repository 按钮无响应并同步 Git 扩展
+**Branch**: `dev`
+
+### Summary
+
+修复了在单仓库环境下点击 Switch Repository 按钮无响应的问题。重构了命令逻辑以集成官方 Git 扩展 API，支持发现子模块和嵌套仓库，并添加了中英文的‘当前已是该仓库’等提示。
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `494f1ef` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete

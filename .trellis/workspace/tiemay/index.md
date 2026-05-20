@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 25
+- **Total Sessions**: 26
 - **Last Active**: 2026-05-20
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~876 | Active |
+| `journal-1.md` | ~909 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 26 | 2026-05-20 | 修复 Switch Repository 按钮无响应并同步 Git 扩展 | `494f1ef` | `dev` |
 | 25 | 2026-05-20 | Internationalize SettingsHandler and add remote removal confirmation | `ccea610` | `dev` |
 | 24 | 2026-05-20 | Full Multi-root Workspace Support | `2f69dcb` | `dev` |
 | 23 | 2026-05-20 | Multi-instance ViewDataManager Transition | `6e621ab` | `dev` |
