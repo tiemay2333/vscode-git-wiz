@@ -42,6 +42,8 @@ export function activate(context: vscode.ExtensionContext) {
         }),
     );
 
+    ViewDataManager.setupWorkspaceWatcher();
+
     const getActiveManager = () => {
         const manager = ViewDataManager.getActiveManager();
         if (!manager) {
@@ -50,11 +52,38 @@ export function activate(context: vscode.ExtensionContext) {
         return manager;
     };
 
-    // The primary sidebar provider. We initialize it with the first workspace folder for now.
-    // In a full multi-root sidebar, we would need a TreeView to select the active repository first.
     const defaultCwd = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || "";
     const graphProvider = new GitGraphViewProvider(context.extensionUri, defaultCwd);
     context.subscriptions.push(graphProvider);
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand("git-wiz.switchRepository", async () => {
+            const workspaceFolders = vscode.workspace.workspaceFolders;
+            if (!workspaceFolders || workspaceFolders.length === 0) {
+                vscode.window.showInformationMessage("No workspace folders found.");
+                return;
+            }
+
+            if (workspaceFolders.length === 1) {
+                graphProvider.updateCwd(workspaceFolders[0].uri.fsPath);
+                return;
+            }
+
+            const items = workspaceFolders.map(folder => ({
+                label: folder.name,
+                description: folder.uri.fsPath,
+                folder,
+            }));
+
+            const selected = await vscode.window.showQuickPick(items, {
+                placeHolder: "Select a repository to show in Git Wiz",
+            });
+
+            if (selected) {
+                graphProvider.updateCwd(selected.folder.uri.fsPath);
+            }
+        }),
+    );
 
     const provider = new (class implements vscode.TextDocumentContentProvider {
         async provideTextDocumentContent(uri: vscode.Uri): Promise<string> {

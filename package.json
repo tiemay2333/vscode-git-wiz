@@ -153,9 +153,14 @@
                     "group": "navigation@4"
                 },
                 {
-                    "command": "git-wiz.toggleSetting",
+                    "command": "git-wiz.switchRepository",
                     "when": "view == gitLeanGraphView",
                     "group": "navigation@5"
+                },
+                {
+                    "command": "git-wiz.toggleSetting",
+                    "when": "view == gitLeanGraphView",
+                    "group": "navigation@6"
                 }
             ]
         },
@@ -169,6 +174,11 @@
                 "command": "git-wiz.showFileHistory",
                 "title": "Git Wiz: Show File History",
                 "category": "Git Wiz"
+            },
+            {
+                "command": "git-wiz.switchRepository",
+                "title": "Switch Repository",
+                "icon": "$(repo)"
             },
             {
                 "command": "git-wiz.fetch",

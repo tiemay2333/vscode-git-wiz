@@ -103,6 +103,14 @@ export class ViewDataManager implements vscode.Disposable {
         return undefined;
     }
 
+    public static setupWorkspaceWatcher() {
+        vscode.workspace.onDidChangeWorkspaceFolders((e) => {
+            for (const folder of e.removed) {
+                this.disposeManagerForPath(folder.uri.fsPath);
+            }
+        });
+    }
+
     public get gitService(): GitService {
         return this._gitService;
     }

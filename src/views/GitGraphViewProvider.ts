@@ -46,7 +46,7 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider, vscode.
     private static currentProvider: GitGraphViewProvider | undefined;
     private _view?: vscode.WebviewView;
     private _disposables: vscode.Disposable[] = [];
-    private readonly _dataManager: ViewDataManager;
+    private _dataManager: ViewDataManager;
     private _initialized = false;
     private _pendingRefresh = false;
     private _refreshing = false;
@@ -55,13 +55,13 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider, vscode.
     private _signaturesLoadingPromise: Promise<void> | null = null;
     private _branchSignaturesCache: { branch: string; headHash: string; signatures: Map<string, string[]> } | null = null;
     private _settingsScope: "local" | "global" = "global";
-    private readonly _gitCommandHandler: GitCommandHandler;
-    private readonly _settingsHandler: SettingsHandler;
+    private _gitCommandHandler: GitCommandHandler;
+    private _settingsHandler: SettingsHandler;
     private readonly _uiStateHandler: UIStateHandler;
     private readonly _fileHandler: FileHandler;
     private readonly _state: GraphState;
 
-    constructor(private readonly _extensionUri: vscode.Uri, public readonly cwd: string) {
+    constructor(private readonly _extensionUri: vscode.Uri, public cwd: string) {
         this._dataManager = ViewDataManager.getManagerForPath(this.cwd);
         this._state = new GraphState();
 
@@ -83,6 +83,13 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider, vscode.
         );
         this._fileHandler = new FileHandler();
 
+        this.subscribeToEvents();
+    }
+
+    private subscribeToEvents() {
+        this._disposables.forEach(d => d.dispose());
+        this._disposables = [];
+
         // Subscribe to global events
         this._disposables.push(this._dataManager.onDidRefresh(() => this.refresh()));
         this._disposables.push(this._dataManager.onDidUpdateCommitHighlight((e: { hash: string; verificationStatus: string }) => {
@@ -91,6 +98,30 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider, vscode.
         this._disposables.push(this._dataManager.onDidUpdateLoading((visible) => {
             this.postToWebview({ command: "setLoading", visible });
         }));
+    }
+
+    public updateCwd(newCwd: string) {
+        if (this.cwd === newCwd)
+            return;
+        this.cwd = newCwd;
+        this._dataManager = ViewDataManager.getManagerForPath(this.cwd);
+
+        // Update handlers with new data manager references
+        this._gitCommandHandler?.dispose();
+        this._gitCommandHandler = new GitCommandHandler(
+            this._dataManager.workflowEngine,
+            branch => this.filterByBranch(branch),
+        );
+        this._settingsHandler?.dispose();
+        this._settingsHandler = new SettingsHandler(
+            this._dataManager.gitService,
+            () => this._dataManager.gitService.getUniqueRemotes(),
+            (scope) => { this._settingsScope = scope; },
+        );
+
+        this.subscribeToEvents();
+        this._state.resetFilters();
+        this.refresh(true);
     }
 
     public filterByBranch(branch: string | null) {
