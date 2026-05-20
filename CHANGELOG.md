@@ -2,6 +2,13 @@
 
 All notable changes to Git Wiz are documented here.
 
+## [1.4.2] - 2026-05-20
+- Experience optimization
+- Bug Fixes
+
+## [1.4.1] - 2026-05-18
+- Improvement of project stability
+
 ## [1.4.0] - 2026-05-15
 - **Features**:
   - Enhance branch creation to support specifying start points.
