@@ -5,11 +5,12 @@ import { GitWorkflowEngine } from "@/git/workflow/engine";
 import { VSCodeUIService } from "@/git/workflow/vscode-ui";
 
 /**
- * ViewDataManager 是一个全局单例，负责集中管理 Git 资源、状态和监听器。
- * 它确保了侧边栏和主面板视图共享同一个 GitService、锁定机制和文件监听器。
+ * ViewDataManager 负责集中管理特定 Git 仓库的资源、状态和监听器。
+ * 多个实例通过静态缓存机制管理，以支持多仓库/多工作区环境。
  */
 export class ViewDataManager implements vscode.Disposable {
-    private static _instance: ViewDataManager | undefined;
+    private static _instances = new Map<string, ViewDataManager>();
+
     private readonly _gitService: GitService;
     private readonly _workflowEngine: GitWorkflowEngine;
     private readonly _verifier: AsyncHighlightVerifier;
@@ -26,11 +27,10 @@ export class ViewDataManager implements vscode.Disposable {
     public readonly onDidUpdateCommitHighlight = this._onDidUpdateCommitHighlight.event;
     public readonly onDidUpdateLoading = this._onDidUpdateLoading.event;
 
-    private constructor() {
-        const cwd = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || "";
+    private constructor(public readonly cwd: string) {
         this._gitService = new GitService({ cwd });
 
-        // 全局共享的 UI Service，用于处理进度条和通知
+        // 每个仓库独立的 UI Service，用于处理进度条和通知
         const uiService = new VSCodeUIService((visible) => {
             this._onDidUpdateLoading.fire(visible);
         });
@@ -51,11 +51,8 @@ export class ViewDataManager implements vscode.Disposable {
     }
 
     private async checkInitialLockState() {
-        const workspaceFolders = vscode.workspace.workspaceFolders;
-        if (!workspaceFolders)
-            return;
         try {
-            const lockUri = vscode.Uri.joinPath(workspaceFolders[0].uri, ".git/index.lock");
+            const lockUri = vscode.Uri.file(this.cwd).with({ path: `${this.cwd}/.git/index.lock` });
             await vscode.workspace.fs.stat(lockUri);
             this._isLocked = true;
         }
@@ -64,11 +61,46 @@ export class ViewDataManager implements vscode.Disposable {
         }
     }
 
-    public static getInstance(): ViewDataManager {
-        if (!ViewDataManager._instance) {
-            ViewDataManager._instance = new ViewDataManager();
+    /**
+     * 获取或创建指定路径的 ViewDataManager 实例
+     */
+    public static getManagerForPath(cwd: string): ViewDataManager {
+        if (!this._instances.has(cwd)) {
+            this._instances.set(cwd, new ViewDataManager(cwd));
         }
-        return ViewDataManager._instance;
+        return this._instances.get(cwd)!;
+    }
+
+    /**
+     * 销毁并移除指定路径的 ViewDataManager 实例
+     */
+    public static disposeManagerForPath(cwd: string) {
+        const manager = this._instances.get(cwd);
+        if (manager) {
+            manager.dispose();
+            this._instances.delete(cwd);
+        }
+    }
+
+    /**
+     * 解析当前活动的 Git 仓库路径
+     * 优先级: 活跃编辑器所在仓库 > 第一个工作区
+     */
+    public static getActiveManager(): ViewDataManager | undefined {
+        const editor = vscode.window.activeTextEditor;
+        if (editor) {
+            const workspaceFolder = vscode.workspace.getWorkspaceFolder(editor.document.uri);
+            if (workspaceFolder) {
+                return this.getManagerForPath(workspaceFolder.uri.fsPath);
+            }
+        }
+
+        const workspaceFolders = vscode.workspace.workspaceFolders;
+        if (workspaceFolders && workspaceFolders.length > 0) {
+            return this.getManagerForPath(workspaceFolders[0].uri.fsPath);
+        }
+
+        return undefined;
     }
 
     public get gitService(): GitService {
@@ -165,6 +197,5 @@ export class ViewDataManager implements vscode.Disposable {
         this._onDidRefresh.dispose();
         this._onDidUpdateCommitHighlight.dispose();
         this._onDidUpdateLoading.dispose();
-        ViewDataManager._instance = undefined;
     }
 }

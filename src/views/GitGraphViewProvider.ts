@@ -61,8 +61,8 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider, vscode.
     private readonly _fileHandler: FileHandler;
     private readonly _state: GraphState;
 
-    constructor(private readonly _extensionUri: vscode.Uri) {
-        this._dataManager = ViewDataManager.getInstance();
+    constructor(private readonly _extensionUri: vscode.Uri, public readonly cwd: string) {
+        this._dataManager = ViewDataManager.getManagerForPath(this.cwd);
         this._state = new GraphState();
 
         this._gitCommandHandler = new GitCommandHandler(
@@ -85,8 +85,8 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider, vscode.
 
         // Subscribe to global events
         this._disposables.push(this._dataManager.onDidRefresh(() => this.refresh()));
-        this._disposables.push(this._dataManager.onDidUpdateCommitHighlight(({ hash, verificationStatus }) => {
-            this.postToWebview({ command: "updateCommitHighlight", hash, verificationStatus });
+        this._disposables.push(this._dataManager.onDidUpdateCommitHighlight((e: { hash: string; verificationStatus: string }) => {
+            this.postToWebview({ command: "updateCommitHighlight", hash: e.hash, verificationStatus: e.verificationStatus });
         }));
         this._disposables.push(this._dataManager.onDidUpdateLoading((visible) => {
             this.postToWebview({ command: "setLoading", visible });
@@ -103,13 +103,18 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider, vscode.
         this.refresh(true);
     }
 
-    public static createOrShow(extensionUri: vscode.Uri) {
+    public static createOrShow(extensionUri: vscode.Uri, cwd: string) {
         const column = vscode.window.activeTextEditor ? vscode.window.activeTextEditor.viewColumn : undefined;
 
         if (GitGraphViewProvider.currentPanel) {
             GitGraphViewProvider.currentPanel.reveal(column);
-            GitGraphViewProvider.currentProvider?.refresh();
-            return;
+            if (GitGraphViewProvider.currentProvider && GitGraphViewProvider.currentProvider.cwd === cwd) {
+                GitGraphViewProvider.currentProvider?.refresh();
+                return;
+            }
+            else {
+                GitGraphViewProvider.currentPanel.dispose(); // Re-create for new cwd
+            }
         }
 
         const panel = vscode.window.createWebviewPanel(
@@ -124,7 +129,7 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider, vscode.
 
         GitGraphViewProvider.currentPanel = panel;
 
-        const provider = new GitGraphViewProvider(extensionUri);
+        const provider = new GitGraphViewProvider(extensionUri, cwd);
         GitGraphViewProvider.currentProvider = provider;
         provider.updateWebview(panel.webview);
 

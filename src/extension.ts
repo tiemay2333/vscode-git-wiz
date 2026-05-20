@@ -42,12 +42,19 @@ export function activate(context: vscode.ExtensionContext) {
         }),
     );
 
-    const graphProvider = new GitGraphViewProvider(context.extensionUri);
-    context.subscriptions.push(graphProvider);
+    const getActiveManager = () => {
+        const manager = ViewDataManager.getActiveManager();
+        if (!manager) {
+            vscode.window.showErrorMessage("Git Wiz: Cannot determine active repository context.");
+        }
+        return manager;
+    };
 
-    const dataManager = ViewDataManager.getInstance();
-    context.subscriptions.push(dataManager);
-    const gitService = dataManager.gitService;
+    // The primary sidebar provider. We initialize it with the first workspace folder for now.
+    // In a full multi-root sidebar, we would need a TreeView to select the active repository first.
+    const defaultCwd = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || "";
+    const graphProvider = new GitGraphViewProvider(context.extensionUri, defaultCwd);
+    context.subscriptions.push(graphProvider);
 
     const provider = new (class implements vscode.TextDocumentContentProvider {
         async provideTextDocumentContent(uri: vscode.Uri): Promise<string> {
@@ -58,7 +65,9 @@ export function activate(context: vscode.ExtensionContext) {
                 if (!hash) {
                     return "";
                 }
-                const service = ViewDataManager.getInstance().gitService;
+                const service = ViewDataManager.getActiveManager()?.gitService;
+                if (!service)
+                    return "";
                 return await service.getFileContentAtRev(hash, fileParam || uri.path.substring(1));
             }
             catch {
@@ -72,24 +81,46 @@ export function activate(context: vscode.ExtensionContext) {
 
     context.subscriptions.push(
         vscode.commands.registerCommand("git-wiz.showGraph", () => {
-            GitGraphViewProvider.createOrShow(context.extensionUri);
+            const manager = getActiveManager();
+            if (manager) {
+                GitGraphViewProvider.createOrShow(context.extensionUri, manager.cwd);
+            }
         }),
     );
 
     context.subscriptions.push(
         vscode.commands.registerCommand("git-wiz.showFileHistory", (uri?: vscode.Uri) => {
             let filePath: string | undefined;
+            let targetManager = ViewDataManager.getActiveManager();
+
             if (uri) {
-                filePath = vscode.workspace.asRelativePath(uri);
+                const workspaceFolder = vscode.workspace.getWorkspaceFolder(uri);
+                if (workspaceFolder) {
+                    targetManager = ViewDataManager.getManagerForPath(workspaceFolder.uri.fsPath);
+                    filePath = vscode.workspace.asRelativePath(uri, false); // relative to workspace folder
+                }
+                else {
+                    filePath = vscode.workspace.asRelativePath(uri);
+                }
             }
             else {
                 const editor = vscode.window.activeTextEditor;
                 if (editor) {
-                    filePath = vscode.workspace.asRelativePath(editor.document.uri);
+                    const workspaceFolder = vscode.workspace.getWorkspaceFolder(editor.document.uri);
+                    if (workspaceFolder) {
+                        targetManager = ViewDataManager.getManagerForPath(workspaceFolder.uri.fsPath);
+                        filePath = vscode.workspace.asRelativePath(editor.document.uri, false);
+                    }
+                    else {
+                        filePath = vscode.workspace.asRelativePath(editor.document.uri);
+                    }
                 }
             }
-            if (filePath) {
+
+            if (filePath && targetManager) {
                 vscode.commands.executeCommand("gitLeanGraphView.focus");
+                // For the sidebar view, we might need to update its CWD or recreate it.
+                // Currently it's bound to the first workspace. To keep it simple:
                 graphProvider.filterByFile(filePath);
             }
         }),
@@ -257,8 +288,13 @@ export function activate(context: vscode.ExtensionContext) {
 
                 for (const name of branchNames) {
                     try {
-                        await gitService.deleteBranch(name, false);
-                        deleted.push(name);
+                        await graphProvider.executeWorkflow({
+                            label: "delete branch",
+                            run: async (ctx: any) => {
+                                await ctx.git.deleteBranch(name, false);
+                                deleted.push(name);
+                            },
+                        } as any);
                     }
                     catch (err: any) {
                         if (err.message.includes("not fully merged")) {
@@ -285,8 +321,13 @@ export function activate(context: vscode.ExtensionContext) {
                     if (forceConfirm === "Force Delete") {
                         for (const name of notMerged) {
                             try {
-                                await gitService.deleteBranch(name, true);
-                                deleted.push(name);
+                                await graphProvider.executeWorkflow({
+                                    label: "force delete branch",
+                                    run: async (ctx: any) => {
+                                        await ctx.git.deleteBranch(name, true);
+                                        deleted.push(name);
+                                    },
+                                } as any);
                             }
                             catch (err: any) {
                                 vscode.window.showErrorMessage(`Failed to force delete '${name}': ${err.message}`);
@@ -325,8 +366,13 @@ export function activate(context: vscode.ExtensionContext) {
             if (confirm === btnDelete) {
                 graphProvider.setLoading(true);
                 try {
-                    await gitService.deleteTag(tagName);
-                    vscode.window.showInformationMessage(t(vscode.env.language, "tagDeleteSuccess", { name: tagName }));
+                    await graphProvider.executeWorkflow({
+                        label: "delete tag",
+                        run: async (ctx: any) => {
+                            await ctx.git.deleteTag(tagName);
+                            vscode.window.showInformationMessage(t(vscode.env.language, "tagDeleteSuccess", { name: tagName }));
+                        },
+                    } as any);
                     vscode.commands.executeCommand("git-wiz.refreshBranches");
                     graphProvider.refresh();
                 }
