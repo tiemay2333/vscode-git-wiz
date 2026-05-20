@@ -19,6 +19,8 @@ export class ViewDataManager implements vscode.Disposable {
     private _watchers: vscode.Disposable[] = [];
     private _configWatcher: vscode.Disposable | undefined;
     private _refreshTimer?: ReturnType<typeof setTimeout>;
+    private _isLocked = false;
+    private _pendingRefresh = false;
 
     public readonly onDidRefresh = this._onDidRefresh.event;
     public readonly onDidUpdateCommitHighlight = this._onDidUpdateCommitHighlight.event;
@@ -39,8 +41,27 @@ export class ViewDataManager implements vscode.Disposable {
             this._onDidUpdateCommitHighlight.fire({ hash, verificationStatus: status });
         });
 
+        this.init();
+    }
+
+    private async init() {
+        await this.checkInitialLockState();
         this.setupGitWatcher();
         this.setupConfigWatcher();
+    }
+
+    private async checkInitialLockState() {
+        const workspaceFolders = vscode.workspace.workspaceFolders;
+        if (!workspaceFolders)
+            return;
+        try {
+            const lockUri = vscode.Uri.joinPath(workspaceFolders[0].uri, ".git/index.lock");
+            await vscode.workspace.fs.stat(lockUri);
+            this._isLocked = true;
+        }
+        catch {
+            this._isLocked = false;
+        }
     }
 
     public static getInstance(): ViewDataManager {
@@ -63,6 +84,11 @@ export class ViewDataManager implements vscode.Disposable {
     }
 
     public refreshAll() {
+        if (this._isLocked) {
+            this._pendingRefresh = true;
+            return;
+        }
+        this._pendingRefresh = false;
         this._verifier.reset();
         if (this._refreshTimer) {
             clearTimeout(this._refreshTimer);
@@ -83,6 +109,12 @@ export class ViewDataManager implements vscode.Disposable {
         const patterns = [
             ".git/HEAD",
             ".git/packed-refs",
+            ".git/index.lock",
+            ".git/MERGE_HEAD",
+            ".git/CHERRY_PICK_HEAD",
+            ".git/REVERT_HEAD",
+            ".git/rebase-merge/**",
+            ".git/rebase-apply/**",
             ".git/refs/heads/**",
             ".git/refs/remotes/**",
             ".git/refs/tags/**",
@@ -93,9 +125,22 @@ export class ViewDataManager implements vscode.Disposable {
                 new vscode.RelativePattern(workspaceFolders[0], pattern),
             );
 
-            watcher.onDidChange(() => this.refreshAll());
-            watcher.onDidCreate(() => this.refreshAll());
-            watcher.onDidDelete(() => this.refreshAll());
+            if (pattern === ".git/index.lock") {
+                watcher.onDidCreate(() => {
+                    this._isLocked = true;
+                });
+                watcher.onDidDelete(() => {
+                    this._isLocked = false;
+                    if (this._pendingRefresh) {
+                        this.refreshAll();
+                    }
+                });
+            }
+            else {
+                watcher.onDidChange(() => this.refreshAll());
+                watcher.onDidCreate(() => this.refreshAll());
+                watcher.onDidDelete(() => this.refreshAll());
+            }
 
             this._watchers.push(watcher);
         }
