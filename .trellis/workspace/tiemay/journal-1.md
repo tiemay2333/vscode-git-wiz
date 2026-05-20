@@ -808,3 +808,36 @@ Refactored ViewDataManager from a global singleton into a controlled multi-insta
 ### Next Steps
 
 - None - task complete
+
+
+## Session 24: Full Multi-root Workspace Support
+
+**Date**: 2026-05-20
+**Task**: Full Multi-root Workspace Support
+**Branch**: `dev`
+
+### Summary
+
+Implemented manual repository switching in the sidebar via QuickPick, supporting multi-root workspaces with isolated ViewDataManager instances per root.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `2f69dcb` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete

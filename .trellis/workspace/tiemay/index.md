@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 23
+- **Total Sessions**: 24
 - **Last Active**: 2026-05-20
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~810 | Active |
+| `journal-1.md` | ~843 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 24 | 2026-05-20 | Full Multi-root Workspace Support | `2f69dcb` | `dev` |
 | 23 | 2026-05-20 | Multi-instance ViewDataManager Transition | `6e621ab` | `dev` |
 | 22 | 2026-05-20 | Optimize Git Refresh Stability | `fd4d8bd` | `dev` |
 | 21 | 2026-05-19 | 修复 GitGraphViewProvider 竞态条件 | `555c8c0` | `dev` |
