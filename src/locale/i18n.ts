@@ -141,6 +141,9 @@ const zh: Record<string, string> = {
     fetchRemoteError: "从 {name} 抓取失败: {error}",
     removeRemoteConfirm: "确定要移除远程仓库 \"{name}\" 吗？",
     removeRemoteError: "移除远程仓库失败: {error}",
+    alreadyAtRepository: "当前已是该仓库",
+    selectRepository: "选择要显示的仓库",
+    noWorkspaceFolders: "未找到工作区文件夹",
 };
 
 const en: Record<string, string> = {
@@ -284,6 +287,9 @@ const en: Record<string, string> = {
     fetchRemoteError: "Failed to fetch from {name}: {error}",
     removeRemoteConfirm: "Are you sure you want to remove remote \"{name}\"?",
     removeRemoteError: "Failed to remove remote: {error}",
+    alreadyAtRepository: "Already at the selected repository",
+    selectRepository: "Select a repository to show",
+    noWorkspaceFolders: "No workspace folders found",
 };
 
 const localeMap: Record<Locale, Record<string, string>> = { zh, en };

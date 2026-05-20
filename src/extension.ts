@@ -58,14 +58,61 @@ export function activate(context: vscode.ExtensionContext) {
 
     context.subscriptions.push(
         vscode.commands.registerCommand("git-wiz.switchRepository", async () => {
+            const gitExtension = vscode.extensions.getExtension("vscode.git");
+            if (gitExtension) {
+                if (!gitExtension.isActive) {
+                    await gitExtension.activate();
+                }
+                const api = gitExtension.exports.getAPI(1);
+                if (api && api.repositories && api.repositories.length > 0) {
+                    const repos = api.repositories;
+                    if (repos.length === 1) {
+                        const repoPath = repos[0].rootUri.fsPath;
+                        if (graphProvider.cwd === repoPath) {
+                            vscode.window.showInformationMessage(t(vscode.env.language, "alreadyAtRepository"));
+                        }
+                        else {
+                            graphProvider.updateCwd(repoPath);
+                        }
+                        return;
+                    }
+
+                    const items: (vscode.QuickPickItem & { path: string })[] = repos.map((repo: any) => {
+                        const path = repo.rootUri.fsPath;
+                        const name = path.split(/[\\/]/).pop() || path;
+                        return {
+                            label: name,
+                            description: path,
+                            path,
+                        };
+                    });
+
+                    const selected = await vscode.window.showQuickPick(items, {
+                        placeHolder: t(vscode.env.language, "selectRepository"),
+                    });
+
+                    if (selected) {
+                        graphProvider.updateCwd(selected.path);
+                    }
+                    return;
+                }
+            }
+
+            // Fallback to workspace folders if Git extension is not available or has no repos
             const workspaceFolders = vscode.workspace.workspaceFolders;
             if (!workspaceFolders || workspaceFolders.length === 0) {
-                vscode.window.showInformationMessage("No workspace folders found.");
+                vscode.window.showInformationMessage(t(vscode.env.language, "noWorkspaceFolders"));
                 return;
             }
 
             if (workspaceFolders.length === 1) {
-                graphProvider.updateCwd(workspaceFolders[0].uri.fsPath);
+                const folderPath = workspaceFolders[0].uri.fsPath;
+                if (graphProvider.cwd === folderPath) {
+                    vscode.window.showInformationMessage(t(vscode.env.language, "alreadyAtRepository"));
+                }
+                else {
+                    graphProvider.updateCwd(folderPath);
+                }
                 return;
             }
 
@@ -76,7 +123,7 @@ export function activate(context: vscode.ExtensionContext) {
             }));
 
             const selected = await vscode.window.showQuickPick(items, {
-                placeHolder: "Select a repository to show in Git Wiz",
+                placeHolder: t(vscode.env.language, "selectRepository"),
             });
 
             if (selected) {
