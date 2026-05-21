@@ -1205,3 +1205,36 @@ Implemented a Command Registry based MessageDispatcher to decouple message routi
 ### Next Steps
 
 - None - task complete
+
+
+## Session 36: Fix highlight hang and async verification
+
+**Date**: 2026-05-21
+**Task**: Fix highlight hang and async verification
+**Branch**: `dev`
+
+### Summary
+
+Fixed the highlight hang issue where cherry-pick candidates would stay in 'pending' state indefinitely. Implemented auto-triggering for AsyncHighlightVerifier in ViewDataManager, updated UIConverter to carry pending targets, and added a specific reverifyCommit method to resolve the infinite refresh loop caused by full refreshes in the message handler.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `5867d2d` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
