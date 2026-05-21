@@ -1172,3 +1172,36 @@ Transformed ViewDataManager into a comprehensive View State Engine by absorbing 
 ### Next Steps
 
 - None - task complete
+
+
+## Session 35: Refactor Message Dispatch Mechanism
+
+**Date**: 2026-05-21
+**Task**: Refactor Message Dispatch Mechanism
+**Branch**: `dev`
+
+### Summary
+
+Implemented a Command Registry based MessageDispatcher to decouple message routing from GitGraphViewProvider. Created IMessageHandler interface and migrated all handlers (Git, Settings, File, UIState) to the new architecture. Added CoreHandler to manage lifecycle commands. Simplified Provider's message handling to a single dispatcher call while maintaining async serialization and improving locality.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `6a80ec1` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
