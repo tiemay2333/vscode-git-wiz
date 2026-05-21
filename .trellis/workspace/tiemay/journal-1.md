@@ -907,3 +907,37 @@ Internationalized notification messages and input prompts in SettingsHandler.ts.
 ### Next Steps
 
 - None - task complete
+
+
+## Session 27: 重构 GitGraphViewProvider：职责拆分
+
+**Date**: 2026-05-21
+**Task**: 重构 GitGraphViewProvider：职责拆分
+**Branch**: `dev`
+
+### Summary
+
+完成了 GitGraphViewProvider 的深度重构，将其拆分为 GitGraphViewProvider (生命周期)、RefreshManager (刷新状态机)、WebviewMessenger (消息通信) 和 UIConverter (数据转换)。消除了原有的竞态条件，并更新了前端质量规范以强制执行此架构模式。
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `c7a8f4b` | (see git log) |
+| `651bdb1` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete

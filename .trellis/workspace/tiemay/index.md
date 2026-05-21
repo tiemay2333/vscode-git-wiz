@@ -8,8 +8,8 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 26
-- **Last Active**: 2026-05-20
+- **Total Sessions**: 27
+- **Last Active**: 2026-05-21
 <!-- @@@/auto:current-status -->
 
 ---
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~909 | Active |
+| `journal-1.md` | ~943 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 27 | 2026-05-21 | 重构 GitGraphViewProvider：职责拆分 | `c7a8f4b`, `651bdb1` | `dev` |
 | 26 | 2026-05-20 | 修复 Switch Repository 按钮无响应并同步 Git 扩展 | `494f1ef` | `dev` |
 | 25 | 2026-05-20 | Internationalize SettingsHandler and add remote removal confirmation | `ccea610` | `dev` |
 | 24 | 2026-05-20 | Full Multi-root Workspace Support | `2f69dcb` | `dev` |
