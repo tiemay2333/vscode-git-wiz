@@ -1,9 +1,21 @@
+import type { IMessageHandler } from "./IMessageHandler";
 import type { GitService } from "@/git/core/GitService";
 import type { FromWebviewMessage } from "@/views/types/WebviewProtocol";
 import * as vscode from "vscode";
 import { t } from "@/locale/i18n";
 
-export class SettingsHandler implements vscode.Disposable {
+export class SettingsHandler implements IMessageHandler {
+    readonly commands: FromWebviewMessage["command"][] = [
+        "saveFilesViewMode",
+        "saveCommitDetailsViewMode",
+        "settingsUpdateSetting",
+        "settingsSetGitConfig",
+        "settingsGetGitConfig",
+        "settingsAddRemote",
+        "settingsFetchRemote",
+        "settingsRemoveRemote",
+    ];
+
     constructor(
         private readonly _gitService: GitService,
         private readonly _getUniqueRemotes: () => Promise<{ name: string; url: string }[]>,

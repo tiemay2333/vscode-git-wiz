@@ -1,8 +1,20 @@
+import type { IMessageHandler } from "./IMessageHandler";
 import type { GraphState } from "@/core/GraphState";
 import type { FromWebviewMessage } from "@/views/types/WebviewProtocol";
 import * as vscode from "vscode";
 
-export class UIStateHandler implements vscode.Disposable {
+export class UIStateHandler implements IMessageHandler {
+    readonly commands: FromWebviewMessage["command"][] = [
+        "search",
+        "refresh",
+        "clearBranchFilter",
+        "filterByFile",
+        "clearFileFilter",
+        "loadMoreCommits",
+        "showErrorMessage",
+        "requestUnfilteredCommits",
+    ];
+
     constructor(
         private readonly _state: GraphState,
         private readonly _refresh: (resetScroll?: boolean) => Promise<void>,

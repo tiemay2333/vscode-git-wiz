@@ -1,7 +1,13 @@
+import type { IMessageHandler } from "./IMessageHandler";
 import type { FromWebviewMessage } from "@/views/types/WebviewProtocol";
 import * as vscode from "vscode";
 
-export class FileHandler implements vscode.Disposable {
+export class FileHandler implements IMessageHandler {
+    readonly commands: FromWebviewMessage["command"][] = [
+        "openDiff",
+        "openFile",
+    ];
+
     constructor() { }
 
     dispose(): void {

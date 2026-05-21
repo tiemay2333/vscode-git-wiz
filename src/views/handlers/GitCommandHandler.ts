@@ -1,3 +1,4 @@
+import type { IMessageHandler } from "./IMessageHandler";
 import type { GitWorkflowEngine } from "@/git/workflow/engine";
 import type { FromWebviewMessage } from "@/views/types/WebviewProtocol";
 import * as vscode from "vscode";
@@ -12,7 +13,32 @@ import { RevertWorkflow } from "@/git/workflow/impl/RevertWorkflow";
 import { SquashWorkflow } from "@/git/workflow/impl/SquashWorkflow";
 import { t } from "@/locale/i18n";
 
-export class GitCommandHandler implements vscode.Disposable {
+export class GitCommandHandler implements IMessageHandler {
+    readonly commands: FromWebviewMessage["command"][] = [
+        "cherryPick",
+        "copyHash",
+        "copyCommitMessage",
+        "revertCommit",
+        "resetToCommit",
+        "dropCommit",
+        "squashCommits",
+        "cherryPickRange",
+        "revertCommits",
+        "dropCommits",
+        "pushTag",
+        "newTag",
+        "createBranch",
+        "selectBranch",
+        "deleteMultipleBranches",
+        "createBranchFromTag",
+        "deleteTag",
+        "checkoutBranch",
+        "deleteBranch",
+        "deleteRemoteBranch",
+        "rebaseBranch",
+        "mergeBranch",
+    ];
+
     constructor(
         private readonly _workflowEngine: GitWorkflowEngine,
         private readonly _filterByBranch: (branch: string | null) => void,

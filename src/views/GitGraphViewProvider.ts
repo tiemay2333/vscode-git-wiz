@@ -4,8 +4,9 @@ import type { FromWebviewMessage } from "./types/WebviewProtocol";
 import type { BaseWorkflow } from "@/git/workflow/base";
 import * as vscode from "vscode";
 import { t } from "@/locale/i18n";
-import { FileHandler, GitCommandHandler, SettingsHandler, UIStateHandler } from "./handlers";
-import { getCommitDetailsHtml, getHtmlForWebview } from "./webviewContent";
+import { CoreHandler, FileHandler, GitCommandHandler, SettingsHandler, UIStateHandler } from "./handlers";
+import { MessageDispatcher } from "./MessageDispatcher";
+import { getHtmlForWebview } from "./webviewContent";
 import { WebviewMessenger } from "./WebviewMessenger";
 
 export class GitGraphViewProvider implements vscode.WebviewViewProvider, vscode.Disposable {
@@ -16,15 +17,11 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider, vscode.
     private _disposables: vscode.Disposable[] = [];
     private _dataManager: IViewDataManager;
     private _loadingCount = 0;
-    private _messageQueue: Promise<void> = Promise.resolve();
 
     private readonly _messenger: WebviewMessenger;
+    private _dispatcher!: MessageDispatcher;
 
     private _settingsScope: "local" | "global" = "global";
-    private _gitCommandHandler!: GitCommandHandler;
-    private _settingsHandler!: SettingsHandler;
-    private readonly _uiStateHandler: UIStateHandler;
-    private readonly _fileHandler: FileHandler;
 
     constructor(
         private readonly _extensionUri: vscode.Uri,
@@ -32,23 +29,57 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider, vscode.
         private readonly _registry: DataManagerRegistry,
     ) {
         this._dataManager = this._registry.getManagerForPath(this.cwd);
-
         this._messenger = new WebviewMessenger();
 
         this._initHandlers();
+        this.subscribeToEvents();
+    }
 
-        this._uiStateHandler = new UIStateHandler(
+    private _initHandlers() {
+        this._dispatcher?.dispose();
+        this._dispatcher = new MessageDispatcher();
+
+        // eslint-disable-next-line ts/no-this-alias
+        const provider = this;
+
+        // Register Core Handler
+        this._dispatcher.register(new CoreHandler(
+            this._extensionUri,
+            this._dataManager,
+            this._messenger,
+            (k, d) => this.getConfig(k, d),
+        ));
+
+        // Register Git Command Handler
+        this._dispatcher.register(new GitCommandHandler(
+            this._dataManager.workflowEngine,
+            branch => this.filterByBranch(branch),
+        ));
+
+        // Register Settings Handler
+        this._dispatcher.register(new SettingsHandler(
+            this._dataManager.gitService,
+            () => this._dataManager.refs.getUniqueRemotes(),
+            (scope) => { this._settingsScope = scope; },
+            visible => this.setLoading(visible),
+        ));
+
+        // Register File Handler
+        this._dispatcher.register(new FileHandler());
+
+        // Register UI State Handler
+        this._dispatcher.register(new UIStateHandler(
             {
-                get filterBranch() { return this._dataManager.getSnapshot()?.filterBranch ?? null; },
-                get filterFile() { return this._dataManager.getSnapshot()?.filterFile ?? null; },
-                get loadedCount() { return this._dataManager.getSnapshot()?.loadedCount ?? 0; },
-                set filterBranch(v: string | null) { this._dataManager.setFilterBranch(v); },
-                set filterFile(v: string | null) { this._dataManager.setFilterFile(v); },
+                get filterBranch() { return provider._dataManager.getSnapshot()?.filterBranch ?? null; },
+                get filterFile() { return provider._dataManager.getSnapshot()?.filterFile ?? null; },
+                get loadedCount() { return provider._dataManager.getSnapshot()?.loadedCount ?? 0; },
+                set filterBranch(v: string | null) { provider._dataManager.setFilterBranch(v); },
+                set filterFile(v: string | null) { provider._dataManager.setFilterFile(v); },
                 set loadedCount(_v: number) { /* handled by VDM */ },
                 resetFilters: () => {
-                    this._dataManager.setFilterBranch(null);
-                    this._dataManager.setFilterFile(null);
-                    this._dataManager.setSearchFilters(undefined);
+                    provider._dataManager.setFilterBranch(null);
+                    provider._dataManager.setFilterFile(null);
+                    provider._dataManager.setSearchFilters(undefined);
                 },
             } as any,
             (reset?: boolean) => this.refresh(reset),
@@ -58,26 +89,7 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider, vscode.
                 this._dataManager.setSearchFilters(undefined);
                 this._dataManager.refreshAll({ resetScroll: true });
             },
-        );
-        this._fileHandler = new FileHandler();
-
-        this.subscribeToEvents();
-    }
-
-    private _initHandlers() {
-        this._gitCommandHandler?.dispose();
-        this._gitCommandHandler = new GitCommandHandler(
-            this._dataManager.workflowEngine,
-            branch => this.filterByBranch(branch),
-        );
-
-        this._settingsHandler?.dispose();
-        this._settingsHandler = new SettingsHandler(
-            this._dataManager.gitService,
-            () => this._dataManager.refs.getUniqueRemotes(),
-            (scope) => { this._settingsScope = scope; },
-            visible => this.setLoading(visible),
-        );
+        ));
     }
 
     private subscribeToEvents() {
@@ -225,68 +237,7 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider, vscode.
     }
 
     private async handleMessage(message: FromWebviewMessage, webview: vscode.Webview) {
-        const cmd = message.command;
-
-        // 立即处理同步状态，不入队
-        if (cmd === "ready") {
-            this._dataManager.setReady(true);
-            return;
-        }
-
-        // 使用队列序列化所有异步操作
-        this._messageQueue = this._messageQueue.then(async () => {
-            try {
-                // Special case: reverify commit highlight
-                if (cmd === "reverifyCommit") {
-                    await this._reverifyCommit(message.commitHash);
-                    return;
-                }
-
-                // Git operations — delegate to GitCommandHandler
-                if (cmd === "cherryPick"
-                    || cmd === "copyHash" || cmd === "copyCommitMessage"
-                    || cmd === "revertCommit" || cmd === "resetToCommit"
-                    || cmd === "dropCommit" || cmd === "squashCommits" || cmd === "cherryPickRange"
-                    || cmd === "revertCommits" || cmd === "dropCommits" || cmd === "pushTag"
-                    || cmd === "newTag" || cmd === "createBranch" || cmd === "selectBranch"
-                    || cmd === "deleteMultipleBranches" || cmd === "createBranchFromTag"
-                    || cmd === "deleteTag" || cmd === "checkoutBranch" || cmd === "deleteBranch"
-                    || cmd === "deleteRemoteBranch" || cmd === "rebaseBranch" || cmd === "mergeBranch") {
-                    await this._gitCommandHandler.handle(message);
-                    return;
-                }
-                // Settings & configuration — delegate to SettingsHandler
-                if (cmd === "saveFilesViewMode" || cmd === "saveCommitDetailsViewMode"
-                    || cmd === "settingsUpdateSetting" || cmd === "settingsSetGitConfig"
-                    || cmd === "settingsGetGitConfig" || cmd === "settingsAddRemote"
-                    || cmd === "settingsRemoveRemote" || cmd === "settingsFetchRemote") {
-                    await this._settingsHandler.handle(message, webview);
-                    return;
-                }
-                // File & diff operations
-                if (cmd === "getCommitFiles") {
-                    await this.getCommitFiles(message.commitHash, webview);
-                    return;
-                }
-                if (cmd === "openDiff" || cmd === "openFile") {
-                    this._fileHandler.handle(message);
-                    return;
-                }
-                // UI state management — delegate to UIStateHandler
-                await this._uiStateHandler.handle(message, webview);
-            }
-            catch (error) {
-                console.error(`Error handling webview message ${cmd}:`, error);
-            }
-        });
-
-        await this._messageQueue;
-    }
-
-    private async _reverifyCommit(_commitHash: string): Promise<void> {
-        // This logic is ideally in VDM or a dedicated domain service
-        // For now, delegate to VDM refresh
-        this._dataManager.refreshAll();
+        await this._dispatcher.dispatch(message, webview);
     }
 
     private getConfig<T>(key: string, defaultValue: T): T {
@@ -331,10 +282,7 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider, vscode.
     public dispose() {
         this._disposables.forEach(d => d.dispose());
         this._disposables = [];
-        this._gitCommandHandler.dispose();
-        this._settingsHandler.dispose();
-        this._uiStateHandler.dispose();
-        this._fileHandler.dispose();
+        this._dispatcher.dispose();
     }
 
     public async showSettings() {
@@ -415,46 +363,6 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider, vscode.
 
         if ((oldCount === 0 && this._loadingCount > 0) || (oldCount > 0 && this._loadingCount === 0)) {
             this._messenger.postMessage({ command: "setLoading", visible: this._loadingCount > 0 });
-        }
-    }
-
-    private async getCommitFiles(commitHash: string, _webview: vscode.Webview) {
-        const files = await this._dataManager.history.getGitLog(null, 0, 1, { query: commitHash });
-        if (files.length > 0) {
-            const commit = files[0];
-            const patchResult = await this._dataManager.gitService.getRunner().exec(["show", commitHash, "--patch"]);
-            const patch = patchResult.exitCode === 0 ? patchResult.stdout : "";
-
-            const data = {
-                fullHash: commit.hash,
-                authorEmail: commit.email,
-                authorName: commit.author,
-                authorDate: commit.date,
-                commitDate: commit.date,
-                subject: commit.message,
-                body: "",
-                patch,
-            };
-
-            const detailsMode = this.getConfig<"tree" | "list">("commitDetailsViewMode", "list");
-
-            const panel = this._messenger.panel;
-            if (panel) {
-                const panelWebview = panel.webview;
-                panelWebview.html = getCommitDetailsHtml(panelWebview, data, this._extensionUri, detailsMode, vscode.env.language);
-            }
-        }
-
-        try {
-            const filesData = await this._dataManager.files.getCommitFiles(commitHash);
-            this._messenger.postMessage({ command: "commitFilesData", commitHash, files: filesData });
-        }
-        catch (e: any) {
-            this._messenger.postMessage({
-                command: "commitFilesData",
-                commitHash,
-                error: e.message || "Failed to load commit files",
-            });
         }
     }
 
