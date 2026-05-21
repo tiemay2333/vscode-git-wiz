@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 27
+- **Total Sessions**: 28
 - **Last Active**: 2026-05-21
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~943 | Active |
+| `journal-1.md` | ~976 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 28 | 2026-05-21 | Refactor ViewDataManager with Registry and Factory | `2960a98` | `dev` |
 | 27 | 2026-05-21 | 重构 GitGraphViewProvider：职责拆分 | `c7a8f4b`, `651bdb1` | `dev` |
 | 26 | 2026-05-20 | 修复 Switch Repository 按钮无响应并同步 Git 扩展 | `494f1ef` | `dev` |
 | 25 | 2026-05-20 | Internationalize SettingsHandler and add remote removal confirmation | `ccea610` | `dev` |

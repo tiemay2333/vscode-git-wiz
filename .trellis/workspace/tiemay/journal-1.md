@@ -941,3 +941,36 @@ Internationalized notification messages and input prompts in SettingsHandler.ts.
 ### Next Steps
 
 - None - task complete
+
+
+## Session 28: Refactor ViewDataManager with Registry and Factory
+
+**Date**: 2026-05-21
+**Task**: Refactor ViewDataManager with Registry and Factory
+**Branch**: `dev`
+
+### Summary
+
+Implemented DataManagerRegistry and ViewDataManagerFactory to decouple ViewDataManager from its dependencies and centralize repository lifecycle management. Replaced static singleton patterns with a registry-based approach injected into GitGraphViewProvider. Fixed a multi-root workspace bug where file watchers were hardcoded to the first workspace. Added unit tests for the registry.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `2960a98` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
