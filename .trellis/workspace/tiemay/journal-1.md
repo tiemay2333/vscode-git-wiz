@@ -1073,3 +1073,36 @@ Introduced a strong-typed Webview communication protocol using discriminated uni
 ### Next Steps
 
 - None - task complete
+
+
+## Session 32: Modularize extension.ts and Decouple Command Registration
+
+**Date**: 2026-05-21
+**Task**: Modularize extension.ts and Decouple Command Registration
+**Branch**: `dev`
+
+### Summary
+
+Drastically reduced the size of extension.ts by moving VSCode command registration into a modular CommandManager architecture. Introduced ICommandGroup interface and split commands into GitCommandGroup and ViewCommandGroup. Extracted TextDocumentContentProvider into GitWizContentProvider. The entry point now focus solely on high-level component assembly, improving maintainability and readability.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `2960a98` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete

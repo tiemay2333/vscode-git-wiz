@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 31
+- **Total Sessions**: 32
 - **Last Active**: 2026-05-21
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~1075 | Active |
+| `journal-1.md` | ~1108 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 32 | 2026-05-21 | Modularize extension.ts and Decouple Command Registration | `2960a98` | `dev` |
 | 31 | 2026-05-21 | Improve Webview Messaging Type Safety | `2960a98` | `dev` |
 | 30 | 2026-05-21 | Reorganize Handlers and Unify Naming | `fa41473` | `dev` |
 | 29 | 2026-05-21 | Consolidate Refresh and Flow Control Logic | `e0aa94a` | `dev` |
