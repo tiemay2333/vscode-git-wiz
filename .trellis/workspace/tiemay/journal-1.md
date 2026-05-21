@@ -1106,3 +1106,36 @@ Drastically reduced the size of extension.ts by moving VSCode command registrati
 ### Next Steps
 
 - None - task complete
+
+
+## Session 33: Refactor GitService into Domain-Driven Deep Module
+
+**Date**: 2026-05-21
+**Task**: Refactor GitService into Domain-Driven Deep Module
+**Branch**: `dev`
+
+### Summary
+
+Refactored GitService from a shallow facade into a structured deep module with five domains (history, refs, ops, files, config). Updated ViewDataManager and migrated all call sites (15+ workflows, UI converters, and providers) to use the new architecture. Verified with TSC and unit tests.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `cef9d71` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
