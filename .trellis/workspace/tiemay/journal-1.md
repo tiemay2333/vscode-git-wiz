@@ -974,3 +974,36 @@ Implemented DataManagerRegistry and ViewDataManagerFactory to decouple ViewDataM
 ### Next Steps
 
 - None - task complete
+
+
+## Session 29: Consolidate Refresh and Flow Control Logic
+
+**Date**: 2026-05-21
+**Task**: Consolidate Refresh and Flow Control Logic
+**Branch**: `dev`
+
+### Summary
+
+Refactored the refresh flow by centralizing debounce, lock management, and state merging (e.g., resetScroll) into ViewDataManager. Simplified RefreshManager to focus strictly on view readiness and mutual exclusion. Updated GitGraphViewProvider to adapt to the new event-driven refresh pipeline. Added comprehensive unit tests for ViewDataManager's refresh logic.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `e0aa94a` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
