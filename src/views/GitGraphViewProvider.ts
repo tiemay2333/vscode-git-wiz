@@ -1,5 +1,6 @@
 import type { DataManagerRegistry } from "./dataManager/DataManagerRegistry";
 import type { IViewDataManager } from "./dataManager/IViewDataManager";
+import type { FromWebviewMessage, ToWebviewMessage } from "./types/WebviewProtocol";
 import type { CommitUIStatus } from "./UIConverter";
 import type { BaseWorkflow } from "@/git/workflow/base";
 import * as vscode from "vscode";
@@ -13,27 +14,6 @@ import { getCommitDetailsHtml, getHtmlForWebview } from "./webviewContent";
 import { WebviewMessenger } from "./WebviewMessenger";
 
 const PAGE_SIZE = 200;
-
-export interface WebviewMessage {
-    command: string;
-    commitHash?: string;
-    commitMessage?: string;
-    newMessage?: string;
-    hashes?: string[];
-    parentHash?: string;
-    filePath?: string;
-    filters?: { query?: string; author?: string; from?: string; to?: string };
-    branchName?: string;
-    branchNames?: string[];
-    tagName?: string;
-    isRemote?: boolean;
-    mode?: "list" | "tree";
-    error?: string;
-    key?: string;
-    value?: unknown;
-    scope?: "local" | "global";
-    remoteName?: string;
-}
 
 export class GitGraphViewProvider implements vscode.WebviewViewProvider, vscode.Disposable {
     public static readonly viewType = "gitLeanGraphView";
@@ -205,7 +185,7 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider, vscode.
         this.updateWebview(webviewView.webview);
     }
 
-    private async handleMessage(message: WebviewMessage, webview: vscode.Webview) {
+    private async handleMessage(message: FromWebviewMessage, webview: vscode.Webview) {
         const cmd = message.command;
 
         // 立即处理同步状态，不入队
@@ -218,7 +198,7 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider, vscode.
         this._messageQueue = this._messageQueue.then(async () => {
             try {
                 // Special case: reverify commit highlight
-                if (cmd === "reverifyCommit" && message.commitHash) {
+                if (cmd === "reverifyCommit") {
                     await this._reverifyCommit(message.commitHash);
                     return;
                 }
@@ -233,7 +213,7 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider, vscode.
                     || cmd === "deleteMultipleBranches" || cmd === "createBranchFromTag"
                     || cmd === "deleteTag" || cmd === "checkoutBranch" || cmd === "deleteBranch"
                     || cmd === "deleteRemoteBranch" || cmd === "rebaseBranch" || cmd === "mergeBranch") {
-                    await this._gitCommandHandler.handle(cmd, message);
+                    await this._gitCommandHandler.handle(message);
                     return;
                 }
                 // Settings & configuration — delegate to SettingsHandler
@@ -241,20 +221,20 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider, vscode.
                     || cmd === "settingsUpdateSetting" || cmd === "settingsSetGitConfig"
                     || cmd === "settingsGetGitConfig" || cmd === "settingsAddRemote"
                     || cmd === "settingsRemoveRemote" || cmd === "settingsFetchRemote") {
-                    await this._settingsHandler.handle(cmd, message, webview);
+                    await this._settingsHandler.handle(message, webview);
                     return;
                 }
                 // File & diff operations
                 if (cmd === "getCommitFiles") {
-                    await this.getCommitFiles(message.commitHash!, webview);
+                    await this.getCommitFiles(message.commitHash, webview);
                     return;
                 }
                 if (cmd === "openDiff" || cmd === "openFile") {
-                    this._fileHandler.handle(cmd, message);
+                    this._fileHandler.handle(message);
                     return;
                 }
                 // UI state management — delegate to UIStateHandler
-                await this._uiStateHandler.handle(cmd, message, webview);
+                await this._uiStateHandler.handle(message, webview);
             }
             catch (error) {
                 console.error(`Error handling webview message ${cmd}:`, error);
@@ -368,7 +348,7 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider, vscode.
 
         this._state.loadedCount = commits.length;
         const hasMore = commits.length >= countToLoad;
-        const msg = {
+        const msg: ToWebviewMessage = {
             command: "replaceCommits",
             commits,
             uiStatus,

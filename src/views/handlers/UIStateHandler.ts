@@ -1,5 +1,5 @@
 import type { GraphState } from "@/core/GraphState";
-import type { WebviewMessage } from "@/views/GitGraphViewProvider";
+import type { FromWebviewMessage } from "@/views/types/WebviewProtocol";
 import * as vscode from "vscode";
 
 export class UIStateHandler implements vscode.Disposable {
@@ -15,8 +15,8 @@ export class UIStateHandler implements vscode.Disposable {
         // No resources to manage
     }
 
-    async handle(cmd: string, msg: WebviewMessage, webview: vscode.Webview): Promise<void> {
-        switch (cmd) {
+    async handle(msg: FromWebviewMessage, webview: vscode.Webview): Promise<void> {
+        switch (msg.command) {
             case "search":
                 this._state.searchFilters = msg.filters;
                 await this._refresh(true);
@@ -29,7 +29,7 @@ export class UIStateHandler implements vscode.Disposable {
                 await this._refresh(true);
                 break;
             case "filterByFile":
-                this._state.filterFile = msg.filePath || null;
+                this._state.filterFile = msg.filePath;
                 await this._refresh(true);
                 break;
             case "clearFileFilter":

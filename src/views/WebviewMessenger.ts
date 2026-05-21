@@ -1,7 +1,9 @@
 import type * as vscode from "vscode";
+import type { ToWebviewMessage } from "./types/WebviewProtocol";
 
 /**
  * WebviewMessenger 负责 Webview 消息通信。
+ * 通过 ToWebviewMessage 强类型约束发送的消息。
  */
 export class WebviewMessenger {
     private _view?: vscode.WebviewView;
@@ -17,7 +19,7 @@ export class WebviewMessenger {
         this._panel = panel;
     }
 
-    public postMessage(message: any): void {
+    public postMessage(message: ToWebviewMessage): void {
         this._view?.webview.postMessage(message);
         this._panel?.webview.postMessage(message);
     }

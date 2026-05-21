@@ -1,4 +1,4 @@
-import type { WebviewMessage } from "@/views/GitGraphViewProvider";
+import type { FromWebviewMessage } from "@/views/types/WebviewProtocol";
 import * as vscode from "vscode";
 
 export class FileHandler implements vscode.Disposable {
@@ -8,13 +8,13 @@ export class FileHandler implements vscode.Disposable {
         // No resources to manage
     }
 
-    handle(cmd: string, msg: WebviewMessage): void {
-        switch (cmd) {
+    handle(msg: FromWebviewMessage): void {
+        switch (msg.command) {
             case "openDiff":
-                this._openDiff(msg.commitHash!, msg.filePath!, msg.parentHash);
+                this._openDiff(msg.commitHash, msg.filePath, msg.parentHash);
                 break;
             case "openFile":
-                this._openFile(msg.filePath!);
+                this._openFile(msg.filePath);
                 break;
         }
     }

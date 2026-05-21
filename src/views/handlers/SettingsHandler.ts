@@ -1,5 +1,5 @@
 import type { GitService } from "@/git/core/GitService";
-import type { WebviewMessage } from "@/views/GitGraphViewProvider";
+import type { FromWebviewMessage } from "@/views/types/WebviewProtocol";
 import * as vscode from "vscode";
 import { t } from "@/locale/i18n";
 
@@ -15,9 +15,9 @@ export class SettingsHandler implements vscode.Disposable {
         // No resources to manage
     }
 
-    async handle(cmd: string, msg: WebviewMessage, webview: vscode.Webview): Promise<void> {
+    async handle(msg: FromWebviewMessage, webview: vscode.Webview): Promise<void> {
         const locale = vscode.env.language;
-        switch (cmd) {
+        switch (msg.command) {
             case "saveFilesViewMode":
                 vscode.workspace.getConfiguration("git-wiz").update("filesViewMode", msg.mode, vscode.ConfigurationTarget.Global);
                 break;
@@ -26,26 +26,26 @@ export class SettingsHandler implements vscode.Disposable {
                 break;
             case "settingsUpdateSetting": {
                 const config = vscode.workspace.getConfiguration("git-wiz");
-                await config.update(msg.key!, msg.value, vscode.ConfigurationTarget.Global);
+                await config.update(msg.key, msg.value, vscode.ConfigurationTarget.Global);
                 if (msg.key === "showTags") {
                     webview.postMessage({ command: "updateShowTags", value: msg.value });
                 }
-                if (msg.key === "showRemoteBranches") {
+                else if (msg.key === "showRemoteBranches") {
                     webview.postMessage({ command: "updateShowRemoteBranches", value: msg.value });
                 }
-                if (msg.key === "showGraph") {
+                else if (msg.key === "showGraph") {
                     webview.postMessage({ command: "updateShowGraph", value: msg.value });
                 }
-                if (msg.key === "searchDefaultMode") {
+                else if (msg.key === "searchDefaultMode") {
                     webview.postMessage({ command: "updateSearchDefaultMode", value: msg.value });
                 }
                 break;
             }
             case "settingsSetGitConfig":
-                await this._gitService.setGitConfig(msg.key!, msg.value as string, msg.scope!);
+                await this._gitService.setGitConfig(msg.key, msg.value, msg.scope);
                 break;
             case "settingsGetGitConfig": {
-                const scope = msg.scope!;
+                const scope = msg.scope;
                 this._setScope(scope);
                 const userName = await this._gitService.getGitConfig("user.name", scope) || "";
                 const userEmail = await this._gitService.getGitConfig("user.email", scope) || "";
@@ -81,7 +81,7 @@ export class SettingsHandler implements vscode.Disposable {
                 break;
             }
             case "settingsFetchRemote": {
-                const name = msg.remoteName!;
+                const name = msg.remoteName;
                 try {
                     this._setLoading(true);
                     await this._gitService.fetchRemote(name);
@@ -97,7 +97,7 @@ export class SettingsHandler implements vscode.Disposable {
                 break;
             }
             case "settingsRemoveRemote": {
-                const name = msg.remoteName!;
+                const name = msg.remoteName;
                 const confirm = await vscode.window.showWarningMessage(
                     t(locale, "removeRemoteConfirm", { name }),
                     { modal: true },
