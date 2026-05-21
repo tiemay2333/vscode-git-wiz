@@ -107,7 +107,9 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider, vscode.
         this._disposables = [];
 
         // Subscribe to global events
-        this._disposables.push(this._dataManager.onDidRefresh(() => this.refresh()));
+        this._disposables.push(this._dataManager.onDidRefresh((options) => {
+            this._refreshManager.refresh(options);
+        }));
         this._disposables.push(this._dataManager.onDidUpdateCommitHighlight((e: { hash: string; verificationStatus: string }) => {
             this._messenger.postMessage({ command: "updateCommitHighlight", hash: e.hash, verificationStatus: e.verificationStatus });
         }));
@@ -347,7 +349,7 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider, vscode.
     }
 
     public async refresh(resetScroll: boolean = false) {
-        await this._refreshManager.refresh(resetScroll);
+        this._dataManager.refreshAll({ resetScroll });
     }
 
     private async _doRefresh(resetScroll: boolean) {

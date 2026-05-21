@@ -1,4 +1,4 @@
-import type { IViewDataManager } from "./dataManager/IViewDataManager";
+import type { IViewDataManager, RefreshOptions } from "./dataManager/IViewDataManager";
 import type { GitService } from "@/git/core/GitService";
 import type { AsyncHighlightVerifier } from "@/git/highlight/AsyncHighlightVerifier";
 import type { GitWorkflowEngine } from "@/git/workflow/engine";
@@ -8,7 +8,7 @@ import * as vscode from "vscode";
  * ViewDataManager 负责集中管理特定 Git 仓库的资源、状态和监听器。
  */
 export class ViewDataManager implements IViewDataManager {
-    private readonly _onDidRefresh = new vscode.EventEmitter<void>();
+    private readonly _onDidRefresh = new vscode.EventEmitter<RefreshOptions>();
     private readonly _onDidUpdateCommitHighlight = new vscode.EventEmitter<{ hash: string; verificationStatus: string }>();
     private readonly _onDidUpdateLoading = new vscode.EventEmitter<boolean>();
     private _watchers: vscode.Disposable[] = [];
@@ -16,6 +16,7 @@ export class ViewDataManager implements IViewDataManager {
     private _refreshTimer?: ReturnType<typeof setTimeout>;
     private _isLocked = false;
     private _pendingRefresh = false;
+    private _pendingResetScroll = false;
 
     public readonly onDidRefresh = this._onDidRefresh.event;
     public readonly onDidUpdateCommitHighlight = this._onDidUpdateCommitHighlight.event;
@@ -59,18 +60,25 @@ export class ViewDataManager implements IViewDataManager {
         return this._verifier;
     }
 
-    public refreshAll() {
+    public refreshAll(options: RefreshOptions = {}) {
+        this._pendingResetScroll = this._pendingResetScroll || !!options.resetScroll;
+
         if (this._isLocked) {
             this._pendingRefresh = true;
             return;
         }
+
         this._pendingRefresh = false;
         this._verifier.reset();
+
         if (this._refreshTimer) {
             clearTimeout(this._refreshTimer);
         }
+
         this._refreshTimer = setTimeout(() => {
-            this._onDidRefresh.fire();
+            const resetScroll = this._pendingResetScroll;
+            this._pendingResetScroll = false;
+            this._onDidRefresh.fire({ resetScroll });
         }, 500);
     }
 

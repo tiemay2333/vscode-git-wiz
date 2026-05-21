@@ -1,6 +1,9 @@
+import type { RefreshOptions } from "./dataManager/IViewDataManager";
+
 /**
- * RefreshManager 采用状态机 + 请求合并方案管理刷新逻辑。
- * 当刷新正在进行时，新的请求将被合并，仅在当前刷新结束后执行最后一次最新请求。
+ * RefreshManager 负责视图层的刷新流控。
+ * 1. 确保在 Webview 未就绪（ready）时不执行刷新，而是将请求挂起。
+ * 2. 确保在刷新正在进行时，不会发起并发刷新，而是合并后续请求。
  */
 export class RefreshManager {
     private _refreshing = false;
@@ -13,7 +16,7 @@ export class RefreshManager {
     public setInitialized(initialized: boolean) {
         this._initialized = initialized;
         if (this._initialized && this._pendingRefresh) {
-            this.refresh();
+            this.refresh({ resetScroll: this._pendingResetScroll });
         }
     }
 
@@ -26,16 +29,12 @@ export class RefreshManager {
     }
 
     /**
-     * 请求刷新。如果正在刷新，则将请求标记为待处理。
+     * 请求刷新。如果正在刷新或未初始化，则将请求标记为待处理。
      */
-    public async refresh(resetScroll: boolean = false) {
-        if (!this._initialized) {
-            this._pendingRefresh = true;
-            this._pendingResetScroll = this._pendingResetScroll || resetScroll;
-            return;
-        }
+    public async refresh(options: RefreshOptions = {}) {
+        const resetScroll = !!options.resetScroll;
 
-        if (this._refreshing) {
+        if (!this._initialized || this._refreshing) {
             this._pendingRefresh = true;
             this._pendingResetScroll = this._pendingResetScroll || resetScroll;
             return;
@@ -44,23 +43,20 @@ export class RefreshManager {
         await this.triggerRefresh(resetScroll);
     }
 
-    private async triggerRefresh(resetScroll: boolean = false) {
-        const actualResetScroll = resetScroll || this._pendingResetScroll;
+    private async triggerRefresh(resetScroll: boolean) {
         this._pendingResetScroll = false;
         this._pendingRefresh = false;
 
         this._refreshing = true;
         try {
-            await this._refreshCallback(actualResetScroll);
+            await this._refreshCallback(resetScroll);
         }
         finally {
             this._refreshing = false;
             if (this._pendingRefresh) {
                 const nextReset = this._pendingResetScroll;
-                this._pendingRefresh = false;
-                this._pendingResetScroll = false;
                 // 使用 Promise.resolve() 确保在微任务队列中执行，避免递归深度过大
-                Promise.resolve().then(() => this.refresh(nextReset));
+                Promise.resolve().then(() => this.refresh({ resetScroll: nextReset }));
             }
         }
     }
