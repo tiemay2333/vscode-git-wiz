@@ -1,5 +1,6 @@
+import type { WorkflowContext } from "@/git/workflow/base";
+import { BaseWorkflow } from "@/git/workflow/base";
 import { t } from "@/locale/i18n";
-import { BaseWorkflow, WorkflowContext } from "@/git/workflow/base";
 
 export class CreateBranchWorkflow extends BaseWorkflow {
     readonly id = "create-branch";
@@ -26,10 +27,11 @@ export class CreateBranchWorkflow extends BaseWorkflow {
             },
         });
 
-        if (!newBranchName) return;
+        if (!newBranchName)
+            return;
 
         await ui.showProgress(t(locale, "branchCreateTitle", { name: newBranchName, source: this._sourceBranch }), async () => {
-            await git.checkoutBranch(newBranchName, { create: true, startPoint: this._sourceBranch });
+            await git.ops.checkoutBranch(newBranchName, { create: true, startPoint: this._sourceBranch });
             ui.notify(t(locale, "branchCreateSuccess", { name: newBranchName, source: this._sourceBranch }), "info");
             refresh();
         });

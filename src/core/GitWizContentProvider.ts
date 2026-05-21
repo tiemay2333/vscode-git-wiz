@@ -15,7 +15,7 @@ export class GitWizContentProvider implements vscode.TextDocumentContentProvider
             const service = this._registry.getActiveManager()?.gitService;
             if (!service)
                 return "";
-            return await service.getFileContentAtRev(hash, fileParam || uri.path.substring(1));
+            return await service.files.getFileContentAtRev(hash, fileParam || uri.path.substring(1));
         }
         catch {
             return "";

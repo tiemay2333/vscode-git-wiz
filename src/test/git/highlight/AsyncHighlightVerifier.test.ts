@@ -9,15 +9,17 @@ describe("asyncHighlightVerifier", () => {
 
     beforeEach(() => {
         mockGitService = {
-            getPatchId: vi.fn(),
-            getCommitFilePatchIds: vi.fn(),
+            history: {
+                getPatchId: vi.fn(),
+                getCommitFilePatchIds: vi.fn(),
+            },
         };
         onUpdate = vi.fn();
         verifier = new AsyncHighlightVerifier(mockGitService as any as GitService, onUpdate);
     });
 
     it("verifies when full patch-id matches", async () => {
-        mockGitService.getPatchId.mockImplementation(async (hash: string) => {
+        mockGitService.history.getPatchId.mockImplementation(async (hash: string) => {
             if (hash === "source" || hash === "target")
                 return "pid-match";
             return "pid-other";
@@ -32,10 +34,10 @@ describe("asyncHighlightVerifier", () => {
     });
 
     it("fails when patch-id differs and paths differ", async () => {
-        mockGitService.getPatchId.mockImplementation(async (hash: string) => {
+        mockGitService.history.getPatchId.mockImplementation(async (hash: string) => {
             return hash === "source" ? "pid1" : "pid2";
         });
-        mockGitService.getCommitFilePatchIds.mockImplementation(async (hash: string) => {
+        mockGitService.history.getCommitFilePatchIds.mockImplementation(async (hash: string) => {
             if (hash === "source")
                 return new Map([["fileA", "contentA"]]);
             if (hash === "target")
@@ -50,10 +52,10 @@ describe("asyncHighlightVerifier", () => {
     });
 
     it("verifies when patch-id differs but all files match (PFM)", async () => {
-        mockGitService.getPatchId.mockImplementation(async (hash: string) => {
+        mockGitService.history.getPatchId.mockImplementation(async (hash: string) => {
             return hash === "source" ? "pid1" : "pid2";
         });
-        mockGitService.getCommitFilePatchIds.mockImplementation(async () => {
+        mockGitService.history.getCommitFilePatchIds.mockImplementation(async () => {
             // Both source and target have same files with same content hashes
             return new Map([["fileA", "contentA"], ["fileB", "contentB"]]);
         });
@@ -65,10 +67,10 @@ describe("asyncHighlightVerifier", () => {
     });
 
     it("fails when paths match but one file content differs", async () => {
-        mockGitService.getPatchId.mockImplementation(async (hash: string) => {
+        mockGitService.history.getPatchId.mockImplementation(async (hash: string) => {
             return hash === "source" ? "pid1" : "pid2";
         });
-        mockGitService.getCommitFilePatchIds.mockImplementation(async (hash: string) => {
+        mockGitService.history.getCommitFilePatchIds.mockImplementation(async (hash: string) => {
             if (hash === "source")
                 return new Map([["fileA", "contentA"]]);
             if (hash === "target")
@@ -83,10 +85,10 @@ describe("asyncHighlightVerifier", () => {
     });
 
     it("verifies when target is a subset of source (T ⊆ S)", async () => {
-        mockGitService.getPatchId.mockImplementation(async (hash: string) => {
+        mockGitService.history.getPatchId.mockImplementation(async (hash: string) => {
             return hash === "source" ? "pid1" : "pid2";
         });
-        mockGitService.getCommitFilePatchIds.mockImplementation(async (hash: string) => {
+        mockGitService.history.getCommitFilePatchIds.mockImplementation(async (hash: string) => {
             // Target {fileA} is a subset of Source {fileA, fileB}
             if (hash === "source")
                 return new Map([["fileA", "contentA"], ["fileB", "contentB"]]);
@@ -102,10 +104,10 @@ describe("asyncHighlightVerifier", () => {
     });
 
     it("fails when target has files not in source (S ⊂ T)", async () => {
-        mockGitService.getPatchId.mockImplementation(async (hash: string) => {
+        mockGitService.history.getPatchId.mockImplementation(async (hash: string) => {
             return hash === "source" ? "pid1" : "pid2";
         });
-        mockGitService.getCommitFilePatchIds.mockImplementation(async (hash: string) => {
+        mockGitService.history.getCommitFilePatchIds.mockImplementation(async (hash: string) => {
             if (hash === "source")
                 return new Map([["fileA", "contentA"]]);
             if (hash === "target")

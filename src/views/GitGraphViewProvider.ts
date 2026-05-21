@@ -72,7 +72,7 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider, vscode.
         this._settingsHandler?.dispose();
         this._settingsHandler = new SettingsHandler(
             this._dataManager.gitService,
-            () => this._dataManager.gitService.getUniqueRemotes(),
+            () => this._dataManager.refs.getUniqueRemotes(),
             (scope) => { this._settingsScope = scope; },
             visible => this.setLoading(visible),
         );
@@ -245,16 +245,16 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider, vscode.
     }
 
     private async _reverifyCommit(commitHash: string): Promise<void> {
-        const commits = await this._dataManager.gitService.getGitLog(null, 0, 1, { query: commitHash });
+        const commits = await this._dataManager.history.getGitLog(null, 0, 1, { query: commitHash });
         if (commits.length === 0)
             return;
 
         const commit = commits[0];
-        const currentBranch = await this._dataManager.gitService.getCurrentBranch();
+        const currentBranch = await this._dataManager.refs.getCurrentBranch();
         if (!currentBranch)
             return;
 
-        const branchHashes = await this._dataManager.gitService.getBranchCommits(currentBranch);
+        const branchHashes = await this._dataManager.history.getBranchCommits(currentBranch);
 
         await this._uiConverter.ensureSignaturesLoaded(currentBranch);
 
@@ -270,8 +270,8 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider, vscode.
     }
 
     private async requestUnfilteredCommits(_webview: vscode.Webview) {
-        const commits = await this._dataManager.gitService.getUnfilteredLog(this._state.filterBranch, 0, Math.max(PAGE_SIZE, this._state.loadedCount));
-        const currentBranch = await this._dataManager.gitService.getCurrentBranch();
+        const commits = await this._dataManager.history.getUnfilteredLog(this._state.filterBranch, 0, Math.max(PAGE_SIZE, this._state.loadedCount));
+        const currentBranch = await this._dataManager.refs.getCurrentBranch();
         const highlightCurrentBranch = this.getConfig("highlightCurrentBranch", false);
 
         let uiStatus: Record<string, CommitUIStatus> = {};
@@ -331,9 +331,9 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider, vscode.
     private async _doRefresh(resetScroll: boolean) {
         this._uiConverter.resetCache();
         const countToLoad = Math.max(PAGE_SIZE, this._state.loadedCount);
-        const commits = await this._dataManager.gitService.getGitLog(this._state.filterBranch, 0, countToLoad, this._state.searchFilters, this._state.filterFile);
-        const currentBranch = await this._dataManager.gitService.getCurrentBranch();
-        const branches = await this._dataManager.gitService.getBranches();
+        const commits = await this._dataManager.history.getGitLog(this._state.filterBranch, 0, countToLoad, this._state.searchFilters, this._state.filterFile);
+        const currentBranch = await this._dataManager.refs.getCurrentBranch();
+        const branches = await this._dataManager.refs.getBranches();
         const highlightCurrentBranch = this.getConfig("highlightCurrentBranch", false);
         const showTags = this.getConfig("showTags", true);
         const showRemoteBranches = this.getConfig("showRemoteBranches", true);
@@ -384,8 +384,8 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider, vscode.
         if (!webview)
             return;
 
-        const userName = await this._dataManager.gitService.getGitConfig("user.name", this._settingsScope) || "";
-        const userEmail = await this._dataManager.gitService.getGitConfig("user.email", this._settingsScope) || "";
+        const userName = await this._dataManager.config.getGitConfig("user.name", this._settingsScope) || "";
+        const userEmail = await this._dataManager.config.getGitConfig("user.email", this._settingsScope) || "";
 
         this._messenger.postMessage({
             command: "showSettingsModal",
@@ -398,7 +398,7 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider, vscode.
                 userName,
                 userEmail,
                 scope: this._settingsScope,
-                remotes: await this._dataManager.gitService.getUniqueRemotes(),
+                remotes: await this._dataManager.refs.getUniqueRemotes(),
                 locale: vscode.env.language,
             },
         });
@@ -414,9 +414,9 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider, vscode.
         try {
             this._state.loadedCount = 0;
             const countToLoad = Math.max(PAGE_SIZE, this._state.loadedCount);
-            const commits = await this._dataManager.gitService.getGitLog(this._state.filterBranch, 0, countToLoad, this._state.searchFilters, this._state.filterFile);
-            const currentBranch = await this._dataManager.gitService.getCurrentBranch();
-            const branches = await this._dataManager.gitService.getBranches();
+            const commits = await this._dataManager.history.getGitLog(this._state.filterBranch, 0, countToLoad, this._state.searchFilters, this._state.filterFile);
+            const currentBranch = await this._dataManager.refs.getCurrentBranch();
+            const branches = await this._dataManager.refs.getBranches();
             const filesViewMode = this.getConfig<"tree" | "list">("filesViewMode", "list");
             const highlightCurrentBranch = this.getConfig("highlightCurrentBranch", false);
             const showTags = this.getConfig("showTags", true);
@@ -458,14 +458,14 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider, vscode.
     }
 
     private async loadMoreCommits(_webview: vscode.Webview) {
-        const commits = await this._dataManager.gitService.getGitLog(
+        const commits = await this._dataManager.history.getGitLog(
             this._state.filterBranch,
             this._state.loadedCount,
             PAGE_SIZE,
             this._state.searchFilters,
             this._state.filterFile,
         );
-        const currentBranch = await this._dataManager.gitService.getCurrentBranch();
+        const currentBranch = await this._dataManager.refs.getCurrentBranch();
         const highlightCurrentBranch = this.getConfig("highlightCurrentBranch", false);
         const showTags = this.getConfig("showTags", true);
         const showRemoteBranches = this.getConfig("showRemoteBranches", true);
@@ -496,7 +496,7 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider, vscode.
     }
 
     private async getCommitFiles(commitHash: string, _webview: vscode.Webview) {
-        const files = await this._dataManager.gitService.getGitLog(null, 0, 1, { query: commitHash });
+        const files = await this._dataManager.history.getGitLog(null, 0, 1, { query: commitHash });
         if (files.length > 0) {
             const commit = files[0];
             const patchResult = await this._dataManager.gitService.getRunner().exec(["show", commitHash, "--patch"]);
@@ -523,7 +523,7 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider, vscode.
         }
 
         try {
-            const filesData = await this._dataManager.gitService.getCommitFiles(commitHash);
+            const filesData = await this._dataManager.files.getCommitFiles(commitHash);
             this._messenger.postMessage({ command: "commitFilesData", commitHash, files: filesData });
         }
         catch (e: any) {

@@ -1,5 +1,6 @@
+import type { WorkflowContext } from "@/git/workflow/base";
+import { BaseWorkflow } from "@/git/workflow/base";
 import { t } from "@/locale/i18n";
-import { BaseWorkflow, WorkflowContext } from "@/git/workflow/base";
 
 export class DropWorkflow extends BaseWorkflow {
     readonly id = "drop";
@@ -12,7 +13,8 @@ export class DropWorkflow extends BaseWorkflow {
     async run(context: WorkflowContext): Promise<void> {
         const { git, ui, refresh, locale } = context;
 
-        if (!this._hashes || this._hashes.length === 0) return;
+        if (!this._hashes || this._hashes.length === 0)
+            return;
 
         const isMulti = this._hashes.length > 1;
         const confirmMsg = isMulti
@@ -23,26 +25,28 @@ export class DropWorkflow extends BaseWorkflow {
         const btnCancel = t(locale, "cancel");
 
         const confirm = await ui.confirm(confirmMsg, [btnDrop, btnCancel]);
-        if (confirm !== btnDrop) return;
+        if (confirm !== btnDrop)
+            return;
 
         const title = isMulti
             ? t(locale, "dropMultiTitle", { count: this._hashes.length })
             : t(locale, "dropTitle", { hash: this._hashes[0].substring(0, 7) });
 
         await ui.showProgress(title, async () => {
-            if (isMulti) {
-                await git.dropCommits(this._hashes, this._parentHash);
-            } else {
-                await git.dropCommit(this._hashes[0]);
+            if (this._hashes.length > 1) {
+                await git.ops.dropCommits(this._hashes, this._parentHash);
             }
-            
+            else {
+                await git.ops.dropCommit(this._hashes[0]);
+            }
+
             ui.notify(
                 isMulti
                     ? t(locale, "dropMultiSuccess", { count: this._hashes.length })
                     : t(locale, "dropSuccess", { hash: this._hashes[0].substring(0, 7) }),
-                "info"
+                "info",
             );
-            
+
             refresh();
         });
     }

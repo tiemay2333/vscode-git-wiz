@@ -1,5 +1,6 @@
+import type { WorkflowContext } from "@/git/workflow/base";
+import { BaseWorkflow } from "@/git/workflow/base";
 import { t } from "@/locale/i18n";
-import { BaseWorkflow, WorkflowContext } from "@/git/workflow/base";
 import { PushTagWorkflow } from "./PushTagWorkflow";
 
 export class CreateTagWorkflow extends BaseWorkflow {
@@ -18,17 +19,18 @@ export class CreateTagWorkflow extends BaseWorkflow {
             placeHolder: "e.g. v1.0.0",
         });
 
-        if (!tagName) return;
+        if (!tagName)
+            return;
 
         await ui.showProgress(t(locale, "tagCreateTitle", { name: tagName }), async () => {
-            await git.createTag(tagName, this._commitHash);
-            
+            await git.refs.createTag(tagName, this._commitHash);
+
             const btnPush = t(locale, "tagPushPrompt");
             const action = await ui.confirm(
                 t(locale, "tagCreateSuccess", { name: tagName }),
-                [btnPush, t(locale, "cancel")]
+                [btnPush, t(locale, "cancel")],
             );
-            
+
             refresh();
 
             if (action === btnPush) {

@@ -42,13 +42,13 @@ export class SettingsHandler implements vscode.Disposable {
                 break;
             }
             case "settingsSetGitConfig":
-                await this._gitService.setGitConfig(msg.key, msg.value, msg.scope);
+                await this._gitService.config.setGitConfig(msg.key, msg.value, msg.scope);
                 break;
             case "settingsGetGitConfig": {
                 const scope = msg.scope;
                 this._setScope(scope);
-                const userName = await this._gitService.getGitConfig("user.name", scope) || "";
-                const userEmail = await this._gitService.getGitConfig("user.email", scope) || "";
+                const userName = await this._gitService.config.getGitConfig("user.name", scope) || "";
+                const userEmail = await this._gitService.config.getGitConfig("user.email", scope) || "";
                 webview.postMessage({ command: "settingsUpdateForm", userName, userEmail });
                 break;
             }
@@ -68,7 +68,7 @@ export class SettingsHandler implements vscode.Disposable {
 
                 try {
                     this._setLoading(true);
-                    await this._gitService.addRemote(name, url);
+                    await this._gitService.refs.addRemote(name, url);
                     vscode.commands.executeCommand("git-wiz.refreshBranches");
                     webview.postMessage({ command: "settingsUpdateForm", remotes: await this._getUniqueRemotes() });
                 }
@@ -84,7 +84,7 @@ export class SettingsHandler implements vscode.Disposable {
                 const name = msg.remoteName;
                 try {
                     this._setLoading(true);
-                    await this._gitService.fetchRemote(name);
+                    await this._gitService.refs.fetchRemote(name);
                     vscode.window.showInformationMessage(t(locale, "fetchRemoteSuccess", { name }));
                     vscode.commands.executeCommand("git-wiz.refreshBranches");
                 }
@@ -108,7 +108,7 @@ export class SettingsHandler implements vscode.Disposable {
 
                 try {
                     this._setLoading(true);
-                    await this._gitService.removeRemote(name);
+                    await this._gitService.refs.removeRemote(name);
                     vscode.commands.executeCommand("git-wiz.refreshBranches");
                     webview.postMessage({ command: "settingsUpdateForm", remotes: await this._getUniqueRemotes() });
                 }

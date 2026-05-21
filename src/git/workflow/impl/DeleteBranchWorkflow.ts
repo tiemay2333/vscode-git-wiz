@@ -1,5 +1,6 @@
+import type { WorkflowContext } from "@/git/workflow/base";
+import { BaseWorkflow } from "@/git/workflow/base";
 import { t } from "@/locale/i18n";
-import { BaseWorkflow, WorkflowContext } from "@/git/workflow/base";
 
 export class DeleteBranchWorkflow extends BaseWorkflow {
     readonly id = "delete-branch";
@@ -12,9 +13,10 @@ export class DeleteBranchWorkflow extends BaseWorkflow {
     async run(context: WorkflowContext): Promise<void> {
         const { git, ui, refresh, locale } = context;
 
-        if (!this._branchName) return;
+        if (!this._branchName)
+            return;
 
-        const upstream = await git.getUpstream(this._branchName);
+        const upstream = await git.refs.getUpstream(this._branchName);
 
         const btnDeleteBoth = t(locale, "deleteBoth");
         const btnDeleteLocal = t(locale, "deleteLocalOnly");
@@ -26,12 +28,13 @@ export class DeleteBranchWorkflow extends BaseWorkflow {
         if (upstream) {
             confirm = await ui.confirm(
                 t(locale, "deleteBranchUpstreamConfirm", { name: this._branchName, upstream }),
-                [btnDeleteBoth, btnDeleteLocal, btnCancel]
+                [btnDeleteBoth, btnDeleteLocal, btnCancel],
             );
-        } else {
+        }
+        else {
             confirm = await ui.confirm(
                 t(locale, "deleteBranchConfirm", { name: this._branchName }),
-                [btnConfirm, btnCancel]
+                [btnConfirm, btnCancel],
             );
         }
 
@@ -41,20 +44,22 @@ export class DeleteBranchWorkflow extends BaseWorkflow {
 
         const doDeleteRemote = confirm === btnDeleteBoth;
 
-        await ui.showProgress(t(locale, "workingOn", { action: t(locale, "deleteBranch") + ` "${this._branchName}"` }), async () => {
+        await ui.showProgress(t(locale, "workingOn", { action: `${t(locale, "deleteBranch")} "${this._branchName}"` }), async () => {
             try {
-                await git.deleteBranch(this._branchName, false);
-            } catch (err: any) {
+                await git.refs.deleteBranch(this._branchName, false);
+            }
+            catch (err: any) {
                 if (err.message.includes("not fully merged")) {
                     const forceConfirm = await ui.confirm(
                         t(locale, "forceDeleteConfirm", { name: this._branchName }),
-                        [btnForceDelete, btnCancel]
+                        [btnForceDelete, btnCancel],
                     );
                     if (forceConfirm !== btnForceDelete) {
                         return;
                     }
-                    await git.deleteBranch(this._branchName, true);
-                } else {
+                    await git.refs.deleteBranch(this._branchName, true);
+                }
+                else {
                     throw err;
                 }
             }
@@ -65,13 +70,15 @@ export class DeleteBranchWorkflow extends BaseWorkflow {
                     if (firstSlash !== -1) {
                         const remoteName = upstream.substring(0, firstSlash);
                         const remoteBranch = upstream.substring(firstSlash + 1);
-                        await git.deleteRemoteBranch(remoteName, remoteBranch);
+                        await git.refs.deleteRemoteBranch(remoteName, remoteBranch);
                         ui.notify(t(locale, "deleteBranchAllSuccess", { name: this._branchName, upstream }), "info");
                     }
-                } catch (err: any) {
+                }
+                catch (err: any) {
                     ui.notify(t(locale, "deleteRemoteBranchFailed", { error: err.message }), "error");
                 }
-            } else {
+            }
+            else {
                 ui.notify(t(locale, "deleteBranchSuccess", { name: this._branchName }), "info");
             }
 

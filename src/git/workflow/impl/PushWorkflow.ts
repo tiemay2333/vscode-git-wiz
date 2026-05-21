@@ -1,5 +1,6 @@
+import type { WorkflowContext } from "@/git/workflow/base";
+import { BaseWorkflow } from "@/git/workflow/base";
 import { t } from "@/locale/i18n";
-import { BaseWorkflow, WorkflowContext } from "@/git/workflow/base";
 
 export class PushWorkflow extends BaseWorkflow {
     readonly id = "push";
@@ -16,19 +17,21 @@ export class PushWorkflow extends BaseWorkflow {
 
         await ui.showProgress(title, async () => {
             try {
-                await git.push(this._options);
+                await git.ops.push(this._options);
                 ui.notify(this._options?.force ? t(locale, "pushForceSuccess") : t(locale, "pushSuccess"), "info");
                 refresh();
-            } catch (err: any) {
+            }
+            catch (err: any) {
                 if (err.message.includes("has no upstream branch")) {
-                    const branch = await git.getCurrentBranch();
+                    const branch = await git.refs.getCurrentBranch();
                     if (!branch) {
                         throw err;
                     }
-                    await git.push({ ...this._options, setUpstream: branch });
+                    await git.ops.push({ ...this._options, setUpstream: branch });
                     ui.notify(t(locale, "pushUpstreamSuccess"), "info");
                     refresh();
-                } else {
+                }
+                else {
                     throw err;
                 }
             }

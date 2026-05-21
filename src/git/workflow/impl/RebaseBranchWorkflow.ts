@@ -1,5 +1,6 @@
+import type { WorkflowContext } from "@/git/workflow/base";
+import { BaseWorkflow } from "@/git/workflow/base";
 import { t } from "@/locale/i18n";
-import { BaseWorkflow, WorkflowContext } from "@/git/workflow/base";
 
 export class RebaseBranchWorkflow extends BaseWorkflow {
     readonly id = "rebase-branch";
@@ -11,11 +12,10 @@ export class RebaseBranchWorkflow extends BaseWorkflow {
 
     async run(context: WorkflowContext): Promise<void> {
         const { git, ui, refresh, locale } = context;
-
-        await ui.showProgress(t(locale, "rebaseTitle", { name: this._targetBranch }), async () => {
-            await git.rebaseBranch(this._targetBranch);
-            ui.notify(t(locale, "rebaseSuccess", { name: this._targetBranch }), "info");
-            refresh();
+        await ui.showProgress(t(locale, "rebasing", { branch: this._targetBranch }), async () => {
+            await git.ops.rebaseBranch(this._targetBranch);
+            ui.notify(t(locale, "rebaseSuccess", { branch: this._targetBranch }), "info");
         });
+        refresh();
     }
 }

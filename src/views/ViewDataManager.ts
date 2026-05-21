@@ -52,6 +52,26 @@ export class ViewDataManager implements IViewDataManager {
         return this._gitService;
     }
 
+    public get history() {
+        return this._gitService.history;
+    }
+
+    public get refs() {
+        return this._gitService.refs;
+    }
+
+    public get ops() {
+        return this._gitService.ops;
+    }
+
+    public get files() {
+        return this._gitService.files;
+    }
+
+    public get config() {
+        return this._gitService.config;
+    }
+
     public get workflowEngine(): GitWorkflowEngine {
         return this._workflowEngine;
     }

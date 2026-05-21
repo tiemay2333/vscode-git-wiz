@@ -1,5 +1,6 @@
+import type { WorkflowContext } from "@/git/workflow/base";
+import { BaseWorkflow } from "@/git/workflow/base";
 import { t } from "@/locale/i18n";
-import { BaseWorkflow, WorkflowContext } from "@/git/workflow/base";
 
 export class RevertWorkflow extends BaseWorkflow {
     readonly id = "revert";
@@ -12,10 +13,11 @@ export class RevertWorkflow extends BaseWorkflow {
     async run(context: WorkflowContext): Promise<void> {
         const { git, ui, refresh, locale } = context;
 
-        if (!this._hashes || this._hashes.length === 0) return;
+        if (!this._hashes || this._hashes.length === 0)
+            return;
 
         const isMulti = this._hashes.length > 1;
-        const confirmMsg = isMulti 
+        const confirmMsg = isMulti
             ? t(locale, "revertMultiConfirm", { count: this._hashes.length })
             : t(locale, "revertConfirm", { hash: this._hashes[0].substring(0, 7) });
 
@@ -23,26 +25,28 @@ export class RevertWorkflow extends BaseWorkflow {
         const btnNo = t(locale, "cancel");
 
         const confirm = await ui.confirm(confirmMsg, [btnYes, btnNo]);
-        if (confirm !== btnYes) return;
+        if (confirm !== btnYes)
+            return;
 
         const title = isMulti
             ? t(locale, "revertMultiTitle", { count: this._hashes.length })
             : t(locale, "revertTitle", { hash: this._hashes[0].substring(0, 7) });
 
         await ui.showProgress(title, async () => {
-            if (isMulti) {
-                await git.revertCommits(this._hashes);
-            } else {
-                await git.revertCommit(this._hashes[0]);
+            if (this._hashes.length > 1) {
+                await git.ops.revertCommits(this._hashes);
             }
-            
+            else {
+                await git.ops.revertCommit(this._hashes[0]);
+            }
+
             ui.notify(
                 isMulti
                     ? t(locale, "revertMultiSuccess", { count: this._hashes.length })
                     : t(locale, "revertSuccess", { hash: this._hashes[0].substring(0, 7) }),
-                "info"
+                "info",
             );
-            
+
             refresh();
         });
     }

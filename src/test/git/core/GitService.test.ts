@@ -23,7 +23,7 @@ describe("gitService", () => {
             exitCode: 0,
         } as ExecResult);
 
-        const branches = await service.getBranches();
+        const branches = await service.refs.getBranches();
         expect(branches).toHaveLength(2);
         expect(branches[0]).toEqual({
             name: "main",
@@ -48,7 +48,7 @@ describe("gitService", () => {
             exitCode: 0,
         } as ExecResult);
 
-        const branch = await service.getCurrentBranch();
+        const branch = await service.refs.getCurrentBranch();
         expect(branch).toBe("feature/test");
         expect(mockRunner.exec).toHaveBeenCalledWith(["rev-parse", "--abbrev-ref", "HEAD"]);
     });
@@ -60,7 +60,7 @@ describe("gitService", () => {
             exitCode: 0,
         } as ExecResult);
 
-        const hash = await service.getHeadHash("main");
+        const hash = await service.refs.getHeadHash("main");
         expect(hash).toBe("a1b2c3d");
         expect(mockRunner.exec).toHaveBeenCalledWith(["rev-parse", "main"]);
     });
@@ -72,7 +72,7 @@ describe("gitService", () => {
             exitCode: 0,
         } as ExecResult);
 
-        await service.getUnfilteredLog("main", 10, 50);
+        await service.history.getUnfilteredLog("main", 10, 50);
         expect(mockRunner.exec).toHaveBeenCalledWith(
             expect.arrayContaining(["log", "main", "--skip=10", "--max-count=50"]),
             expect.any(Object),
@@ -86,7 +86,7 @@ describe("gitService", () => {
             exitCode: 0,
         } as ExecResult);
 
-        await service.cherryPickCommit("hash123");
+        await service.ops.cherryPickCommit("hash123");
         expect(mockRunner.exec).toHaveBeenCalledWith(["cherry-pick", "hash123"]);
     });
 
@@ -97,7 +97,7 @@ describe("gitService", () => {
             exitCode: 0,
         } as ExecResult);
 
-        await service.revertCommit("hash123");
+        await service.ops.revertCommit("hash123");
         expect(mockRunner.exec).toHaveBeenCalledWith(["revert", "hash123", "--no-edit"]);
     });
 
@@ -128,7 +128,7 @@ index 789..abc 100644
             .mockResolvedValueOnce({ stdout: "pid1 hash1", stderr: "", exitCode: 0 } as ExecResult)
             .mockResolvedValueOnce({ stdout: "pid2 hash2", stderr: "", exitCode: 0 } as ExecResult);
 
-        const result = await service.getCommitFilePatchIds("some-hash");
+        const result = await service.history.getCommitFilePatchIds("some-hash");
         expect(result.size).toBe(2);
         expect(result.get("file1.ts")).toBe("pid1");
         expect(result.get("dir/file2.js")).toBe("pid2");

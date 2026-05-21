@@ -1,6 +1,7 @@
-import * as vscode from "vscode";
+import type * as vscode from "vscode";
+import type { WorkflowContext } from "@/git/workflow/base";
+import { BaseWorkflow } from "@/git/workflow/base";
 import { t } from "@/locale/i18n";
-import { BaseWorkflow, WorkflowContext } from "@/git/workflow/base";
 
 export class ResetWorkflow extends BaseWorkflow {
     readonly id = "reset";
@@ -20,19 +21,21 @@ export class ResetWorkflow extends BaseWorkflow {
         ];
 
         const resetType = await ui.showQuickPick(items, { placeHolder: t(locale, "selectResetType") });
-        if (!resetType) return;
+        if (!resetType)
+            return;
 
         const btnYes = t(locale, "confirm");
         const btnNo = t(locale, "cancel");
 
         const confirm = await ui.confirm(
             t(locale, "resetConfirm", { hash: this._hash.substring(0, 7), type: resetType.label }),
-            [btnYes, btnNo]
+            [btnYes, btnNo],
         );
-        if (confirm !== btnYes) return;
+        if (confirm !== btnYes)
+            return;
 
         await ui.showProgress(t(locale, "resetTitle", { hash: this._hash.substring(0, 7), type: resetType.label }), async () => {
-            await git.resetToCommit(this._hash, resetType.value);
+            await git.ops.resetToCommit(this._hash, resetType.value);
             ui.notify(t(locale, "resetSuccess", { hash: this._hash.substring(0, 7) }), "info");
             refresh();
         });

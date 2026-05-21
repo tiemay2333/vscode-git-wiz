@@ -60,7 +60,7 @@ export class AsyncHighlightVerifier {
         if (cached !== undefined) {
             return cached;
         }
-        const pid = await this._gitService.getPatchId(hash);
+        const pid = await this._gitService.history.getPatchId(hash);
         this._patchIdCache.set(hash, pid);
         return pid;
     }
@@ -70,7 +70,7 @@ export class AsyncHighlightVerifier {
         if (cached !== undefined) {
             return cached;
         }
-        const pids = await this._gitService.getCommitFilePatchIds(hash);
+        const pids = await this._gitService.history.getCommitFilePatchIds(hash);
         this._filePatchIdCache.set(hash, pids);
         return pids;
     }

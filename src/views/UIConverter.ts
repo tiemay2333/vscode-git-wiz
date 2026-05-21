@@ -20,7 +20,7 @@ export class UIConverter {
      * 计算提交的 UI 状态（是否在当前分支，签名验证状态等）
      */
     public async calculateUIStatus(commits: GitCommit[], currentBranch: string): Promise<Record<string, CommitUIStatus>> {
-        const branchHashes = await this._gitService.getBranchCommits(currentBranch);
+        const branchHashes = await this._gitService.history.getBranchCommits(currentBranch);
 
         await this.ensureSignaturesLoaded(currentBranch);
 
@@ -53,7 +53,7 @@ export class UIConverter {
 
     public async ensureSignaturesLoaded(currentBranch: string): Promise<void> {
         while (true) {
-            const headHash = await this._gitService.getHeadHash(currentBranch);
+            const headHash = await this._gitService.refs.getHeadHash(currentBranch);
             if (this._branchSignaturesCache
                 && this._branchSignaturesCache.branch === currentBranch
                 && (!headHash || this._branchSignaturesCache.headHash === headHash)) {
@@ -63,7 +63,7 @@ export class UIConverter {
             if (!this._signaturesLoadingPromise) {
                 this._signaturesLoadingPromise = (async () => {
                     try {
-                        const signatures = await this._gitService.getBranchCommitSignatures(currentBranch);
+                        const signatures = await this._gitService.history.getBranchCommitSignatures(currentBranch);
                         this._branchSignaturesCache = {
                             branch: currentBranch,
                             headHash: headHash || "",

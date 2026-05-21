@@ -10,6 +10,11 @@ export interface RefreshOptions {
 export interface IViewDataManager extends vscode.Disposable {
     readonly cwd: string;
     readonly gitService: GitService;
+    readonly history: GitService["history"];
+    readonly refs: GitService["refs"];
+    readonly ops: GitService["ops"];
+    readonly files: GitService["files"];
+    readonly config: GitService["config"];
     readonly workflowEngine: GitWorkflowEngine;
     readonly verifier: AsyncHighlightVerifier;
     readonly onDidRefresh: vscode.Event<RefreshOptions>;
