@@ -36,6 +36,7 @@
 - **Webview Ready Signal**: Webviews must send a `ready` message upon mounting. The extension host must wait for this signal before sending any state updates (`replaceCommits`, `appendCommits`, etc.) to ensure messages are not lost during the initial load or re-render of the webview context.
 - **Refresh Concurrency**: The `refresh()` method should implement a concurrency guard (e.g., `_refreshInProgress`) to prevent overlapping Git operations from multiple rapid events.
 - **Handler-based message routing**: When a `WebviewViewProvider` or `WebviewPanel` grows a large `handleMessage` method, extract command groups into dedicated handler classes. Each handler receives only what it needs (service, callbacks), never the provider itself. All handlers implement `vscode.Disposable` so the provider can chain `dispose()` through them.
+- **Provider State Management**: Do not manage complex asynchronous state (like refresh concurrency) using scattered boolean flags (e.g., `_refreshing`, `_pendingRefresh`) inside the `WebviewViewProvider`. Instead, encapsulate state coordination in a dedicated `RefreshManager` (or similar state machine) that supports request merging. This prevents race conditions and makes the provider's lifecycle predictable.
 
 ---
 
