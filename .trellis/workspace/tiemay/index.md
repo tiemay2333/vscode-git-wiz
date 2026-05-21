@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 29
+- **Total Sessions**: 30
 - **Last Active**: 2026-05-21
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~1009 | Active |
+| `journal-1.md` | ~1042 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 30 | 2026-05-21 | Reorganize Handlers and Unify Naming | `fa41473` | `dev` |
 | 29 | 2026-05-21 | Consolidate Refresh and Flow Control Logic | `e0aa94a` | `dev` |
 | 28 | 2026-05-21 | Refactor ViewDataManager with Registry and Factory | `2960a98` | `dev` |
 | 27 | 2026-05-21 | 重构 GitGraphViewProvider：职责拆分 | `c7a8f4b`, `651bdb1` | `dev` |

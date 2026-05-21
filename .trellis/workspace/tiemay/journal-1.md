@@ -1007,3 +1007,36 @@ Refactored the refresh flow by centralizing debounce, lock management, and state
 ### Next Steps
 
 - None - task complete
+
+
+## Session 30: Reorganize Handlers and Unify Naming
+
+**Date**: 2026-05-21
+**Task**: Reorganize Handlers and Unify Naming
+**Branch**: `dev`
+
+### Summary
+
+Moved Webview message handlers (FileHandler, GitCommandHandler, SettingsHandler, UIStateHandler) from src/core/ and src/commands/ to a dedicated src/views/handlers/ directory. Unified naming convention to PascalCase for these classes and renamed src/core/graphState.ts to src/core/GraphState.ts. Created an index.ts in the handlers directory for consolidated exports and updated all import references accordingly. Cleaned up the now-empty src/commands/ directory.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `fa41473` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
