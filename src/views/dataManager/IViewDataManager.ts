@@ -40,6 +40,7 @@ export interface IViewDataManager extends vscode.Disposable {
 
     refreshAll: (options?: RefreshOptions) => void;
     loadMoreCommits: () => Promise<void>;
+    reverifyCommit: (hash: string) => Promise<void>;
     setFilterBranch: (branch: string | null) => void;
     setFilterFile: (filePath: string | null) => void;
     setSearchFilters: (filters: SearchFilters | undefined) => void;

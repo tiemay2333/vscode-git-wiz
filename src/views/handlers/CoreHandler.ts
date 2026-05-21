@@ -29,7 +29,7 @@ export class CoreHandler implements IMessageHandler {
                 this._dataManager.setReady(true);
                 break;
             case "reverifyCommit":
-                await this._dataManager.refreshAll();
+                await this._dataManager.reverifyCommit(msg.commitHash);
                 break;
             case "getCommitFiles":
                 await this._getCommitFiles(msg.commitHash, webview);

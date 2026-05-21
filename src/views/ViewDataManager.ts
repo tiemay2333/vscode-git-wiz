@@ -5,6 +5,7 @@ import type { AsyncHighlightVerifier } from "@/git/highlight/AsyncHighlightVerif
 import type { GitWorkflowEngine } from "@/git/workflow/engine";
 import * as vscode from "vscode";
 import { GraphState } from "@/core/GraphState";
+import { getCommitSignature } from "@/git/highlight/commitHighlight";
 import { UIConverter } from "./UIConverter";
 
 const PAGE_SIZE = 200;
@@ -156,9 +157,10 @@ export class ViewDataManager implements IViewDataManager {
             const branches = await this.refs.getBranches();
             const highlightCurrentBranch = vscode.workspace.getConfiguration("git-wiz").get("highlightCurrentBranch", false);
 
-            let uiStatus = {};
+            let uiStatus: Record<string, any> = {};
             if (highlightCurrentBranch && currentBranch) {
                 uiStatus = await this._uiConverter.calculateUIStatus(commits, currentBranch);
+                this._triggerAsyncVerification(uiStatus);
             }
 
             this._state.loadedCount = commits.length;
@@ -210,9 +212,10 @@ export class ViewDataManager implements IViewDataManager {
             const currentBranch = await this.refs.getCurrentBranch();
             const highlightCurrentBranch = vscode.workspace.getConfiguration("git-wiz").get("highlightCurrentBranch", false);
 
-            let uiStatus = {};
+            let uiStatus: Record<string, any> = {};
             if (highlightCurrentBranch && currentBranch) {
                 uiStatus = await this._uiConverter.calculateUIStatus(commits, currentBranch);
+                this._triggerAsyncVerification(uiStatus);
             }
 
             this._state.loadedCount += commits.length;
@@ -236,6 +239,26 @@ export class ViewDataManager implements IViewDataManager {
         finally {
             this._isRefreshing = false;
             this._onDidUpdateLoading.fire(false);
+        }
+    }
+
+    public async reverifyCommit(hash: string) {
+        const currentBranch = await this.refs.getCurrentBranch();
+        if (!currentBranch)
+            return;
+
+        // 获取该提交的完整信息（需要 email 和 subject）
+        const commits = await this.history.getGitLog(null, 0, 1, { query: hash });
+        if (commits.length === 0)
+            return;
+        const commit = commits[0];
+
+        await this._uiConverter.ensureSignaturesLoaded(currentBranch);
+        const sig = getCommitSignature(commit);
+        const targets = this._uiConverter.signaturesCache?.signatures.get(sig);
+
+        if (targets) {
+            this._verifier.queueVerification(hash, targets);
         }
     }
 
@@ -314,6 +337,14 @@ export class ViewDataManager implements IViewDataManager {
                 this.refreshAll();
             }
         });
+    }
+
+    private _triggerAsyncVerification(uiStatus: Record<string, any>) {
+        for (const [hash, status] of Object.entries(uiStatus)) {
+            if (status.verificationStatus === "pending" && status.pendingTargets) {
+                this._verifier.queueVerification(hash, status.pendingTargets);
+            }
+        }
     }
 
     public dispose() {

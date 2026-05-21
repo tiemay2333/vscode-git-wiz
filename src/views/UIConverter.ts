@@ -4,6 +4,7 @@ import { getCurrentBranchHashes } from "@/git/highlight/commitHighlight";
 export interface CommitUIStatus {
     isCurrentBranch?: boolean;
     verificationStatus?: "pending" | "verified" | "failed";
+    pendingTargets?: string[];
 }
 
 /**
@@ -36,7 +37,11 @@ export class UIConverter {
                 uiStatus[c.hash] = { isCurrentBranch: true, verificationStatus: "verified" };
             }
             else if (result.pending.has(c.hash)) {
-                uiStatus[c.hash] = { isCurrentBranch: true, verificationStatus: "pending" };
+                uiStatus[c.hash] = {
+                    isCurrentBranch: true,
+                    verificationStatus: "pending",
+                    pendingTargets: result.pending.get(c.hash),
+                };
             }
             else {
                 uiStatus[c.hash] = { isCurrentBranch: false };
