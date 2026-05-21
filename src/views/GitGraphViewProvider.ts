@@ -3,14 +3,10 @@ import type { IViewDataManager } from "./dataManager/IViewDataManager";
 import type { CommitUIStatus } from "./UIConverter";
 import type { BaseWorkflow } from "@/git/workflow/base";
 import * as vscode from "vscode";
-import { GitCommandHandler } from "@/commands/gitCommandHandler";
-import { FileHandler } from "@/core/fileHandler";
-import { GraphState } from "@/core/graphState";
-
-import { SettingsHandler } from "@/core/settingsHandler";
-import { UIStateHandler } from "@/core/uiStateHandler";
+import { GraphState } from "@/core/GraphState";
 import { getCurrentBranchHashes } from "@/git/highlight/commitHighlight";
 import { t } from "@/locale/i18n";
+import { FileHandler, GitCommandHandler, SettingsHandler, UIStateHandler } from "./handlers";
 import { RefreshManager } from "./RefreshManager";
 import { UIConverter } from "./UIConverter";
 import { getCommitDetailsHtml, getHtmlForWebview } from "./webviewContent";

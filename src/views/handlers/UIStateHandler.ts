@@ -1,4 +1,4 @@
-import type { GraphState } from "./graphState";
+import type { GraphState } from "@/core/GraphState";
 import type { WebviewMessage } from "@/views/GitGraphViewProvider";
 import * as vscode from "vscode";
 
