@@ -1,16 +1,24 @@
-import type { IViewDataManager, RefreshOptions } from "./dataManager/IViewDataManager";
+import type { IViewDataManager, RefreshOptions, ViewDataSnapshot } from "./dataManager/IViewDataManager";
+import type { SearchFilters } from "@/core/GraphState";
 import type { GitService } from "@/git/core/GitService";
 import type { AsyncHighlightVerifier } from "@/git/highlight/AsyncHighlightVerifier";
 import type { GitWorkflowEngine } from "@/git/workflow/engine";
 import * as vscode from "vscode";
+import { GraphState } from "@/core/GraphState";
+import { UIConverter } from "./UIConverter";
+
+const PAGE_SIZE = 200;
 
 /**
  * ViewDataManager 负责集中管理特定 Git 仓库的资源、状态和监听器。
+ * 它是视图层的“状态引擎”，负责数据获取、分页、过滤和 UI 转换。
  */
 export class ViewDataManager implements IViewDataManager {
     private readonly _onDidRefresh = new vscode.EventEmitter<RefreshOptions>();
     private readonly _onDidUpdateCommitHighlight = new vscode.EventEmitter<{ hash: string; verificationStatus: string }>();
     private readonly _onDidUpdateLoading = new vscode.EventEmitter<boolean>();
+    private readonly _onDidUpdateSnapshot = new vscode.EventEmitter<ViewDataSnapshot>();
+
     private _watchers: vscode.Disposable[] = [];
     private _configWatcher: vscode.Disposable | undefined;
     private _refreshTimer?: ReturnType<typeof setTimeout>;
@@ -18,9 +26,17 @@ export class ViewDataManager implements IViewDataManager {
     private _pendingRefresh = false;
     private _pendingResetScroll = false;
 
+    // View State
+    private readonly _state: GraphState;
+    private readonly _uiConverter: UIConverter;
+    private _isReady = false;
+    private _isRefreshing = false;
+    private _lastSnapshot?: ViewDataSnapshot;
+
     public readonly onDidRefresh = this._onDidRefresh.event;
     public readonly onDidUpdateCommitHighlight = this._onDidUpdateCommitHighlight.event;
     public readonly onDidUpdateLoading = this._onDidUpdateLoading.event;
+    public readonly onDidUpdateSnapshot = this._onDidUpdateSnapshot.event;
 
     constructor(
         public readonly cwd: string,
@@ -28,6 +44,8 @@ export class ViewDataManager implements IViewDataManager {
         private readonly _workflowEngine: GitWorkflowEngine,
         private readonly _verifier: AsyncHighlightVerifier,
     ) {
+        this._state = new GraphState();
+        this._uiConverter = new UIConverter(this._gitService);
         this.init();
     }
 
@@ -80,10 +98,28 @@ export class ViewDataManager implements IViewDataManager {
         return this._verifier;
     }
 
+    public setReady(ready: boolean) {
+        const wasReady = this._isReady;
+        this._isReady = ready;
+        if (!wasReady && ready && this._pendingRefresh) {
+            this.refreshAll({ resetScroll: this._pendingResetScroll });
+        }
+    }
+
+    public getSnapshot(): ViewDataSnapshot | undefined {
+        return this._lastSnapshot;
+    }
+
     public refreshAll(options: RefreshOptions = {}) {
-        this._pendingResetScroll = this._pendingResetScroll || !!options.resetScroll;
+        const resetScroll = !!options.resetScroll;
+        this._pendingResetScroll = this._pendingResetScroll || resetScroll;
 
         if (this._isLocked) {
+            this._pendingRefresh = true;
+            return;
+        }
+
+        if (!this._isReady || this._isRefreshing) {
             this._pendingRefresh = true;
             return;
         }
@@ -96,10 +132,130 @@ export class ViewDataManager implements IViewDataManager {
         }
 
         this._refreshTimer = setTimeout(() => {
-            const resetScroll = this._pendingResetScroll;
+            const currentReset = this._pendingResetScroll;
             this._pendingResetScroll = false;
-            this._onDidRefresh.fire({ resetScroll });
+            this._doRefresh(currentReset);
         }, 500);
+    }
+
+    private async _doRefresh(resetScroll: boolean) {
+        this._isRefreshing = true;
+        this._onDidUpdateLoading.fire(true);
+
+        try {
+            this._uiConverter.resetCache();
+            const countToLoad = Math.max(PAGE_SIZE, this._state.loadedCount);
+            const commits = await this.history.getGitLog(
+                this._state.filterBranch,
+                0,
+                countToLoad,
+                this._state.searchFilters,
+                this._state.filterFile,
+            );
+            const currentBranch = await this.refs.getCurrentBranch();
+            const branches = await this.refs.getBranches();
+            const highlightCurrentBranch = vscode.workspace.getConfiguration("git-wiz").get("highlightCurrentBranch", false);
+
+            let uiStatus = {};
+            if (highlightCurrentBranch && currentBranch) {
+                uiStatus = await this._uiConverter.calculateUIStatus(commits, currentBranch);
+            }
+
+            this._state.loadedCount = commits.length;
+            const hasMore = commits.length >= countToLoad;
+
+            const snapshot: ViewDataSnapshot = {
+                commits,
+                branches,
+                uiStatus,
+                hasMore,
+                filterBranch: this._state.filterBranch,
+                filterFile: this._state.filterFile,
+                currentBranch,
+                searchFilters: this._state.searchFilters,
+                loadedCount: this._state.loadedCount,
+                resetScroll,
+            };
+
+            this._lastSnapshot = snapshot;
+            this._onDidUpdateSnapshot.fire(snapshot);
+            this._onDidRefresh.fire({ resetScroll });
+        }
+        finally {
+            this._isRefreshing = false;
+            this._onDidUpdateLoading.fire(false);
+
+            if (this._pendingRefresh) {
+                this.refreshAll();
+            }
+        }
+    }
+
+    public async loadMoreCommits() {
+        if (this._isRefreshing)
+            return;
+
+        this._isRefreshing = true;
+        this._onDidUpdateLoading.fire(true);
+
+        try {
+            const commits = await this.history.getGitLog(
+                this._state.filterBranch,
+                this._state.loadedCount,
+                PAGE_SIZE,
+                this._state.searchFilters,
+                this._state.filterFile,
+            );
+
+            const currentBranch = await this.refs.getCurrentBranch();
+            const highlightCurrentBranch = vscode.workspace.getConfiguration("git-wiz").get("highlightCurrentBranch", false);
+
+            let uiStatus = {};
+            if (highlightCurrentBranch && currentBranch) {
+                uiStatus = await this._uiConverter.calculateUIStatus(commits, currentBranch);
+            }
+
+            this._state.loadedCount += commits.length;
+            const hasMore = commits.length === PAGE_SIZE;
+
+            const snapshot: ViewDataSnapshot = {
+                commits,
+                branches: [], // Incremental update doesn't usually need full branches
+                uiStatus,
+                hasMore,
+                filterBranch: this._state.filterBranch,
+                filterFile: this._state.filterFile,
+                currentBranch,
+                searchFilters: this._state.searchFilters,
+                loadedCount: this._state.loadedCount,
+                isIncremental: true,
+            };
+
+            this._onDidUpdateSnapshot.fire(snapshot);
+        }
+        finally {
+            this._isRefreshing = false;
+            this._onDidUpdateLoading.fire(false);
+        }
+    }
+
+    public setFilterBranch(branch: string | null) {
+        if (this._state.filterBranch === branch)
+            return;
+        this._state.filterBranch = branch;
+        this.refreshAll({ resetScroll: true });
+    }
+
+    public setFilterFile(filePath: string | null) {
+        if (this._state.filterFile === filePath)
+            return;
+        this._state.filterFile = filePath;
+        this.refreshAll({ resetScroll: true });
+    }
+
+    public setSearchFilters(filters: SearchFilters | undefined) {
+        this._state.searchFilters = filters;
+        this.refreshAll({ resetScroll: true });
     }
 
     private setupGitWatcher() {

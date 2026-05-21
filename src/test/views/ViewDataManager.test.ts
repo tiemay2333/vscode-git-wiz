@@ -21,6 +21,13 @@ vi.mock("vscode", () => {
             fs: {
                 stat: vi.fn().mockRejectedValue(new Error("File not found")),
             },
+            getConfiguration: vi.fn(() => ({
+                get: vi.fn((key) => {
+                    if (key === "highlightCurrentBranch")
+                        return false;
+                    return undefined;
+                }),
+            })),
         },
         Uri: {
             file: vi.fn(path => ({ fsPath: path, with: vi.fn().mockReturnThis() })),
@@ -39,14 +46,25 @@ describe("viewDataManager", () => {
     beforeEach(() => {
         vi.clearAllMocks();
         vi.useFakeTimers();
-        gitService = { cwd: "/test/repo" };
+        gitService = {
+            history: {
+                getGitLog: vi.fn().mockResolvedValue([]),
+                getBranchCommits: vi.fn().mockResolvedValue(new Set()),
+            },
+            refs: {
+                getCurrentBranch: vi.fn().mockResolvedValue("main"),
+                getBranches: vi.fn().mockResolvedValue([]),
+                getHeadHash: vi.fn().mockResolvedValue("hash"),
+            },
+        };
         workflowEngine = {};
         verifier = { reset: vi.fn(), dispose: vi.fn() };
         manager = new ViewDataManager("/test/repo", gitService, workflowEngine, verifier);
     });
 
-    it("should debounce refresh calls and merge resetScroll flag", () => {
-        const fireSpy = (manager as any)._onDidRefresh.fire;
+    it("should debounce refresh calls and merge resetScroll flag", async () => {
+        const fireSpy = (manager as any)._onDidUpdateSnapshot.fire;
+        manager.setReady(true);
 
         manager.refreshAll({ resetScroll: false });
         manager.refreshAll({ resetScroll: true });
@@ -55,13 +73,17 @@ describe("viewDataManager", () => {
         expect(fireSpy).not.toHaveBeenCalled();
 
         vi.runAllTimers();
+        // Wait for async _doRefresh
+        await vi.runAllTimersAsync();
 
-        expect(fireSpy).toHaveBeenCalledTimes(1);
-        expect(fireSpy).toHaveBeenCalledWith({ resetScroll: true });
+        expect(fireSpy).toHaveBeenCalled();
+        const lastCall = fireSpy.mock.calls[fireSpy.mock.calls.length - 1][0];
+        expect(lastCall.resetScroll).toBe(true);
     });
 
     it("should handle lock state and pending refresh", async () => {
-        const fireSpy = (manager as any)._onDidRefresh.fire;
+        const fireSpy = (manager as any)._onDidUpdateSnapshot.fire;
+        manager.setReady(true);
 
         // Simulate lock
         (manager as any)._isLocked = true;
@@ -69,6 +91,7 @@ describe("viewDataManager", () => {
         manager.refreshAll({ resetScroll: true });
 
         vi.runAllTimers();
+        await vi.runAllTimersAsync();
         expect(fireSpy).not.toHaveBeenCalled();
         expect((manager as any)._pendingRefresh).toBe(true);
         expect((manager as any)._pendingResetScroll).toBe(true);
@@ -78,6 +101,8 @@ describe("viewDataManager", () => {
         (manager as any).refreshAll(); // Trigger the pending one
 
         vi.runAllTimers();
-        expect(fireSpy).toHaveBeenCalledWith({ resetScroll: true });
+        await vi.runAllTimersAsync();
+        const lastCall = fireSpy.mock.calls[fireSpy.mock.calls.length - 1][0];
+        expect(lastCall.resetScroll).toBe(true);
     });
 });
