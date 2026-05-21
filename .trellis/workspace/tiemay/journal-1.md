@@ -1040,3 +1040,36 @@ Moved Webview message handlers (FileHandler, GitCommandHandler, SettingsHandler,
 ### Next Steps
 
 - None - task complete
+
+
+## Session 31: Improve Webview Messaging Type Safety
+
+**Date**: 2026-05-21
+**Task**: Improve Webview Messaging Type Safety
+**Branch**: `dev`
+
+### Summary
+
+Introduced a strong-typed Webview communication protocol using discriminated unions. Refactored WebviewMessenger to enforce type constraints on outgoing messages. Updated all message handlers to use the new protocol, eliminating numerous non-null assertions and improving code reliability. Consolidated the messaging architecture by moving the protocol definition to a shared type file.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `2960a98` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
