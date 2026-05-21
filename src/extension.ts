@@ -13,10 +13,15 @@ import { RebaseBranchWorkflow } from "./git/workflow/impl/RebaseBranchWorkflow";
 import { ResetWorkflow } from "./git/workflow/impl/ResetWorkflow";
 import { RevertWorkflow } from "./git/workflow/impl/RevertWorkflow";
 import { t } from "./locale/i18n";
+import { DataManagerRegistry } from "./views/dataManager/DataManagerRegistry";
+import { ViewDataManagerFactory } from "./views/dataManager/ViewDataManagerFactory";
 import { GitGraphViewProvider } from "./views/GitGraphViewProvider";
-import { ViewDataManager } from "./views/ViewDataManager";
 
 export function activate(context: vscode.ExtensionContext) {
+    const factory = new ViewDataManagerFactory();
+    const registry = new DataManagerRegistry(factory);
+    context.subscriptions.push(registry);
+
     const statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
     statusBarItem.text = "$(git-branch) Git Wiz";
     statusBarItem.tooltip = "Open Git Wiz Panel";
@@ -42,10 +47,8 @@ export function activate(context: vscode.ExtensionContext) {
         }),
     );
 
-    ViewDataManager.setupWorkspaceWatcher();
-
     const getActiveManager = () => {
-        const manager = ViewDataManager.getActiveManager();
+        const manager = registry.getActiveManager();
         if (!manager) {
             vscode.window.showErrorMessage("Git Wiz: Cannot determine active repository context.");
         }
@@ -53,7 +56,7 @@ export function activate(context: vscode.ExtensionContext) {
     };
 
     const defaultCwd = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || "";
-    const graphProvider = new GitGraphViewProvider(context.extensionUri, defaultCwd);
+    const graphProvider = new GitGraphViewProvider(context.extensionUri, defaultCwd, registry);
     context.subscriptions.push(graphProvider);
 
     context.subscriptions.push(
@@ -141,7 +144,7 @@ export function activate(context: vscode.ExtensionContext) {
                 if (!hash) {
                     return "";
                 }
-                const service = ViewDataManager.getActiveManager()?.gitService;
+                const service = registry.getActiveManager()?.gitService;
                 if (!service)
                     return "";
                 return await service.getFileContentAtRev(hash, fileParam || uri.path.substring(1));
@@ -159,7 +162,7 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.commands.registerCommand("git-wiz.showGraph", () => {
             const manager = getActiveManager();
             if (manager) {
-                GitGraphViewProvider.createOrShow(context.extensionUri, manager.cwd);
+                GitGraphViewProvider.createOrShow(context.extensionUri, manager.cwd, registry);
             }
         }),
     );
@@ -167,12 +170,12 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(
         vscode.commands.registerCommand("git-wiz.showFileHistory", (uri?: vscode.Uri) => {
             let filePath: string | undefined;
-            let targetManager = ViewDataManager.getActiveManager();
+            let targetManager = registry.getActiveManager();
 
             if (uri) {
                 const workspaceFolder = vscode.workspace.getWorkspaceFolder(uri);
                 if (workspaceFolder) {
-                    targetManager = ViewDataManager.getManagerForPath(workspaceFolder.uri.fsPath);
+                    targetManager = registry.getManagerForPath(workspaceFolder.uri.fsPath);
                     filePath = vscode.workspace.asRelativePath(uri, false); // relative to workspace folder
                 }
                 else {
@@ -184,7 +187,7 @@ export function activate(context: vscode.ExtensionContext) {
                 if (editor) {
                     const workspaceFolder = vscode.workspace.getWorkspaceFolder(editor.document.uri);
                     if (workspaceFolder) {
-                        targetManager = ViewDataManager.getManagerForPath(workspaceFolder.uri.fsPath);
+                        targetManager = registry.getManagerForPath(workspaceFolder.uri.fsPath);
                         filePath = vscode.workspace.asRelativePath(editor.document.uri, false);
                     }
                     else {
@@ -195,8 +198,6 @@ export function activate(context: vscode.ExtensionContext) {
 
             if (filePath && targetManager) {
                 vscode.commands.executeCommand("gitLeanGraphView.focus");
-                // For the sidebar view, we might need to update its CWD or recreate it.
-                // Currently it's bound to the first workspace. To keep it simple:
                 graphProvider.filterByFile(filePath);
             }
         }),

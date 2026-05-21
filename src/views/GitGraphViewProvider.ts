@@ -1,17 +1,18 @@
+import type { DataManagerRegistry } from "./dataManager/DataManagerRegistry";
+import type { IViewDataManager } from "./dataManager/IViewDataManager";
 import type { CommitUIStatus } from "./UIConverter";
 import type { BaseWorkflow } from "@/git/workflow/base";
 import * as vscode from "vscode";
 import { GitCommandHandler } from "@/commands/gitCommandHandler";
 import { FileHandler } from "@/core/fileHandler";
 import { GraphState } from "@/core/graphState";
+
 import { SettingsHandler } from "@/core/settingsHandler";
 import { UIStateHandler } from "@/core/uiStateHandler";
-
 import { getCurrentBranchHashes } from "@/git/highlight/commitHighlight";
 import { t } from "@/locale/i18n";
 import { RefreshManager } from "./RefreshManager";
 import { UIConverter } from "./UIConverter";
-import { ViewDataManager } from "./ViewDataManager";
 import { getCommitDetailsHtml, getHtmlForWebview } from "./webviewContent";
 import { WebviewMessenger } from "./WebviewMessenger";
 
@@ -44,7 +45,7 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider, vscode.
     private static currentProvider: GitGraphViewProvider | undefined;
 
     private _disposables: vscode.Disposable[] = [];
-    private _dataManager: ViewDataManager;
+    private _dataManager: IViewDataManager;
     private _loadingCount = 0;
     private _messageQueue: Promise<void> = Promise.resolve();
 
@@ -59,8 +60,12 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider, vscode.
     private readonly _fileHandler: FileHandler;
     private readonly _state: GraphState;
 
-    constructor(private readonly _extensionUri: vscode.Uri, public cwd: string) {
-        this._dataManager = ViewDataManager.getManagerForPath(this.cwd);
+    constructor(
+        private readonly _extensionUri: vscode.Uri,
+        public cwd: string,
+        private readonly _registry: DataManagerRegistry,
+    ) {
+        this._dataManager = this._registry.getManagerForPath(this.cwd);
         this._state = new GraphState();
 
         this._messenger = new WebviewMessenger();
@@ -115,7 +120,7 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider, vscode.
         if (this.cwd === newCwd)
             return;
         this.cwd = newCwd;
-        this._dataManager = ViewDataManager.getManagerForPath(this.cwd);
+        this._dataManager = this._registry.getManagerForPath(this.cwd);
         this._uiConverter = new UIConverter(this._dataManager.gitService);
 
         this._initHandlers();
@@ -134,7 +139,7 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider, vscode.
         this.refresh(true);
     }
 
-    public static createOrShow(extensionUri: vscode.Uri, cwd: string) {
+    public static createOrShow(extensionUri: vscode.Uri, cwd: string, registry: DataManagerRegistry) {
         const column = vscode.window.activeTextEditor ? vscode.window.activeTextEditor.viewColumn : undefined;
 
         if (GitGraphViewProvider.currentPanel) {
@@ -160,7 +165,7 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider, vscode.
 
         GitGraphViewProvider.currentPanel = panel;
 
-        const provider = new GitGraphViewProvider(extensionUri, cwd);
+        const provider = new GitGraphViewProvider(extensionUri, cwd, registry);
         GitGraphViewProvider.currentProvider = provider;
         provider._messenger.setPanel(panel);
         provider.updateWebview(panel.webview);
