@@ -1139,3 +1139,36 @@ Refactored GitService from a shallow facade into a structured deep module with f
 ### Next Steps
 
 - None - task complete
+
+
+## Session 34: Deepen ViewDataManager and Make Provider Reactive
+
+**Date**: 2026-05-21
+**Task**: Deepen ViewDataManager and Make Provider Reactive
+**Branch**: `dev`
+
+### Summary
+
+Transformed ViewDataManager into a comprehensive View State Engine by absorbing GraphState, RefreshManager flow-control, and UIConverter logic. Defined a reactive ViewDataSnapshot interface and updated GitGraphViewProvider to push snapshots reactively, significantly reducing logic leakage in the provider. Deleted redundant RefreshManager.ts and updated unit tests.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `f3deca4` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
