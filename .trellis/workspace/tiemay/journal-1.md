@@ -1238,3 +1238,36 @@ Fixed the highlight hang issue where cherry-pick candidates would stay in 'pendi
 ### Next Steps
 
 - None - task complete
+
+
+## Session 37: Implemented single-track search filtering
+
+**Date**: 2026-05-22
+**Task**: Implemented single-track search filtering
+**Branch**: `dev`
+
+### Summary
+
+Fixed the bug where search filters were not correctly passed to ViewDataManager in single-track mode by updating the UIStateHandler mapping in GitGraphViewProvider. Also refined the git log command arguments in LogEngine to handle author and query filtering more robustly.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `a1c223d` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
