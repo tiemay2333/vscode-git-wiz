@@ -1,6 +1,7 @@
 import type { DataManagerRegistry } from "./dataManager/DataManagerRegistry";
 import type { IViewDataManager, ViewDataSnapshot } from "./dataManager/IViewDataManager";
 import type { FromWebviewMessage } from "./types/WebviewProtocol";
+import type { SearchFilters } from "@/core/GraphState";
 import type { BaseWorkflow } from "@/git/workflow/base";
 import * as vscode from "vscode";
 import { t } from "@/locale/i18n";
@@ -72,9 +73,11 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider, vscode.
             {
                 get filterBranch() { return provider._dataManager.getSnapshot()?.filterBranch ?? null; },
                 get filterFile() { return provider._dataManager.getSnapshot()?.filterFile ?? null; },
+                get searchFilters() { return provider._dataManager.getSnapshot()?.searchFilters; },
                 get loadedCount() { return provider._dataManager.getSnapshot()?.loadedCount ?? 0; },
                 set filterBranch(v: string | null) { provider._dataManager.setFilterBranch(v); },
                 set filterFile(v: string | null) { provider._dataManager.setFilterFile(v); },
+                set searchFilters(v: SearchFilters | undefined) { provider._dataManager.setSearchFilters(v); },
                 set loadedCount(_v: number) { /* handled by VDM */ },
                 resetFilters: () => {
                     provider._dataManager.setFilterBranch(null);
