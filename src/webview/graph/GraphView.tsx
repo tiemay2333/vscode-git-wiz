@@ -327,6 +327,7 @@ export function GraphView({
                                 const qMsg = !!(q && c.message.toLowerCase().includes(q));
                                 const qHash = !!(q && (c.hash.toLowerCase().includes(q) || c.shortHash.toLowerCase().includes(q)));
                                 const aMatch = !!(a && c.author.toLowerCase().includes(a));
+                                // AND: all non-empty fields must match
                                 if ((!q || qMsg || qHash) && (!a || aMatch)) {
                                     info[c.hash] = { q: qMsg, h: qHash, a: aMatch };
                                 }
@@ -350,6 +351,7 @@ export function GraphView({
                             const qMsg = !!(q && c.message.toLowerCase().includes(q));
                             const qHash = !!(q && (c.hash.toLowerCase().includes(q) || c.shortHash.toLowerCase().includes(q)));
                             const aMatch = !!(a && c.author.toLowerCase().includes(a));
+                            // AND: all non-empty fields must match
                             if ((!q || qMsg || qHash) && (!a || aMatch)) {
                                 info[c.hash] = { q: qMsg, h: qHash, a: aMatch };
                             }
@@ -439,13 +441,22 @@ export function GraphView({
             // Client-side matching — keep all commits visible, highlight matches
             const q = searchQuery.toLowerCase();
             const a = searchAuthor.toLowerCase();
+            const from = dateFrom ? new Date(dateFrom.replace(/\//g, "-")).getTime() : 0;
+            const to = dateTo ? new Date(`${dateTo.replace(/\//g, "-")} 23:59:59`).getTime() : 0;
+
             const info: Record<string, { q: boolean; h: boolean; a: boolean }> = {};
             for (const c of commitsRef.current) {
                 const qMsg = !!(q && c.message.toLowerCase().includes(q));
                 const qHash = !!(q && (c.hash.toLowerCase().includes(q) || c.shortHash.toLowerCase().includes(q)));
                 const aMatch = !!(a && c.author.toLowerCase().includes(a));
+
+                // Date filtering
+                const commitTime = c.timestamp * 1000;
+                const fromMatch = !from || commitTime >= from;
+                const toMatch = !to || commitTime <= to;
+
                 // AND: all non-empty fields must match
-                if ((!q || qMsg || qHash) && (!a || aMatch)) {
+                if ((!q || qMsg || qHash) && (!a || aMatch) && fromMatch && toMatch) {
                     info[c.hash] = { q: qMsg, h: qHash, a: aMatch };
                 }
             }

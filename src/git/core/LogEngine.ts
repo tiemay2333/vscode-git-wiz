@@ -2,6 +2,7 @@ import type { GitCommit } from "../utils/gitParser";
 import type { GitRunner } from "./GitRunner";
 import { createSignature } from "@/git/highlight/commitHighlight";
 import { parseGitLogOutput } from "../utils/gitParser";
+import { escapeRegex } from "../utils/regex";
 
 export class LogEngine {
     constructor(private readonly runner: GitRunner) { }
@@ -86,10 +87,12 @@ export class LogEngine {
         args.push(`--max-count=${limit}`);
 
         if (filters?.query?.trim()) {
-            args.push("--grep", filters.query.trim(), "-i");
+            args.push("--grep", escapeRegex(filters.query.trim()), "-i");
         }
         if (filters?.author?.trim()) {
-            args.push("--author", filters.author.trim(), "-i");
+            // Match author name only, ignoring email by searching before the '<' character
+            const pattern = `${escapeRegex(filters.author.trim())}.*<`;
+            args.push("--author", pattern, "-i");
         }
         if (filters?.query?.trim() && filters?.author?.trim()) {
             args.push("--all-match");
