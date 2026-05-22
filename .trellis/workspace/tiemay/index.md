@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 37
+- **Total Sessions**: 38
 - **Last Active**: 2026-05-22
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~1273 | Active |
+| `journal-1.md` | ~1306 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 38 | 2026-05-22 | Restrict author search to name only and unify AND logic | `a66e454` | `dev` |
 | 37 | 2026-05-22 | Implemented single-track search filtering | `a1c223d` | `dev` |
 | 36 | 2026-05-21 | Fix highlight hang and async verification | `5867d2d` | `dev` |
 | 35 | 2026-05-21 | Refactor Message Dispatch Mechanism | `6a80ec1` | `dev` |

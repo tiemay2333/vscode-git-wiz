@@ -1271,3 +1271,36 @@ Fixed the bug where search filters were not correctly passed to ViewDataManager 
 ### Next Steps
 
 - None - task complete
+
+
+## Session 38: Restrict author search to name only and unify AND logic
+
+**Date**: 2026-05-22
+**Task**: Restrict author search to name only and unify AND logic
+**Branch**: `dev`
+
+### Summary
+
+Implemented strict name matching for author searches by using a regex pattern in the backend and updated the frontend Graph Mode highlight logic to enforce consistent AND logic across all search filters (query, author, and dates). Also added regex escaping for all search terms to prevent unexpected behavior with special characters.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `a66e454` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
