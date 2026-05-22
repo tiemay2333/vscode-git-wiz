@@ -40,7 +40,27 @@ function FileList({
                             <span className={`file-status file-status-${file.status?.toLowerCase()}`}>
                                 {file.status}
                             </span>
-                            <span className={`file-name file-name-${file.status?.toLowerCase()}`}>{file.path}</span>
+                            <span className={`file-name file-name-${file.status?.toLowerCase()}`} style={{ display: "flex", alignItems: "baseline", flex: 1, minWidth: 0, textDecoration: "none" }}>
+                                <span style={{ flexShrink: 0, whiteSpace: "nowrap", textDecoration: file.status?.toUpperCase() === "D" ? "line-through" : "none" }}>{file.path.split("/").pop()}</span>
+                                {file.path.includes("/") && (
+                                    <span
+                                        title={file.path.substring(0, file.path.lastIndexOf("/"))}
+                                        style={{
+                                            opacity: 0.5,
+                                            marginLeft: "8px",
+                                            fontSize: "0.85em",
+                                            color: "var(--vscode-descriptionForeground)",
+                                            overflow: "hidden",
+                                            textOverflow: "ellipsis",
+                                            whiteSpace: "nowrap",
+                                            flexShrink: 1,
+                                            minWidth: 0,
+                                        }}
+                                    >
+                                        {file.path.substring(0, file.path.lastIndexOf("/"))}
+                                    </span>
+                                )}
+                            </span>
                             {(file.insertions! > 0 || file.deletions! > 0) && (
                                 <span className="file-stats">
                                     {file.insertions! > 0 && (
