@@ -85,11 +85,14 @@ export class LogEngine {
         }
         args.push(`--max-count=${limit}`);
 
-        if (filters?.query) {
-            args.push(`--grep=${filters.query}`, "-i");
+        if (filters?.query?.trim()) {
+            args.push("--grep", filters.query.trim(), "-i");
         }
-        if (filters?.author) {
-            args.push(`--author=${filters.author}`, "-i");
+        if (filters?.author?.trim()) {
+            args.push("--author", filters.author.trim(), "-i");
+        }
+        if (filters?.query?.trim() && filters?.author?.trim()) {
+            args.push("--all-match");
         }
         if (filters?.from) {
             args.push(`--since=${filters.from.replace(/\//g, "-")} 00:00:00`);
