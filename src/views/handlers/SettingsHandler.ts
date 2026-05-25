@@ -81,7 +81,6 @@ export class SettingsHandler implements IMessageHandler {
                 try {
                     this._setLoading(true);
                     await this._gitService.refs.addRemote(name, url);
-                    vscode.commands.executeCommand("git-wiz.refreshBranches");
                     webview.postMessage({ command: "settingsUpdateForm", remotes: await this._getUniqueRemotes() });
                 }
                 catch (err: any) {
@@ -121,7 +120,6 @@ export class SettingsHandler implements IMessageHandler {
                 try {
                     this._setLoading(true);
                     await this._gitService.refs.removeRemote(name);
-                    vscode.commands.executeCommand("git-wiz.refreshBranches");
                     webview.postMessage({ command: "settingsUpdateForm", remotes: await this._getUniqueRemotes() });
                 }
                 catch (err: any) {

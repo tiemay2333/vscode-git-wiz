@@ -1,4 +1,6 @@
 import type { GitRunner } from "./GitRunner";
+import * as vscode from "vscode";
+import { t } from "../../locale/i18n";
 
 export interface Branch {
     name: string;
@@ -95,10 +97,23 @@ export class RefManager {
     }
 
     async addRemote(name: string, url: string): Promise<void> {
-        await this.runner.exec(["remote", "add", name, url]);
+        let result = await this.runner.exec(["remote", "add", name, url]);
+
+        // 自动判断未初始化的仓库，尝试 git init 后再添加
+        if (result.exitCode !== 0 && result.stderr.toLowerCase().includes("not a git repository")) {
+            const initResult = await this.runner.exec(["init"]);
+            if (initResult.exitCode !== 0) {
+                throw new Error(t(vscode.env.language, "initRepoFailed", { error: initResult.stderr }));
+            }
+            result = await this.runner.exec(["remote", "add", name, url]);
+        }
+
+        if (result.exitCode !== 0) {
+            throw new Error(result.stderr || `Failed to add remote ${name}`);
+        }
         // 自动拉取新添加的远程仓库，不阻塞 addRemote 的结果
         this.fetchRemote(name).catch((err) => {
-            console.error(`[RefManager] Auto-fetch failed for remote ${name}:`, err);
+            console.error(t(vscode.env.language, "autoFetchFailed", { name }), err);
         });
     }
 
