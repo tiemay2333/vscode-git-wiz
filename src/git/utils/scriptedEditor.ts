@@ -35,8 +35,8 @@ export function runRebaseWithScripts(
 
         const env = {
             ...process.env,
-            GIT_SEQUENCE_EDITOR: `node "${seqEditorPath}"`,
-            GIT_EDITOR: `node "${msgEditorPath}"`,
+            GIT_SEQUENCE_EDITOR: `"${process.execPath}" "${seqEditorPath}"`,
+            GIT_EDITOR: `"${process.execPath}" "${msgEditorPath}"`,
         };
 
         cp.exec(`git rebase -i ${baseCommit}`, { cwd, env }, (error, _stdout, stderr) => {

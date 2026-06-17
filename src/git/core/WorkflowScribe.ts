@@ -1,4 +1,6 @@
 import type { GitRunner } from "./GitRunner";
+import * as fs from "node:fs";
+import * as path from "node:path";
 import { makeMsgEditorScript, makeSeqEditorScript } from "../utils/rebaseScripts";
 import { runRebaseWithScripts } from "../utils/scriptedEditor";
 
@@ -95,12 +97,30 @@ export class WorkflowScribe {
         await this.runner.exec(["merge", "--abort"]);
     }
 
-    async rebaseBranch(targetBranch: string): Promise<void> {
+    async isRebaseInProgress(): Promise<boolean> {
+        const gitDirResult = await this.runner.exec(["rev-parse", "--git-dir"]);
+        if (gitDirResult.exitCode === 0) {
+            const gitDir = gitDirResult.stdout.trim();
+            const absoluteGitDir = path.resolve(this.cwd, gitDir);
+            const rebaseMergeExists = fs.existsSync(path.join(absoluteGitDir, "rebase-merge"));
+            const rebaseApplyExists = fs.existsSync(path.join(absoluteGitDir, "rebase-apply"));
+            return rebaseMergeExists || rebaseApplyExists;
+        }
+        return false;
+    }
+
+    async rebaseBranch(targetBranch: string): Promise<{ success: boolean; error?: string; isConflict?: boolean; isRebaseInProgress?: boolean }> {
         const result = await this.runner.exec(["rebase", targetBranch]);
         if (result.exitCode !== 0) {
-            await this.runner.exec(["rebase", "--abort"]);
-            throw new Error(`Rebase failed: ${result.stderr || result.stdout}. Rebase aborted.`);
+            const isConflict = result.stderr.includes("CONFLICT") || result.stdout.includes("CONFLICT") || result.stdout.includes("Failed to merge");
+            const isRebaseInProgress = await this.isRebaseInProgress();
+            return { success: false, error: result.stderr || result.stdout, isConflict, isRebaseInProgress };
         }
+        return { success: true };
+    }
+
+    async abortRebase(): Promise<void> {
+        await this.runner.exec(["rebase", "--abort"]);
     }
 
     async createBranch(branchName: string, startPoint: string): Promise<void> {

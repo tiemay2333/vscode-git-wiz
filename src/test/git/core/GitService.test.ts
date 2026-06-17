@@ -1,6 +1,39 @@
 import type { ExecResult, GitRunner } from "@/git/core/GitRunner";
+import * as fs from "node:fs";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { GitService } from "@/git/core/GitService";
+
+// Mock node:fs
+vi.mock("node:fs", () => {
+    return {
+        existsSync: vi.fn(),
+    };
+});
+
+// Mock vscode
+vi.mock("vscode", () => {
+    return {
+        workspace: {
+            onDidChangeWorkspaceFolders: vi.fn(() => ({ dispose: vi.fn() })),
+            getWorkspaceFolder: vi.fn(),
+            workspaceFolders: [],
+            getConfiguration: vi.fn(() => ({
+                get: vi.fn(),
+            })),
+        },
+        window: {
+            activeTextEditor: undefined,
+        },
+        env: {
+            language: "en",
+        },
+        EventEmitter: vi.fn(() => ({
+            event: vi.fn(),
+            fire: vi.fn(),
+            dispose: vi.fn(),
+        })),
+    };
+});
 
 describe("gitService", () => {
     const mockRunner: GitRunner = {
@@ -135,5 +168,61 @@ index 789..abc 100644
 
         expect(mockRunner.exec).toHaveBeenCalledWith(["show", "--pretty=format:", "some-hash"]);
         expect(mockRunner.exec).toHaveBeenCalledWith(["patch-id", "--stable"], { stdin: "diff --git a/file1.ts b/file1.ts\nindex 123..456 100644\n--- a/file1.ts\n+++ b/file1.ts\n@@ -1 +1 @@\n-old\n+new\n" });
+    });
+
+    it("rebaseBranch returns success true on zero exit code", async () => {
+        vi.mocked(mockRunner.exec).mockResolvedValueOnce({
+            stdout: "",
+            stderr: "",
+            exitCode: 0,
+        } as ExecResult);
+
+        const result = await service.ops.rebaseBranch("target-branch");
+        expect(result.success).toBe(true);
+        expect(mockRunner.exec).toHaveBeenCalledWith(["rebase", "target-branch"]);
+    });
+
+    it("rebaseBranch returns success false, isConflict true if output indicates conflict", async () => {
+        vi.mocked(mockRunner.exec).mockResolvedValueOnce({
+            stdout: "CONFLICT (content): Merge conflict in file.txt",
+            stderr: "",
+            exitCode: 1,
+        } as ExecResult);
+        vi.mocked(mockRunner.exec).mockResolvedValueOnce({
+            stdout: ".git",
+            stderr: "",
+            exitCode: 0,
+        } as ExecResult);
+
+        vi.mocked(fs.existsSync).mockReturnValue(true);
+
+        const result = await service.ops.rebaseBranch("target-branch");
+        expect(result.success).toBe(false);
+        expect(result.isConflict).toBe(true);
+        expect(result.isRebaseInProgress).toBe(true);
+
+        vi.mocked(fs.existsSync).mockReset();
+    });
+
+    it("rebaseBranch returns success false and indicates if rebase is in progress", async () => {
+        vi.mocked(mockRunner.exec).mockResolvedValueOnce({
+            stdout: "error: cannot rebase",
+            stderr: "error: cannot rebase",
+            exitCode: 1,
+        } as ExecResult);
+        vi.mocked(mockRunner.exec).mockResolvedValueOnce({
+            stdout: ".git",
+            stderr: "",
+            exitCode: 0,
+        } as ExecResult);
+
+        vi.mocked(fs.existsSync).mockReturnValue(true);
+
+        const result = await service.ops.rebaseBranch("target-branch");
+        expect(result.success).toBe(false);
+        expect(result.isConflict).toBe(false);
+        expect(result.isRebaseInProgress).toBe(true);
+
+        vi.mocked(fs.existsSync).mockReset();
     });
 });

@@ -132,6 +132,10 @@ const zh: Record<string, string> = {
 
     rebaseTitle: "正在变基到 \"{name}\"...",
     rebaseSuccess: "变基到 \"{name}\" 成功",
+    rebaseConflictError: "变基冲突: {error}",
+    rebaseFailedError: "变基失败: {error}",
+    rebaseAbort: "中止变基",
+    rebaseAborted: "变基已中止",
     remoteNamePrompt: "远程名称",
     remoteNamePlaceholder: "origin",
     remoteUrlPrompt: "远程 \"{name}\" 的 URL",
@@ -280,6 +284,10 @@ const en: Record<string, string> = {
 
     rebaseTitle: "Rebasing onto \"{name}\"...",
     rebaseSuccess: "Rebased onto \"{name}\" successfully",
+    rebaseConflictError: "Rebase failed with conflicts: {error}",
+    rebaseFailedError: "Rebase failed: {error}",
+    rebaseAbort: "Abort Rebase",
+    rebaseAborted: "Rebase aborted",
     remoteNamePrompt: "Remote name",
     remoteNamePlaceholder: "origin",
     remoteUrlPrompt: "Remote URL for \"{name}\"",
