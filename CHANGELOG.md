@@ -2,6 +2,11 @@
 
 All notable changes to Git Wiz are documented here.
 
+## [1.4.3] - 2026-08-25
+- The warehouse management function has been enhanced
+- Experience optimization
+- Bug Fixes
+
 ## [1.4.2] - 2026-05-20
 - Experience optimization
 - Bug Fixes
