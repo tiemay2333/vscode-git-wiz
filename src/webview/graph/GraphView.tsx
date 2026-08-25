@@ -1104,6 +1104,7 @@ export function GraphView({
                                                                                                                                     vscode.postMessage({ command: "openFile", filePath: path });
                                                                                                                                 }}
                                                                                                                             >
+                                                                                                                                ↗
                                                                                                                             </span>
                                                                                                                         </div>
                                                                                                                     )}
