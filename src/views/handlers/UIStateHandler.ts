@@ -1,5 +1,5 @@
 import type { IMessageHandler } from "./IMessageHandler";
-import type { GraphState } from "@/core/graphState";
+import type { GraphState } from "@/core/GraphState";
 import type { FromWebviewMessage } from "@/views/types/WebviewProtocol";
 import * as vscode from "vscode";
 

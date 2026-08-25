@@ -1,7 +1,7 @@
 import type { DataManagerRegistry } from "./dataManager/DataManagerRegistry";
 import type { IViewDataManager, ViewDataSnapshot } from "./dataManager/IViewDataManager";
 import type { FromWebviewMessage } from "./types/WebviewProtocol";
-import type { SearchFilters } from "@/core/graphState";
+import type { SearchFilters } from "@/core/GraphState";
 import type { BaseWorkflow } from "@/git/workflow/base";
 import * as vscode from "vscode";
 import { t } from "@/locale/i18n";
