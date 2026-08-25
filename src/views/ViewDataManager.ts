@@ -1,10 +1,10 @@
 import type { IViewDataManager, RefreshOptions, ViewDataSnapshot } from "./dataManager/IViewDataManager";
-import type { SearchFilters } from "@/core/GraphState";
+import type { SearchFilters } from "@/core/GraphStateSetting";
 import type { GitService } from "@/git/core/GitService";
 import type { AsyncHighlightVerifier } from "@/git/highlight/AsyncHighlightVerifier";
 import type { GitWorkflowEngine } from "@/git/workflow/engine";
 import * as vscode from "vscode";
-import { GraphState } from "@/core/GraphState";
+import { GraphState } from "@/core/GraphStateSetting";
 import { getCommitSignature } from "@/git/highlight/commitHighlight";
 import { UIConverter } from "./UIConverter";
 

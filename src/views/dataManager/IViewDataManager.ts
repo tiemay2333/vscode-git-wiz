@@ -1,6 +1,6 @@
 import type * as vscode from "vscode";
 import type { CommitUIStatus } from "../UIConverter";
-import type { SearchFilters } from "@/core/GraphState";
+import type { SearchFilters } from "@/core/GraphStateSetting";
 import type { Branch, GitCommit, GitService } from "@/git/core/GitService";
 import type { AsyncHighlightVerifier } from "@/git/highlight/AsyncHighlightVerifier";
 import type { GitWorkflowEngine } from "@/git/workflow/engine";
