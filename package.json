@@ -39,6 +39,11 @@
         "configuration": {
             "title": "Git Wiz",
             "properties": {
+                "git-wiz.currentLineBlame": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Show Git blame for the current editor line. Full-file annotations can be toggled independently with Alt+N."
+                },
                 "git-wiz.showStatusBarItem": {
                     "type": "boolean",
                     "default": true,
@@ -164,7 +169,18 @@
                 }
             ]
         },
+        "keybindings": [
+            {
+                "command": "git-wiz.toggleFileBlame",
+                "key": "alt+n",
+                "when": "editorTextFocus && resourceScheme == file"
+            }
+        ],
         "commands": [
+            {
+                "command": "git-wiz.toggleFileBlame",
+                "title": "Git Wiz: Toggle File Blame"
+            },
             {
                 "command": "git-wiz.showGraph",
                 "title": "Git Wiz: Show Graph",

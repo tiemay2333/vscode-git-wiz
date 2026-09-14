@@ -1,6 +1,11 @@
 export type Locale = "zh" | "en";
 
 const zh: Record<string, string> = {
+    currentLineBlame: "当前行 Blame",
+    currentLineBlameDesc: "在行尾显示作者、日期和提交说明；Alt+N 独立开关整文件注释",
+    blameUncommitted: "尚未提交",
+    blameReveal: "在 Git Wiz 中查看提交",
+    blameNoRepository: "当前文件不在 Git 仓库中。",
     regularItems: "常规设置",
     searchDefaultMode: "默认搜索模式",
     searchDefaultModeDesc: "搜索时的默认模式",
@@ -153,6 +158,11 @@ const zh: Record<string, string> = {
 };
 
 const en: Record<string, string> = {
+    currentLineBlame: "Current Line Blame",
+    currentLineBlameDesc: "Show author, date and commit message at the end of the line; Alt+N toggles file annotations independently",
+    blameUncommitted: "Not committed yet",
+    blameReveal: "Show commit in Git Wiz",
+    blameNoRepository: "The current file is not in a Git repository.",
     regularItems: "REGULAR ITEMS",
     searchDefaultMode: "Default Search Mode",
     searchDefaultModeDesc: "Default mode when performing a search",

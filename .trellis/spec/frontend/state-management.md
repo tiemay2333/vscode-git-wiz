@@ -80,3 +80,14 @@ async handleMessage(message: WebviewMessage) {
 - **Debounced refresh**: `debouncedRefresh()` (500ms) on file system watcher prevents cascading refreshes when `.git/**` changes rapidly.
 - **Initialization race**: The `_initialized` flag + `ready` signal pattern prevents refreshes before the webview is ready.
 - **Search and pagination don't mix well**: When search filters are active, `_searchFilters` is set and subsequent `loadMoreCommits` includes the filter. Clear filters to see all commits again.
+
+## Blame Navigation and Editor State
+
+- `BlameController` owns editor annotations; current-line visibility uses `git-wiz.currentLineBlame`, while full-file visibility is toggled per document by `git-wiz.toggleFileBlame` (Alt+N).
+- Query the current document text with `git blame --line-porcelain --contents -`. A supplied empty stdin must still be closed. Zero hashes represent uncommitted lines and must not produce navigation links.
+- Cache attribution by document identity/version, invalidate on edits and Git state changes, and reject async results after the active editor or document version changes. Watch actual Git/common directories so linked worktrees refresh correctly.
+- Blame links use escaped Markdown text and trust only `git-wiz.revealBlameCommit`.
+- Current-line blame uses an inlay label tooltip with no command or general hover provider. Only hovering the annotation text shows blame details; the six-space prefix has no tooltip.
+- Full-file annotations retain normal hovers. Use one column width per file, account for wide characters in author names, and keep dates right-aligned. Use a minimum six-space gap between authors and dates, with no side borders. Keep a six-character gap between annotations and code. The 6px left padding is constant CSS in `textDecoration` because the API does not expose it individually.
+- Graph navigation sets the revision filter and clears file/search filters. Send `revealCommit` only after the matching snapshot reaches a visible view; React clears local search state, selects the commit, scrolls to it, and requests changed files.
+- When switching repositories in an already mounted webview, transfer its ready state to the new data manager. An unresolved/recreated webview must still wait for the `ready` message.

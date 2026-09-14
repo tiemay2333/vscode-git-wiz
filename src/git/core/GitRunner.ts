@@ -7,13 +7,13 @@ export interface ExecResult {
 }
 
 export interface GitRunner {
-    exec: (args: string[], options?: { cwd?: string; env?: NodeJS.ProcessEnv; maxBuffer?: number; stdin?: string }) => Promise<ExecResult>;
+    exec: (args: string[], options?: { cwd?: string; env?: NodeJS.ProcessEnv; maxBuffer?: number; stdin?: string; trimOutput?: boolean }) => Promise<ExecResult>;
 }
 
 export class ChildProcessGitRunner implements GitRunner {
     constructor(private defaultCwd?: string) {}
 
-    exec(args: string[], options?: { cwd?: string; env?: NodeJS.ProcessEnv; maxBuffer?: number; stdin?: string }): Promise<ExecResult> {
+    exec(args: string[], options?: { cwd?: string; env?: NodeJS.ProcessEnv; maxBuffer?: number; stdin?: string; trimOutput?: boolean }): Promise<ExecResult> {
         return new Promise((resolve) => {
             const child = cp.execFile("git", args, {
                 cwd: options?.cwd ?? this.defaultCwd,
@@ -21,13 +21,13 @@ export class ChildProcessGitRunner implements GitRunner {
                 maxBuffer: options?.maxBuffer ?? 10 * 1024 * 1024,
             }, (error, stdout, stderr) => {
                 resolve({
-                    stdout: (stdout ?? "").trim(),
+                    stdout: options?.trimOutput === false ? (stdout ?? "") : (stdout ?? "").trim(),
                     stderr: (stderr ?? "").trim(),
                     exitCode: typeof error?.code === "number" ? error.code : error ? 1 : 0,
                 });
             });
 
-            if (options?.stdin) {
+            if (options?.stdin !== undefined) {
                 child.stdin?.write(options.stdin);
                 child.stdin?.end();
             }

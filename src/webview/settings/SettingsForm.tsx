@@ -4,6 +4,7 @@ import { IconFetchRemote } from "@/webview/shared/Icons";
 import { vscode } from "@/webview/vscodeApi";
 
 export interface SettingsData {
+    currentLineBlame: boolean;
     highlightCurrentBranch: boolean;
     showTags: boolean;
     showRemoteBranches: boolean;
@@ -17,6 +18,7 @@ export interface SettingsData {
 }
 
 export function SettingsForm({ data }: { data: SettingsData }) {
+    const [currentLineBlame, setCurrentLineBlame] = useState(data.currentLineBlame);
     const [highlight, setHighlight] = useState(data.highlightCurrentBranch);
     const [showTags, setShowTags] = useState(data.showTags);
     const [showRemoteBranches, setShowRemoteBranches] = useState(data.showRemoteBranches);
@@ -112,6 +114,25 @@ export function SettingsForm({ data }: { data: SettingsData }) {
         <div style={{ padding: "20px 24px", maxWidth: 520, fontFamily: "var(--vscode-font-family)", fontSize: "13px", color: "var(--vscode-foreground)" }}>
             <div style={{ fontSize: "12px", fontWeight: 600, color: "var(--vscode-descriptionForeground)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 14 }}>
                 {t(locale, "regularItems")}
+            </div>
+
+            <div className="settings-row">
+                <div className="settings-row-label">
+                    <div className="settings-row-title">{t(locale, "currentLineBlame")}</div>
+                    <div className="settings-row-desc">{t(locale, "currentLineBlameDesc")}</div>
+                </div>
+                <label className="toggle-switch">
+                    <input
+                        type="checkbox"
+                        aria-label={t(locale, "currentLineBlame")}
+                        checked={currentLineBlame}
+                        onChange={() => {
+                            setCurrentLineBlame(!currentLineBlame);
+                            vscode.postMessage({ command: "settingsUpdateSetting", key: "currentLineBlame", value: !currentLineBlame });
+                        }}
+                    />
+                    <span className="toggle-slider" />
+                </label>
             </div>
 
             {/* Highlight toggle — switch on right */}

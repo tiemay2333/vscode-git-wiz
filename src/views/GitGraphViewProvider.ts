@@ -18,6 +18,8 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider, vscode.
     private _disposables: vscode.Disposable[] = [];
     private _dataManager: IViewDataManager;
     private _loadingCount = 0;
+    private _pendingRevealHash?: string;
+    private _webviewReady = false;
 
     private readonly _messenger: WebviewMessenger;
     private _dispatcher!: MessageDispatcher;
@@ -149,16 +151,34 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider, vscode.
             });
             this._messenger.postMessage({ command: "replaceBranches", branches: snapshot.branches });
         }
+        if (this._messenger.isVisible && this._pendingRevealHash && snapshot.filterBranch === this._pendingRevealHash
+            && snapshot.commits.some(commit => commit.hash === this._pendingRevealHash)) {
+            this._messenger.postMessage({ command: "revealCommit", hash: this._pendingRevealHash });
+            this._pendingRevealHash = undefined;
+        }
+    }
+
+    public async revealCommit(cwd: string, hash: string) {
+        this.updateCwd(cwd);
+        this._pendingRevealHash = hash;
+        // A revision filter also reaches old commits outside the loaded page or branch.
+        this._dataManager.setFilterBranch(hash);
+        this._dataManager.setFilterFile(null);
+        this._dataManager.setSearchFilters(undefined);
+        await vscode.commands.executeCommand(`${GitGraphViewProvider.viewType}.focus`);
+        this.refresh(true);
     }
 
     public updateCwd(newCwd: string) {
         if (this.cwd === newCwd)
             return;
         this.cwd = newCwd;
+        this._pendingRevealHash = undefined;
         this._dataManager = this._registry.getManagerForPath(this.cwd);
 
         this._initHandlers();
         this.subscribeToEvents();
+        this._dataManager.setReady(this._webviewReady);
         this._dataManager.setFilterBranch(null);
         this._dataManager.setFilterFile(null);
         this._dataManager.setSearchFilters(undefined);
@@ -227,6 +247,7 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider, vscode.
         });
 
         webviewView.onDidDispose(() => {
+            this._webviewReady = false;
             this._dataManager.setReady(false);
         });
 
@@ -241,6 +262,8 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider, vscode.
     }
 
     private async handleMessage(message: FromWebviewMessage, webview: vscode.Webview) {
+        if (message.command === "ready")
+            this._webviewReady = true;
         await this._dispatcher.dispatch(message, webview);
     }
 
@@ -300,6 +323,7 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider, vscode.
         this._messenger.postMessage({
             command: "showSettingsModal",
             data: {
+                currentLineBlame: this.getConfig("currentLineBlame", true),
                 highlightCurrentBranch: this.getConfig("highlightCurrentBranch", false),
                 showTags: this.getConfig("showTags", true),
                 showRemoteBranches: this.getConfig("showRemoteBranches", true),
@@ -315,6 +339,7 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider, vscode.
     }
 
     private async updateWebview(webview: vscode.Webview) {
+        this._webviewReady = false;
         this._dataManager.setReady(false);
         try {
             const currentBranch = await this._dataManager.refs.getCurrentBranch();

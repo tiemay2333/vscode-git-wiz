@@ -60,6 +60,9 @@ A minimalist Git extension for VS Code with a canvas-rendered commit graph and v
 - Right-click any file in the editor or explorer → "Git Wiz: Show File History" to filter the graph to only that file's commits
 - Uses the standard VS Code file picker integration
 
+### Git Blame
+It can be enabled in the Settings or by pressing the shortcut key 'ALT + N'
+
 ### Internationalization
 - Supports **English** and **Chinese (Simplified)**
 - Automatically matches VS Code display language

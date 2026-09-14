@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 import { CommandManager } from "./commands/CommandManager";
 import { GitWizContentProvider } from "./core/GitWizContentProvider";
+import { BlameController } from "./editor/BlameController";
 import { DataManagerRegistry } from "./views/dataManager/DataManagerRegistry";
 import { ViewDataManagerFactory } from "./views/dataManager/ViewDataManagerFactory";
 import { GitGraphViewProvider } from "./views/GitGraphViewProvider";
@@ -38,6 +39,7 @@ export function activate(context: vscode.ExtensionContext) {
     const defaultCwd = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || "";
     const graphProvider = new GitGraphViewProvider(context.extensionUri, defaultCwd, registry);
     context.subscriptions.push(graphProvider);
+    context.subscriptions.push(new BlameController(graphProvider));
 
     const commandManager = new CommandManager(registry, graphProvider, context.extensionUri);
     commandManager.registerAll(context);

@@ -183,6 +183,7 @@ export function GraphView({
     const searchGraphModeRef = useRef(searchGraphMode);
     const activeSearchRef = useRef(activeSearch);
     const pendingModeRef = useRef<"single" | "graph" | null>(null);
+    const [revealHash, setRevealHash] = useState<string | null>(null);
 
     useLayoutEffect(() => {
         if (shouldScrollToTopRef.current && containerRef.current) {
@@ -210,6 +211,20 @@ export function GraphView({
             return true;
         });
     }, [commits, searchGraphMode, activeSearch.from, activeSearch.to]);
+
+    useEffect(() => {
+        if (!revealHash)
+            return;
+        const index = filteredCommits.findIndex(commit => commit.hash === revealHash);
+        if (index === -1)
+            return;
+        setSelectedIndices(new Set([index]));
+        setRangeStartIndex(index);
+        setLoadingHash(revealHash);
+        vscode.postMessage({ command: "getCommitFiles", commitHash: revealHash });
+        containerRef.current?.querySelector(`[data-commit-hash="${revealHash}"]`)?.scrollIntoView({ block: "center" });
+        setRevealHash(null);
+    }, [revealHash, filteredCommits]);
 
     useEffect(() => {
         if (loadingHash && commitFiles[loadingHash]) {
@@ -261,7 +276,21 @@ export function GraphView({
     useEffect(() => {
         const handler = (event: MessageEvent) => {
             const msg = event.data;
-            if (msg.command === "appendCommits") {
+            if (msg.command === "revealCommit") {
+                const emptySearch = { query: "", author: "", from: "", to: "" };
+                setSearchQuery("");
+                setSearchAuthor("");
+                setDateFrom("");
+                setDateTo("");
+                setActiveSearch(emptySearch);
+                activeSearchRef.current = emptySearch;
+                pendingModeRef.current = null;
+                setToggleLoading(false);
+                setSearchLoading(false);
+                setMatchInfo({});
+                setRevealHash(msg.hash);
+            }
+            else if (msg.command === "appendCommits") {
                 setCommits(prev => [...prev, ...msg.commits]);
                 if (msg.uiStatus) {
                     setCommitUIStatus(prev => ({ ...prev, ...msg.uiStatus }));

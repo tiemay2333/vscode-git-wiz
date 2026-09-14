@@ -4,12 +4,13 @@ import type { GitCommit } from "@/git/utils/gitParser";
  * Commands sent from Plugin to Webview
  */
 export type ToWebviewMessage
-    = | { command: "updateCommitHighlight"; hash: string; verificationStatus: string }
+    = | { command: "revealCommit"; hash: string }
+        | { command: "updateCommitHighlight"; hash: string; verificationStatus: string }
         | { command: "setLoading"; visible: boolean }
         | { command: "replaceCommits"; commits: GitCommit[]; uiStatus: Record<string, any>; hasMore: boolean; filterBranch: string | null; filterFile: string | null; currentBranch: string | null; resetScroll: boolean; highlightCurrentBranch: boolean; showTags: boolean; showRemoteBranches: boolean; showGraph: boolean }
         | { command: "appendCommits"; commits: GitCommit[]; uiStatus: Record<string, any>; hasMore: boolean; showTags: boolean; showRemoteBranches: boolean; showGraph: boolean }
         | { command: "replaceBranches"; branches: any[] }
-        | { command: "showSettingsModal"; data: { highlightCurrentBranch: boolean; showTags: boolean; showRemoteBranches: boolean; showGraph: boolean; searchDefaultMode: string; userName: string; userEmail: string; scope: "local" | "global"; remotes: { name: string; url: string }[]; locale: string } }
+        | { command: "showSettingsModal"; data: { currentLineBlame: boolean; highlightCurrentBranch: boolean; showTags: boolean; showRemoteBranches: boolean; showGraph: boolean; searchDefaultMode: string; userName: string; userEmail: string; scope: "local" | "global"; remotes: { name: string; url: string }[]; locale: string } }
         | { command: "commitFilesData"; commitHash: string; files?: any[]; error?: string }
         | { command: "updateShowTags"; value: boolean }
         | { command: "updateShowRemoteBranches"; value: boolean }
