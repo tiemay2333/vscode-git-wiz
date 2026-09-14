@@ -193,6 +193,7 @@ export class GitGraphViewProvider implements vscode.WebviewViewProvider, vscode.
             column || vscode.ViewColumn.One,
             {
                 enableScripts: true,
+                retainContextWhenHidden: true,
                 localResourceRoots: [extensionUri],
             },
         );

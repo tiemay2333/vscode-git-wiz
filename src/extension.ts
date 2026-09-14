@@ -45,7 +45,9 @@ export function activate(context: vscode.ExtensionContext) {
     const contentProvider = new GitWizContentProvider(registry);
     context.subscriptions.push(vscode.workspace.registerTextDocumentContentProvider("git-wiz", contentProvider));
 
-    context.subscriptions.push(vscode.window.registerWebviewViewProvider(GitGraphViewProvider.viewType, graphProvider));
+    context.subscriptions.push(vscode.window.registerWebviewViewProvider(GitGraphViewProvider.viewType, graphProvider, {
+        webviewOptions: { retainContextWhenHidden: true },
+    }));
 }
 
 export function deactivate() { }
